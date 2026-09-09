@@ -1,0 +1,16 @@
+{
+  "name": "kabadconnect",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Hyperlocal Recycling Marketplace - Doorstep scrap pickup & circular economy platform",
+  "scripts": {
+    "dev": "npm --prefix kabadconnect-web run dev",
+    "build": "npm --prefix kabadconnect-web run build",
+    "preview": "npm --prefix kabadconnect-web run preview"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "mongoose": "^9.9.5"
+  }
+}

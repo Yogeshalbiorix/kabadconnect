@@ -1,0 +1,64 @@
+:root {
+  /* Brand Color Tokens */
+  --color-primary-dark: #072e1c;
+  --color-primary: #0D5C3A;
+  --color-primary-light: #15803d;
+  --color-accent-mint: #10B981;
+  --color-accent-mint-light: #34D399;
+  --color-accent-mint-soft: #ECFDF5;
+  --color-accent-gold: #F59E0B;
+  --color-accent-gold-dark: #B45309;
+  --color-accent-gold-soft: #FEF3C7;
+  --color-accent-cyan: #06B6D4;
+  --color-accent-cyan-soft: #ECFEFF;
+  
+  /* Status Colors */
+  --color-success: #10B981;
+  --color-warning: #F59E0B;
+  --color-danger: #EF4444;
+  --color-info: #3B82F6;
+
+  /* Neutral Surface & Text */
+  --color-bg: #F8FAFC;
+  --color-bg-alt: #F1F5F9;
+  --color-surface: #FFFFFF;
+  --color-surface-glass: rgba(255, 255, 255, 0.88);
+  --color-surface-translucent: rgba(255, 255, 255, 0.7);
+  --color-border: #E2E8F0;
+  --color-border-hover: #CBD5E1;
+  --color-border-glow: rgba(16, 185, 129, 0.35);
+
+  --color-text-primary: #0F172A;
+  --color-text-secondary: #475569;
+  --color-text-muted: #64748B;
+  --color-text-inverse: #FFFFFF;
+  --color-text-mint: #065F46;
+
+  /* Typography */
+  --font-heading: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+
+  /* Elevation Shadows */
+  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-sm: 0 2px 4px -1px rgba(0, 0, 0, 0.06), 0 1px 2px -1px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 6px 16px -2px rgba(13, 92, 58, 0.08), 0 2px 6px -1px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 14px 28px -4px rgba(13, 92, 58, 0.12), 0 6px 12px -2px rgba(0, 0, 0, 0.05);
+  --shadow-xl: 0 24px 48px -8px rgba(13, 92, 58, 0.16), 0 12px 20px -4px rgba(0, 0, 0, 0.06);
+  --shadow-glow: 0 0 25px rgba(16, 185, 129, 0.28);
+  --shadow-glow-gold: 0 0 25px rgba(245, 158, 11, 0.28);
+
+  /* Border Radii */
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
+
+  /* Layout */
+  --max-width: 1280px;
+  --header-height: 76px;
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 400ms cubic-bezier(0.4, 0, 0.2, 1);
+}
