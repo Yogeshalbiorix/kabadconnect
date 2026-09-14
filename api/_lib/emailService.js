@@ -2,16 +2,27 @@ import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
 import path from 'path';
 
-// Ensure .env is loaded
-try {
-  dotenv.config({ override: true });
-  dotenv.config({ path: path.resolve(process.cwd(), '.env'), override: true });
-} catch {}
+// Ensure .env is loaded from all possible directories (root or child)
+function loadEnvironment() {
+  try {
+    const cwd = process.cwd();
+    dotenv.config();
+    dotenv.config({ path: path.resolve(cwd, '.env'), override: true });
+    dotenv.config({ path: path.resolve(cwd, '../.env'), override: true });
+    dotenv.config({ path: path.resolve(cwd, 'kabadconnect-web/.env'), override: true });
+  } catch {}
+}
+
+loadEnvironment();
 
 /**
  * Returns configured nodemailer transporter or null if SMTP not set
  */
 function getTransporter() {
+  if (!process.env.GMAIL_USER && !process.env.SMTP_HOST) {
+    loadEnvironment();
+  }
+
   const rawGmailUser = process.env.GMAIL_USER;
   const rawGmailPass = process.env.GMAIL_APP_PASSWORD || process.env.GMAIL_PASS;
 
