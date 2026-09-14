@@ -521,6 +521,17 @@ export const HeroSection = ({
           width: 100%;
           min-width: 0;
         }
+        @media (max-width: 1399px) and (min-width: 961px) {
+          .hero-grid {
+            grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr) !important;
+            gap: 2rem !important;
+          }
+          .hero-radar-card {
+            padding: 1.35rem !important;
+            max-width: 480px !important;
+            margin: 0 auto !important;
+          }
+        }
         @media (max-width: 960px) {
           .hero-grid {
             grid-template-columns: minmax(0, 1fr);

@@ -257,13 +257,15 @@ export const Navbar = ({
       }}>
         <div style={{
           width: '100%',
-          padding: '0 clamp(0.75rem, 2vw, 2.5rem)',
+          maxWidth: '100vw',
+          padding: '0 clamp(0.75rem, 1.2vw, 1.5rem)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           height: 'var(--header-height)',
-          gap: 'clamp(0.4rem, 1vw, 1.25rem)',
-          flexWrap: 'nowrap'
+          gap: 'clamp(0.35rem, 0.8vw, 1rem)',
+          flexWrap: 'nowrap',
+          overflowX: 'clip'
         }}>
           {/* Logo */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(0.35rem, 1vw, 1.25rem)', flexShrink: 0 }}>
@@ -472,19 +474,20 @@ export const Navbar = ({
               { id: 'calculator', label: 'Scrap Calculator' },
               { id: 'kabadwalas', label: 'Find Kabadwalas' },
               { id: 'store', label: 'Pre-Loved Bazaar', badge: 'Sell & Buy' },
-              { id: 'how-it-works', label: 'How It Works' },
-              { id: 'profile', label: 'Profiles' }
+              { id: 'how-it-works', label: 'How It Works', isSecondary: true },
+              { id: 'profile', label: 'Profiles', isSecondary: true }
             ].map((item) => {
               const isActive = currentPage === item.id;
               return (
                 <button
                   key={item.id}
                   onClick={() => onNavigate && onNavigate(item.id)}
+                  className={`nav-link-btn ${item.isSecondary ? 'nav-link-secondary' : ''}`}
                   style={{
                     background: 'transparent',
                     border: 'none',
                     fontWeight: isActive ? 800 : 600,
-                    fontSize: 'clamp(0.82rem, 0.88vw, 0.925rem)',
+                    fontSize: 'clamp(0.8rem, 0.84vw, 0.9rem)',
                     color: isActive ? 'var(--color-primary)' : 'var(--color-text-primary)',
                     cursor: 'pointer',
                     padding: '0.4rem 0',
@@ -498,7 +501,7 @@ export const Navbar = ({
                 >
                   <span>{item.label}</span>
                   {item.badge && (
-                    <span className="badge badge-warning" style={{ fontSize: '0.65rem', padding: '0.1rem 0.35rem' }}>
+                    <span className="badge badge-warning nav-badge-sellbuy" style={{ fontSize: '0.65rem', padding: '0.1rem 0.35rem' }}>
                       {item.badge}
                     </span>
                   )}
@@ -627,9 +630,9 @@ export const Navbar = ({
               <button
                 onClick={onOpenAuth}
                 className="btn btn-outline nav-btn-signin"
-                style={{ padding: '0.55rem 1rem', fontSize: '0.85rem' }}
+                style={{ padding: '0.45rem 0.85rem', fontSize: '0.825rem', flexShrink: 0 }}
               >
-                <User size={16} />
+                <User size={15} />
                 <span>Sign In</span>
               </button>
             ) : (
@@ -926,29 +929,31 @@ export const Navbar = ({
                 background: '#F59E0B',
                 color: '#0F172A',
                 border: 'none',
-                padding: '0.6rem 1.1rem',
-                fontSize: '0.875rem',
+                padding: '0.52rem 0.95rem',
+                fontSize: '0.85rem',
                 fontWeight: 800,
                 borderRadius: 'var(--radius-full)',
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '0.4rem',
+                gap: '0.35rem',
                 boxShadow: '0 2px 8px rgba(245, 158, 11, 0.35)',
                 cursor: 'pointer',
-                whiteSpace: 'nowrap'
+                whiteSpace: 'nowrap',
+                flexShrink: 0
               }}
               title="Sell Almirahs, ACs, Sofas, Beds, Cycles & more"
             >
-              <span>+ Sell Old Goods</span>
+              <span className="nav-btn-sell-text-full">+ Sell Old Goods</span>
+              <span className="nav-btn-sell-text-short" style={{ display: 'none' }}>+ Sell</span>
             </button>
 
             {/* Schedule Pickup CTA */}
             <button
               onClick={onOpenBooking}
               className="nav-btn-book btn btn-primary"
-              style={{ padding: '0.65rem 1.25rem', fontSize: '0.92rem', whiteSpace: 'nowrap' }}
+              style={{ padding: '0.52rem 1.05rem', fontSize: '0.86rem', whiteSpace: 'nowrap', flexShrink: 0 }}
             >
-              <Calendar size={17} />
+              <Calendar size={15} />
               <span>Book Pickup</span>
             </button>
 
@@ -1135,16 +1140,23 @@ export const Navbar = ({
 
       {/* Embedded CSS for responsive navbar */}
       <style>{`
-        @media (min-width: 1160px) {
+        /* 1. Large Desktops (1400px and above) */
+        @media (min-width: 1400px) {
           .desktop-nav {
             display: flex !important;
-            gap: clamp(0.5rem, 1.1vw, 1.4rem);
+            gap: 1.15rem;
           }
           .mobile-menu-btn {
             display: none !important;
           }
           .nav-btn-sell {
             display: inline-flex !important;
+          }
+          .nav-btn-sell-text-full {
+            display: inline !important;
+          }
+          .nav-btn-sell-text-short {
+            display: none !important;
           }
           .nav-btn-book {
             display: inline-flex !important;
@@ -1159,33 +1171,88 @@ export const Navbar = ({
             display: block !important;
           }
         }
-        @media (max-width: 1159px) and (min-width: 860px) {
+
+        /* 2. Standard Laptops (1120px to 1399px) - Fixes cut-off & overflow */
+        @media (max-width: 1399px) and (min-width: 1120px) {
           .desktop-nav {
-            display: none !important;
+            display: flex !important;
+            gap: clamp(0.45rem, 0.75vw, 0.85rem) !important;
+          }
+          .nav-link-secondary {
+            display: none !important; /* Hides How It Works & Profiles to guarantee no overflow */
+          }
+          .nav-badge-sellbuy {
+            display: none !important; /* Hides Sell & Buy badge to save 50px */
           }
           .mobile-menu-btn {
-            display: flex !important;
+            display: none !important;
           }
           .nav-btn-sell {
             display: inline-flex !important;
-            padding: 0.5rem 0.85rem !important;
+            padding: 0.45rem 0.75rem !important;
+            font-size: 0.8rem !important;
+          }
+          .nav-btn-sell-text-full {
+            display: none !important;
+          }
+          .nav-btn-sell-text-short {
+            display: inline !important; /* Shows compact "+ Sell" */
+          }
+          .nav-btn-book {
+            display: inline-flex !important;
+            padding: 0.48rem 0.85rem !important;
             font-size: 0.825rem !important;
           }
           .nav-btn-admin {
             display: none !important;
           }
-          .nav-btn-book {
-            display: inline-flex !important;
-            padding: 0.55rem 0.95rem !important;
-            font-size: 0.85rem !important;
-          }
           .nav-btn-signin {
             display: inline-flex !important;
+            padding: 0.42rem 0.75rem !important;
+            font-size: 0.8rem !important;
           }
           .nav-user-dropdown {
             display: block !important;
           }
         }
+
+        /* 3. Small Laptops & Tablets (860px to 1119px) - Clean Hamburger layout */
+        @media (max-width: 1119px) and (min-width: 860px) {
+          .desktop-nav {
+            display: none !important;
+          }
+          .mobile-menu-btn {
+            display: flex !important;
+          }
+          .nav-btn-sell {
+            display: inline-flex !important;
+            padding: 0.45rem 0.75rem !important;
+            font-size: 0.8rem !important;
+          }
+          .nav-btn-sell-text-full {
+            display: none !important;
+          }
+          .nav-btn-sell-text-short {
+            display: inline !important;
+          }
+          .nav-btn-admin {
+            display: none !important;
+          }
+          .nav-btn-book {
+            display: inline-flex !important;
+            padding: 0.48rem 0.85rem !important;
+            font-size: 0.825rem !important;
+          }
+          .nav-btn-signin {
+            display: inline-flex !important;
+            padding: 0.42rem 0.75rem !important;
+          }
+          .nav-user-dropdown {
+            display: block !important;
+          }
+        }
+
+        /* 4. Mobile Screens (under 860px) */
         @media (max-width: 859px) {
           .desktop-nav {
             display: none !important;
