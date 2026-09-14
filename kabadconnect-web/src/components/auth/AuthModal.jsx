@@ -110,7 +110,7 @@ export const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
     try {
       const res = await registerUser(regData);
       if (res.success && res.user) {
-        setSuccessMessage(`✓ Account created & saved to MongoDB database! Welcome, ${res.user.name}!`);
+        setSuccessMessage(`✓ Account created successfully! Welcome, ${res.user.name}!`);
         setTimeout(() => {
           onLoginSuccess(res.user);
           onClose();
@@ -169,9 +169,8 @@ export const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
               <h3 style={{ fontSize: '1.15rem', margin: 0, fontWeight: 700 }}>
                 {authMode === 'register' ? 'Create New Account' : 'Account Sign In'}
               </h3>
-              <p style={{ fontSize: '0.785rem', color: 'var(--color-text-muted)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                <Database size={12} color="#10B981" />
-                <span>Backed directly by MongoDB Atlas database</span>
+              <p style={{ fontSize: '0.785rem', color: 'var(--color-text-muted)', margin: 0 }}>
+                {authMode === 'register' ? 'Join KabadConnect hyperlocal recycling network' : 'Access your pickups & scrap earnings'}
               </p>
             </div>
           </div>
@@ -584,12 +583,12 @@ export const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
                 {isSubmitting ? (
                   <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem' }}>
                     <Loader2 size={17} className="animate-spin" />
-                    <span>Saving to MongoDB Atlas Database...</span>
+                    <span>Creating Account...</span>
                   </span>
                 ) : (
                   <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem' }}>
                     <UserPlus size={17} />
-                    <span>Create Account & Save in MongoDB</span>
+                    <span>Create Account</span>
                   </span>
                 )}
               </button>
