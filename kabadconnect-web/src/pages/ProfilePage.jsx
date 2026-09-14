@@ -1867,11 +1867,20 @@ export const ProfilePage = ({
           <div
             className="modal-content"
             onClick={(e) => e.stopPropagation()}
-            style={{ maxWidth: '520px', width: '100%', padding: '2rem' }}
+            style={{ 
+              maxWidth: '520px', 
+              width: '100%', 
+              maxHeight: '90vh',
+              maxHeight: '90dvh',
+              display: 'flex',
+              flexDirection: 'column',
+              padding: 0,
+              overflow: 'hidden'
+            }}
           >
-            <div className="flex-between" style={{ marginBottom: '1.5rem' }}>
+            <div className="modal-header" style={{ borderBottom: '1px solid var(--color-border)', flexShrink: 0, padding: '1.25rem 1.75rem', background: 'var(--color-surface)' }}>
               <div>
-                <h3 style={{ fontSize: '1.35rem', margin: 0, fontWeight: 800 }}>Edit Customer Profile</h3>
+                <h3 style={{ fontSize: '1.25rem', margin: 0, fontWeight: 800 }}>Edit Customer Profile</h3>
                 <p style={{ fontSize: '0.825rem', color: 'var(--color-text-muted)', margin: 0 }}>
                   Update your contact details and default doorstep pickup address.
                 </p>
@@ -1885,9 +1894,10 @@ export const ProfilePage = ({
               </button>
             </div>
 
-            <form onSubmit={handleSaveProfile} style={{ display: 'flex', flexDirection: 'column', gap: '1.15rem' }}>
-              <div>
-                <label className="form-label" style={{ fontSize: '0.825rem', fontWeight: 700 }}>Full Name</label>
+            <div className="modal-body" style={{ flex: 1, overflowY: 'auto', minHeight: 0, padding: '1.5rem 1.75rem' }}>
+              <form onSubmit={handleSaveProfile} style={{ display: 'flex', flexDirection: 'column', gap: '1.15rem' }}>
+                <div>
+                  <label className="form-label" style={{ fontSize: '0.825rem', fontWeight: 700 }}>Full Name</label>
                 <input
                   type="text"
                   value={editFormData.name}
@@ -2128,7 +2138,7 @@ export const ProfilePage = ({
                 />
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px solid var(--color-border)' }}>
                 <button
                   type="button"
                   onClick={() => setIsEditModalOpen(false)}
@@ -2147,6 +2157,7 @@ export const ProfilePage = ({
             </form>
           </div>
         </div>
+      </div>
       )}
     </div>
   );

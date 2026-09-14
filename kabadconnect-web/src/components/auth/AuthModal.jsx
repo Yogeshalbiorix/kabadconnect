@@ -147,14 +147,30 @@ export const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
       <div 
         className="modal-content auth-modal-content" 
         onClick={(e) => e.stopPropagation()}
-        style={{ maxWidth: authMode === 'register' ? '500px' : '440px', width: '100%' }}
+        style={{ 
+          maxWidth: authMode === 'register' ? '500px' : '440px', 
+          width: '100%',
+          maxHeight: '90vh',
+          maxHeight: '90dvh',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden'
+        }}
       >
-        {/* Header */}
-        <div className="flex-between" style={{ marginBottom: '1.25rem' }}>
+        {/* Pinned Modal Header */}
+        <div className="modal-header auth-modal-header" style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '1.15rem 1.5rem',
+          borderBottom: '1px solid var(--color-border)',
+          background: 'var(--color-surface)',
+          flexShrink: 0
+        }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
             <div style={{
-              width: '42px',
-              height: '42px',
+              width: '40px',
+              height: '40px',
               borderRadius: '12px',
               background: activeTab === 'admin' 
                 ? 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)' 
@@ -163,12 +179,13 @@ export const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              boxShadow: 'var(--shadow-sm)'
+              boxShadow: 'var(--shadow-sm)',
+              flexShrink: 0
             }}>
               {authMode === 'register' ? <UserPlus size={20} /> : activeTab === 'admin' ? <KeyRound size={20} /> : <User size={20} />}
             </div>
             <div>
-              <h3 style={{ fontSize: '1.25rem', margin: 0 }}>
+              <h3 style={{ fontSize: '1.15rem', margin: 0, fontWeight: 700 }}>
                 {authMode === 'register' ? 'Create New Account' : activeTab === 'admin' ? 'Admin Portal Login' : 'Customer Sign In'}
               </h3>
               <p style={{ fontSize: '0.785rem', color: 'var(--color-text-muted)', margin: 0 }}>
@@ -182,70 +199,78 @@ export const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
           </button>
         </div>
 
-        {/* Mode Switcher: Sign In vs Create Account */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          background: 'rgba(13, 92, 58, 0.06)',
-          borderRadius: 'var(--radius-full)',
-          padding: '4px',
-          marginBottom: '1.25rem',
-          border: '1px solid rgba(13, 92, 58, 0.15)'
+        {/* Scrollable Modal Body */}
+        <div className="modal-body auth-modal-body" style={{
+          padding: '1.25rem 1.5rem',
+          overflowY: 'auto',
+          flex: 1,
+          minHeight: 0
         }}>
-          <button
-            type="button"
-            onClick={() => {
-              setAuthMode('login');
-              setErrorMessage('');
-            }}
-            style={{
-              padding: '0.45rem',
-              borderRadius: 'var(--radius-full)',
-              fontSize: '0.8rem',
-              fontWeight: 700,
-              border: 'none',
-              cursor: 'pointer',
-              background: authMode === 'login' ? '#FFFFFF' : 'transparent',
-              color: authMode === 'login' ? 'var(--color-primary)' : 'var(--color-text-muted)',
-              boxShadow: authMode === 'login' ? 'var(--shadow-xs)' : 'none',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.35rem',
-              transition: 'all 0.2s ease'
-            }}
-          >
-            <LogIn size={14} />
-            <span>Sign In</span>
-          </button>
+          {/* Mode Switcher: Sign In vs Create Account */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            background: 'rgba(13, 92, 58, 0.06)',
+            borderRadius: 'var(--radius-full)',
+            padding: '4px',
+            marginBottom: '1.15rem',
+            border: '1px solid rgba(13, 92, 58, 0.15)',
+            flexShrink: 0
+          }}>
+            <button
+              type="button"
+              onClick={() => {
+                setAuthMode('login');
+                setErrorMessage('');
+              }}
+              style={{
+                padding: '0.45rem',
+                borderRadius: 'var(--radius-full)',
+                fontSize: '0.8rem',
+                fontWeight: 700,
+                border: 'none',
+                cursor: 'pointer',
+                background: authMode === 'login' ? '#FFFFFF' : 'transparent',
+                color: authMode === 'login' ? 'var(--color-primary)' : 'var(--color-text-muted)',
+                boxShadow: authMode === 'login' ? 'var(--shadow-xs)' : 'none',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.35rem',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              <LogIn size={14} />
+              <span>Sign In</span>
+            </button>
 
-          <button
-            type="button"
-            onClick={() => {
-              setAuthMode('register');
-              setErrorMessage('');
-            }}
-            style={{
-              padding: '0.45rem',
-              borderRadius: 'var(--radius-full)',
-              fontSize: '0.8rem',
-              fontWeight: 700,
-              border: 'none',
-              cursor: 'pointer',
-              background: authMode === 'register' ? '#FFFFFF' : 'transparent',
-              color: authMode === 'register' ? 'var(--color-primary)' : 'var(--color-text-muted)',
-              boxShadow: authMode === 'register' ? 'var(--shadow-xs)' : 'none',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.35rem',
-              transition: 'all 0.2s ease'
-            }}
-          >
-            <UserPlus size={14} />
-            <span>Create New User</span>
-          </button>
-        </div>
+            <button
+              type="button"
+              onClick={() => {
+                setAuthMode('register');
+                setErrorMessage('');
+              }}
+              style={{
+                padding: '0.45rem',
+                borderRadius: 'var(--radius-full)',
+                fontSize: '0.8rem',
+                fontWeight: 700,
+                border: 'none',
+                cursor: 'pointer',
+                background: authMode === 'register' ? '#FFFFFF' : 'transparent',
+                color: authMode === 'register' ? 'var(--color-primary)' : 'var(--color-text-muted)',
+                boxShadow: authMode === 'register' ? 'var(--shadow-xs)' : 'none',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.35rem',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              <UserPlus size={14} />
+              <span>Create New User</span>
+            </button>
+          </div>
 
         {/* ============================================================ */}
         {/* MODE 1: SIGN IN FORM                                         */}
@@ -693,15 +718,19 @@ export const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
             </button>
           </form>
         )}
+        </div>
       </div>
 
       <style>{`
         .auth-modal-content {
-          padding: 2rem;
+          padding: 0 !important;
         }
         @media (max-width: 480px) {
-          .auth-modal-content {
-            padding: 1.25rem !important;
+          .auth-modal-header {
+            padding: 1rem 1.15rem !important;
+          }
+          .auth-modal-body {
+            padding: 1rem 1.15rem !important;
           }
         }
       `}</style>

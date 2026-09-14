@@ -269,8 +269,8 @@
   border-radius: var(--radius-xl);
   max-width: 650px;
   width: 100%;
-  max-height: 92vh;
-  max-height: 92dvh;
+  max-height: 90vh;
+  max-height: 90dvh;
   display: flex;
   flex-direction: column;
   box-shadow: var(--shadow-xl);
@@ -294,6 +294,7 @@
   align-items: center;
   justify-content: space-between;
   background: var(--color-bg);
+  flex-shrink: 0;
 }
 
 @media (max-width: 640px) {
@@ -337,7 +338,43 @@
   padding: 1.5rem 1.75rem;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  flex: 1;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* Modal bodies & custom scrollable containers */
+.modal-body,
+.auth-modal-body,
+.modal-scrollable {
+  scrollbar-width: thin;
+  scrollbar-color: #CBD5E1 #F1F5F9;
+}
+
+.modal-body::-webkit-scrollbar,
+.auth-modal-body::-webkit-scrollbar,
+.modal-scrollable::-webkit-scrollbar {
+  width: 7px;
+}
+
+.modal-body::-webkit-scrollbar-track,
+.auth-modal-body::-webkit-scrollbar-track,
+.modal-scrollable::-webkit-scrollbar-track {
+  background: #F1F5F9;
+  border-radius: 999px;
+}
+
+.modal-body::-webkit-scrollbar-thumb,
+.auth-modal-body::-webkit-scrollbar-thumb,
+.modal-scrollable::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 999px;
+  border: 1.5px solid #F1F5F9;
+}
+
+.modal-body::-webkit-scrollbar-thumb:hover,
+.auth-modal-body::-webkit-scrollbar-thumb:hover,
+.modal-scrollable::-webkit-scrollbar-thumb:hover {
+  background: #0D5C3A;
 }
 
 @media (max-width: 640px) {
@@ -360,6 +397,7 @@
   justify-content: flex-end;
   gap: 0.75rem;
   background: var(--color-bg);
+  flex-shrink: 0;
 }
 
 @media (max-width: 640px) {
@@ -376,6 +414,46 @@
   .modal-footer > button,
   .modal-footer > a {
     width: 100% !important;
+  }
+}
+
+/* Laptop screen & short-height viewport optimizations */
+@media (max-height: 850px) {
+  .modal-overlay {
+    padding: 0.75rem;
+  }
+  .modal-content {
+    max-height: 92vh;
+    max-height: 92dvh;
+  }
+  .modal-header {
+    padding: 0.85rem 1.35rem;
+  }
+  .modal-body {
+    padding: 1rem 1.35rem;
+  }
+  .modal-footer {
+    padding: 0.75rem 1.35rem;
+  }
+}
+
+@media (max-height: 680px) {
+  .modal-overlay {
+    padding: 0.5rem;
+  }
+  .modal-content {
+    max-height: 95vh;
+    max-height: 95dvh;
+    border-radius: var(--radius-lg);
+  }
+  .modal-header {
+    padding: 0.75rem 1rem;
+  }
+  .modal-body {
+    padding: 0.75rem 1rem;
+  }
+  .modal-footer {
+    padding: 0.65rem 1rem;
   }
 }
 
