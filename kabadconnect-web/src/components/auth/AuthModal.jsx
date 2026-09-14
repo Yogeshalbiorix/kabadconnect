@@ -349,7 +349,7 @@ export const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
                 {authMode === 'register' ? 'Create New Account' : 'Account Sign In'}
               </h3>
               <p style={{ fontSize: '0.785rem', color: 'var(--color-text-muted)', margin: 0 }}>
-                {authMode === 'register' ? 'Verify with Email OTP' : 'Login via OTP or Password'}
+                {authMode === 'register' ? 'Join KabadConnect recycling network' : 'Access your pickups & scrap earnings'}
               </p>
             </div>
           </div>
@@ -552,13 +552,13 @@ export const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
                     <form onSubmit={handleSendLoginOtp}>
                       <div className="form-group" style={{ marginBottom: '1.25rem' }}>
                         <label className="form-label">
-                          Email Address *
+                          Email Address
                         </label>
                         <div style={{ position: 'relative' }}>
                           <input
                             type="email"
                             className="form-input"
-                            placeholder="Enter your registered email address"
+                            placeholder="Enter your email address"
                             value={otpEmail}
                             onChange={(e) => setOtpEmail(e.target.value)}
                             style={{ paddingLeft: '38px' }}
@@ -871,7 +871,7 @@ export const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
               <div className="form-group" style={{ marginBottom: '0.75rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
                   <label className="form-label" style={{ margin: 0 }}>
-                    Email Address *
+                    Email Address
                   </label>
                   {regEmailVerified && (
                     <span style={{ fontSize: '0.72rem', color: '#059669', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '3px' }}>
@@ -885,7 +885,7 @@ export const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
                     <input
                       type="email"
                       className="form-input"
-                      placeholder="e.g. name@domain.com"
+                      placeholder="Enter your email address"
                       value={regData.email}
                       disabled={regEmailVerified}
                       onChange={(e) => {
