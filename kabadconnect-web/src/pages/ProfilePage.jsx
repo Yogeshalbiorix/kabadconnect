@@ -73,15 +73,27 @@ export const ProfilePage = ({
   // Edit Profile Modal State with Live Location & Postal Pincode Auto-fetch
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editFormData, setEditFormData] = useState({
-    name: currentUser?.name || 'Aarav Sharma',
-    email: currentUser?.email || 'aarav@kabadconnect.com',
-    phone: currentUser?.phone || '+91 98100 23456',
-    address: currentUser?.address || 'Flat 402, Block B, Amrapali Village, Indirapuram',
+    name: currentUser?.name || '',
+    email: currentUser?.email || '',
+    phone: currentUser?.phone || '',
+    address: currentUser?.address || '',
     city: currentUser?.city || 'Delhi NCR',
-    state: currentUser?.state || 'Uttar Pradesh',
-    pincode: currentUser?.pincode || '201014',
-    upiId: currentUser?.upiId || 'aarav.sharma@okhdfcbank'
+    state: currentUser?.state || '',
+    pincode: currentUser?.pincode || '',
+    upiId: currentUser?.upiId || ''
   });
+
+  // Filter orders strictly for the active user (excluding any legacy demo IDs)
+  const userOrders = currentUser 
+    ? orders.filter(o => {
+        if (['KC-7729', 'KC-7681', 'KC-DEMO-1', 'KC-DEMO-2', 'KC-8842', 'KC-8721'].includes(o.id)) return false;
+        if (o.userId && o.userId === currentUser.id) return true;
+        if (currentUser.email && o.customer?.email && o.customer.email.toLowerCase() === currentUser.email.toLowerCase()) return true;
+        if (currentUser.phone && o.customer?.phone && o.customer.phone === currentUser.phone) return true;
+        if (currentUser.role === 'admin') return true;
+        return false;
+      })
+    : [];
 
   const [isDetectingLocation, setIsDetectingLocation] = useState(false);
   const [isFetchingPincode, setIsFetchingPincode] = useState(false);
@@ -691,36 +703,37 @@ export const ProfilePage = ({
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.25rem' }}>
                       <h2 style={{ fontSize: '1.65rem', fontWeight: 800, margin: 0, color: '#0F172A' }}>
-                        {currentUser?.role === 'user' ? currentUser?.name : DEMO_USERS.customer.name}
+                        {currentUser?.name || 'Member'}
                       </h2>
                       <span className="badge badge-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
                         <CheckCircle2 size={13} /> Verified Resident
                       </span>
                       <span className="badge badge-neutral" style={{ background: '#FEF3C7', color: '#92400E', fontWeight: 700 }}>
-                        🌱 Platinum Green Guardian
+                        {currentUser?.totalRecycledKg > 100 ? '🌱 Platinum Green Guardian' : currentUser?.totalRecycledKg > 25 ? '🌿 Silver Green Guardian' : '🌱 New Eco Contributor'}
                       </span>
                     </div>
 
                     <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap', fontSize: '0.85rem', color: 'var(--color-text-muted)', marginBottom: '0.5rem' }}>
                       <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                        <Mail size={14} /> {currentUser?.role === 'user' ? currentUser?.email : DEMO_USERS.customer.email}
+                        <Mail size={14} /> {currentUser?.email || 'No email set'}
                       </span>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                        <Phone size={14} /> {currentUser?.role === 'user' ? currentUser?.phone : DEMO_USERS.customer.phone}
-                      </span>
+                      {currentUser?.phone && (
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                          <Phone size={14} /> {currentUser.phone}
+                        </span>
+                      )}
                       <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                         <MapPin size={14} /> {
                           (() => {
-                            const usr = currentUser?.role === 'user' ? currentUser : DEMO_USERS.customer;
-                            const parts = [usr?.city, usr?.state].filter(Boolean).join(', ');
-                            return `${parts || 'Delhi NCR'}${usr?.pincode ? ` (${usr.pincode})` : ''}`;
+                            const parts = [currentUser?.city, currentUser?.state].filter(Boolean).join(', ');
+                            return `${parts || 'Delhi NCR'}${currentUser?.pincode ? ` (${currentUser.pincode})` : ''}`;
                           })()
                         }
                       </span>
                     </div>
 
                     <div style={{ fontSize: '0.825rem', color: 'var(--color-text-secondary)' }}>
-                      <strong>Primary Address:</strong> {currentUser?.role === 'user' ? (currentUser?.address || 'No address set') : DEMO_USERS.customer.address}
+                      <strong>Primary Address:</strong> {currentUser?.address || 'No address set'}
                     </div>
                   </div>
                 </div>
@@ -861,7 +874,7 @@ export const ProfilePage = ({
                   cursor: 'pointer'
                 }}
               >
-                My Pickup Requests ({orders.length})
+                My Pickup Requests ({userOrders.length})
               </button>
 
               <button
@@ -919,7 +932,7 @@ export const ProfilePage = ({
             {/* SubTab 1: Pickups List */}
             {customerTab === 'pickups' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                {orders.length === 0 ? (
+                {userOrders.length === 0 ? (
                   <div style={{
                     padding: '3rem 1.5rem',
                     textAlign: 'center',
@@ -937,7 +950,7 @@ export const ProfilePage = ({
                     </button>
                   </div>
                 ) : (
-                  orders.map((order) => {
+                  userOrders.map((order) => {
                     const isCancelled = order.status === 'Cancelled';
                     return (
                       <div

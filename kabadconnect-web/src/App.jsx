@@ -91,12 +91,26 @@ export default function App() {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          return parsed.filter(o => !['KC-7729', 'KC-7681', 'KC-DEMO-1', 'KC-DEMO-2'].includes(o.id));
+          const cleaned = parsed.filter(o => !['KC-7729', 'KC-7681', 'KC-DEMO-1', 'KC-DEMO-2', 'KC-8842', 'KC-8721'].includes(o.id));
+          localStorage.setItem('kabadconnect_orders', JSON.stringify(cleaned));
+          return cleaned;
         }
       }
     } catch (e) {}
     return [];
   });
+
+  // Filter orders strictly for the active user
+  const userOrders = currentUser 
+    ? orders.filter(o => {
+        if (['KC-7729', 'KC-7681', 'KC-DEMO-1', 'KC-DEMO-2', 'KC-8842', 'KC-8721'].includes(o.id)) return false;
+        if (o.userId && o.userId === currentUser.id) return true;
+        if (currentUser.email && o.customer?.email && o.customer.email.toLowerCase() === currentUser.email.toLowerCase()) return true;
+        if (currentUser.phone && o.customer?.phone && o.customer.phone === currentUser.phone) return true;
+        if (currentUser.role === 'admin') return true;
+        return false;
+      })
+    : [];
 
   // Centralized Scrap Rates State (allows Admin live editing)
   const [scrapItems, setScrapItems] = useState(SCRAP_ITEMS);
@@ -133,7 +147,7 @@ export default function App() {
   // Dynamic booking state & pickup list
   const [selectedScrapItems, setSelectedScrapItems] = useState([]);
   const [calculatedScrapData, setCalculatedScrapData] = useState(null);
-  const [activeOrder, setActiveOrder] = useState(orders[0] || null);
+  const [activeOrder, setActiveOrder] = useState(null);
 
   // Shopping cart for recycled products (empty by default)
   const [cartItems, setCartItems] = useState(() => {
@@ -654,7 +668,7 @@ export default function App() {
         onOpenAdminPanel={() => setIsAdminPanelOpen(true)}
         onOpenPickupList={() => setIsPickupListOpen(true)}
         pickupCount={selectedScrapItems.length}
-        ordersCount={orders.length}
+        ordersCount={userOrders.length}
         currentPage={currentRoute}
         onNavigate={navigateTo}
       />
@@ -723,7 +737,7 @@ export default function App() {
           <ProfilePage
             currentUser={currentUser}
             onUpdateUser={handleUpdateUser}
-            orders={orders}
+            orders={userOrders}
             onCancelOrder={handleCancelOrder}
             onReorder={handleReorder}
             onUpdateOrder={handleUpdateOrder}
@@ -828,7 +842,7 @@ export default function App() {
       <MyPickupsModal
         isOpen={isMyPickupsOpen}
         onClose={() => setIsMyPickupsOpen(false)}
-        orders={orders}
+        orders={userOrders}
         onCancelOrder={handleCancelOrder}
         onUpdateOrder={handleUpdateOrder}
         onTrackOrder={(order) => {
