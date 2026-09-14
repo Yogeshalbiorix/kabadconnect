@@ -5,7 +5,6 @@ import {
   Mail, 
   User, 
   ShieldCheck, 
-  Sparkles, 
   ArrowRight, 
   CheckCircle2, 
   Eye, 
@@ -43,7 +42,6 @@ export const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
   const [otpCode, setOtpCode] = useState('');
   const [otpSent, setOtpSent] = useState(false);
   const [otpCountdown, setOtpCountdown] = useState(0);
-  const [previewOtp, setPreviewOtp] = useState('');
   
   // Register Form State
   const [regData, setRegData] = useState({
@@ -60,7 +58,6 @@ export const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
   const [regOtpCode, setRegOtpCode] = useState('');
   const [regEmailVerified, setRegEmailVerified] = useState(false);
   const [regCountdown, setRegCountdown] = useState(0);
-  const [regPreviewOtp, setRegPreviewOtp] = useState('');
 
   // Status & Feedback
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -92,7 +89,7 @@ export const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
   if (!isOpen) return null;
 
   // ----------------------------------------------------
-  // OTP Login: Step 1 - Send OTP
+  // OTP Login: Step 1 - Send OTP to Real Email
   // ----------------------------------------------------
   const handleSendLoginOtp = async (e) => {
     if (e) e.preventDefault();
@@ -101,7 +98,7 @@ export const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
 
     const trimmed = otpEmail.trim().toLowerCase();
     if (!trimmed || !trimmed.includes('@')) {
-      setErrorMessage('Please enter a valid email address (e.g. Gmail or Yopmail).');
+      setErrorMessage('Please enter a valid email address.');
       return;
     }
 
@@ -111,15 +108,12 @@ export const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
       if (res.success) {
         setOtpSent(true);
         setOtpCountdown(60);
-        if (res.previewOtp) {
-          setPreviewOtp(res.previewOtp);
-        }
-        setSuccessMessage(res.message || `OTP sent to ${trimmed}`);
+        setSuccessMessage(`✓ Verification code sent to ${trimmed}. Please check your inbox.`);
       } else {
         setErrorMessage(res.error || 'Failed to send OTP. Please check your email.');
       }
     } catch (err) {
-      setErrorMessage(err.message || 'Error sending OTP code.');
+      setErrorMessage(err.message || 'Error sending verification code.');
     } finally {
       setIsSendingOtp(false);
     }
@@ -135,7 +129,7 @@ export const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
 
     const trimmedOtp = otpCode.trim();
     if (!trimmedOtp || trimmedOtp.length !== 6) {
-      setErrorMessage('Please enter the complete 6-digit OTP.');
+      setErrorMessage('Please enter the 6-digit code received on your email.');
       return;
     }
 
@@ -149,10 +143,10 @@ export const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
           onClose();
         }, 600);
       } else {
-        setErrorMessage(res.error || 'Invalid or expired OTP. Please try again.');
+        setErrorMessage(res.error || 'Invalid or expired code. Please check your email and try again.');
       }
     } catch (err) {
-      setErrorMessage(err.message || 'Failed to verify OTP.');
+      setErrorMessage(err.message || 'Failed to verify code.');
     } finally {
       setIsSubmitting(false);
     }
@@ -195,7 +189,7 @@ export const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
   };
 
   // ----------------------------------------------------
-  // Register: Step 1 - Send Email OTP
+  // Register: Step 1 - Send Real Email OTP
   // ----------------------------------------------------
   const handleSendRegOtp = async () => {
     setErrorMessage('');
@@ -203,7 +197,7 @@ export const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
 
     const trimmed = regData.email.trim().toLowerCase();
     if (!trimmed || !trimmed.includes('@')) {
-      setErrorMessage('Please enter a valid email address (Gmail or Yopmail) first.');
+      setErrorMessage('Please enter a valid email address first.');
       return;
     }
 
@@ -213,15 +207,12 @@ export const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
       if (res.success) {
         setRegOtpSent(true);
         setRegCountdown(60);
-        if (res.previewOtp) {
-          setRegPreviewOtp(res.previewOtp);
-        }
-        setSuccessMessage(res.message || `Verification OTP sent to ${trimmed}`);
+        setSuccessMessage(`✓ Verification code sent to ${trimmed}. Please check your inbox.`);
       } else {
         setErrorMessage(res.error || 'Failed to send OTP.');
       }
     } catch (err) {
-      setErrorMessage(err.message || 'Error sending OTP.');
+      setErrorMessage(err.message || 'Error sending code.');
     } finally {
       setIsSendingOtp(false);
     }
@@ -247,10 +238,10 @@ export const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
         setRegEmailVerified(true);
         setSuccessMessage('✓ Email verified successfully! You can now complete your registration.');
       } else {
-        setErrorMessage(res.error || 'Invalid or expired OTP.');
+        setErrorMessage(res.error || 'Invalid or expired code.');
       }
     } catch (err) {
-      setErrorMessage(err.message || 'Failed to verify OTP.');
+      setErrorMessage(err.message || 'Failed to verify code.');
     } finally {
       setIsSubmitting(false);
     }
@@ -273,11 +264,10 @@ export const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
       return;
     }
     if (!regEmailVerified) {
-      // If user entered OTP but didn't click verify yet, check if 6 digits
       if (regOtpCode.trim().length === 6) {
-        // Proceed with verification on server
+        // Will be verified on server
       } else if (regOtpSent) {
-        setErrorMessage('Please enter the 6-digit OTP code to verify your email.');
+        setErrorMessage('Please enter the 6-digit verification code sent to your email.');
         return;
       } else {
         setErrorMessage('Please verify your email with OTP first by clicking "Send OTP".');
@@ -359,7 +349,7 @@ export const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
                 {authMode === 'register' ? 'Create New Account' : 'Account Sign In'}
               </h3>
               <p style={{ fontSize: '0.785rem', color: 'var(--color-text-muted)', margin: 0 }}>
-                {authMode === 'register' ? 'Verify with Gmail or Yopmail OTP' : 'Login via OTP or Password'}
+                {authMode === 'register' ? 'Verify with Email OTP' : 'Login via OTP or Password'}
               </p>
             </div>
           </div>
@@ -488,7 +478,7 @@ export const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
           {/* ============================================================ */}
           {authMode === 'login' && (
             <div>
-              {/* Sign In Method Toggle: Email OTP vs Password */}
+              {/* Sign In Method Toggle */}
               <div style={{
                 display: 'flex',
                 gap: '0.5rem',
@@ -522,7 +512,7 @@ export const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
                   }}
                 >
                   <Mail size={14} />
-                  <span>OTP Login (Gmail / Yopmail)</span>
+                  <span>Email OTP Login</span>
                 </button>
 
                 <button
@@ -562,13 +552,13 @@ export const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
                     <form onSubmit={handleSendLoginOtp}>
                       <div className="form-group" style={{ marginBottom: '1.25rem' }}>
                         <label className="form-label">
-                          Email Address (Gmail / Yopmail) *
+                          Email Address *
                         </label>
                         <div style={{ position: 'relative' }}>
                           <input
                             type="email"
                             className="form-input"
-                            placeholder="e.g. rahul@gmail.com or test@yopmail.com"
+                            placeholder="Enter your registered email address"
                             value={otpEmail}
                             onChange={(e) => setOtpEmail(e.target.value)}
                             style={{ paddingLeft: '38px' }}
@@ -578,7 +568,7 @@ export const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
                           <Mail size={16} color="#94A3B8" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
                         </div>
                         <p style={{ fontSize: '0.75rem', color: '#64748B', marginTop: '0.35rem', marginBottom: 0 }}>
-                          We will send a 6-digit verification code to your email.
+                          We will send a 6-digit verification code to your email inbox.
                         </p>
                       </div>
 
@@ -591,11 +581,11 @@ export const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
                         {isSendingOtp ? (
                           <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem' }}>
                             <Loader2 size={17} className="animate-spin" />
-                            <span>Sending OTP Code...</span>
+                            <span>Sending Email to {otpEmail || 'your inbox'}...</span>
                           </span>
                         ) : (
                           <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem' }}>
-                            <span>Send Verification OTP</span>
+                            <span>Send Verification Code</span>
                             <ArrowRight size={17} />
                           </span>
                         )}
@@ -604,47 +594,10 @@ export const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
                   ) : (
                     /* Step 2: Enter & Verify OTP */
                     <form onSubmit={handleVerifyLoginOtp}>
-                      {/* Simulated / Test OTP Banner */}
-                      {previewOtp && (
-                        <div style={{
-                          background: '#EFF6FF',
-                          border: '1px solid #BFDBFE',
-                          borderRadius: 'var(--radius-md)',
-                          padding: '0.65rem 0.85rem',
-                          marginBottom: '1rem',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          fontSize: '0.825rem',
-                          color: '#1E40AF'
-                        }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                            <KeyRound size={15} color="#2563EB" />
-                            <span>Test OTP: <strong style={{ letterSpacing: '2px', fontFamily: 'monospace', fontSize: '1.05rem', color: '#1D4ED8' }}>{previewOtp}</strong></span>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => setOtpCode(previewOtp)}
-                            style={{
-                              background: '#DBEAFE',
-                              border: 'none',
-                              borderRadius: '4px',
-                              padding: '3px 8px',
-                              fontSize: '0.75rem',
-                              fontWeight: 700,
-                              color: '#1E40AF',
-                              cursor: 'pointer'
-                            }}
-                          >
-                            Auto-fill
-                          </button>
-                        </div>
-                      )}
-
                       <div className="form-group" style={{ marginBottom: '1.25rem' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
                           <label className="form-label" style={{ margin: 0 }}>
-                            Enter 6-Digit OTP Code *
+                            Enter 6-Digit Code *
                           </label>
                           <button
                             type="button"
@@ -685,6 +638,9 @@ export const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
                             required
                           />
                         </div>
+                        <p style={{ fontSize: '0.75rem', color: '#64748B', marginTop: '0.45rem', marginBottom: 0 }}>
+                          Please check your inbox or spam folder for the code sent to <strong>{otpEmail}</strong>.
+                        </p>
                       </div>
 
                       <button
@@ -696,7 +652,7 @@ export const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
                         {isSubmitting ? (
                           <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem' }}>
                             <Loader2 size={17} className="animate-spin" />
-                            <span>Verifying OTP...</span>
+                            <span>Verifying Code...</span>
                           </span>
                         ) : (
                           <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem' }}>
@@ -706,7 +662,7 @@ export const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
                         )}
                       </button>
 
-                      {/* Resend OTP button with countdown */}
+                      {/* Resend OTP with countdown */}
                       <div style={{ textAlign: 'center' }}>
                         {otpCountdown > 0 ? (
                           <span style={{ fontSize: '0.785rem', color: '#64748B' }}>
@@ -730,7 +686,7 @@ export const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
                             }}
                           >
                             <RefreshCw size={13} className={isSendingOtp ? 'animate-spin' : ''} />
-                            <span>Resend OTP Code</span>
+                            <span>Resend Code to Email</span>
                           </button>
                         )}
                       </div>
@@ -816,7 +772,7 @@ export const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
                 </form>
               )}
 
-              {/* Bottom Mode Switcher Link */}
+              {/* Bottom Switcher Link */}
               <div style={{
                 textAlign: 'center',
                 marginTop: '1.25rem',
@@ -847,7 +803,7 @@ export const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
           )}
 
           {/* ============================================================ */}
-          {/* MODE 2: REGISTER / CREATE NEW USER WITH OTP VERIFICATION      */}
+          {/* MODE 2: REGISTER / CREATE NEW USER WITH EMAIL OTP            */}
           {/* ============================================================ */}
           {authMode === 'register' && (
             <form onSubmit={handleRegisterSubmit}>
@@ -915,7 +871,7 @@ export const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
               <div className="form-group" style={{ marginBottom: '0.75rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
                   <label className="form-label" style={{ margin: 0 }}>
-                    Email Address (Gmail / Yopmail) *
+                    Email Address *
                   </label>
                   {regEmailVerified && (
                     <span style={{ fontSize: '0.72rem', color: '#059669', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '3px' }}>
@@ -929,7 +885,7 @@ export const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
                     <input
                       type="email"
                       className="form-input"
-                      placeholder="e.g. name@gmail.com or name@yopmail.com"
+                      placeholder="e.g. name@domain.com"
                       value={regData.email}
                       disabled={regEmailVerified}
                       onChange={(e) => {
@@ -985,39 +941,8 @@ export const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
                   padding: '0.75rem',
                   marginBottom: '0.85rem'
                 }}>
-                  {/* Test OTP Quick-fill */}
-                  {regPreviewOtp && (
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      fontSize: '0.75rem',
-                      color: '#1D4ED8',
-                      marginBottom: '0.5rem',
-                      background: '#EFF6FF',
-                      padding: '4px 8px',
-                      borderRadius: '4px'
-                    }}>
-                      <span>Test OTP: <strong style={{ letterSpacing: '1px' }}>{regPreviewOtp}</strong></span>
-                      <button
-                        type="button"
-                        onClick={() => setRegOtpCode(regPreviewOtp)}
-                        style={{
-                          background: 'none',
-                          border: 'none',
-                          color: '#2563EB',
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                          padding: 0
-                        }}
-                      >
-                        Auto-fill
-                      </button>
-                    </div>
-                  )}
-
                   <label className="form-label" style={{ fontSize: '0.75rem', marginBottom: '0.25rem' }}>
-                    Enter 6-Digit OTP sent to {regData.email}
+                    Enter 6-Digit Code sent to {regData.email}
                   </label>
 
                   <div style={{ display: 'flex', gap: '0.5rem' }}>

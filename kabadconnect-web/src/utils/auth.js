@@ -81,12 +81,12 @@ export const loginUser = async (emailOrPhone, password) => {
 };
 
 /**
- * Send OTP for login or registration via Gmail / Yopmail / SMTP
+ * Send OTP for login or registration via email
  */
 export const sendAuthOtp = async (email, purpose = 'login') => {
   const trimmed = (email || '').trim().toLowerCase();
   if (!trimmed || !trimmed.includes('@')) {
-    return { success: false, error: 'Please provide a valid email address (e.g. Gmail or Yopmail).' };
+    return { success: false, error: 'Please provide a valid email address.' };
   }
   return await apiSendOtp({ email: trimmed, purpose });
 };

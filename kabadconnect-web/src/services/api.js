@@ -247,8 +247,6 @@ export async function apiSendOtp({ email, purpose = 'login' }) {
       return {
         success: true,
         message: data.message,
-        simulated: data.simulated,
-        previewOtp: data.previewOtp,
         email: data.email
       };
     }

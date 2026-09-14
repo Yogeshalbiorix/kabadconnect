@@ -47,27 +47,19 @@ function getTransporter() {
 }
 
 /**
- * Send OTP to user's email address (Gmail, Yopmail, or any provider)
+ * Send OTP to user's email address
  */
 export async function sendOtpEmail({ to, otp, purpose = 'login' }) {
   const actionText = purpose === 'register' ? 'Account Registration' : 'Account Sign In';
   const transporter = getTransporter();
 
-  // If SMTP is not yet configured, log and return simulated response
+  // If SMTP is not yet configured, return error
   if (!transporter) {
-    console.log(`\n========================================`);
-    console.log(`[EMAIL OTP NOTICE] For: ${to}`);
-    console.log(`Purpose: ${actionText}`);
-    console.log(`OTP Code: ${otp}`);
-    console.log(`(Configure GMAIL_USER & GMAIL_APP_PASSWORD in .env for live inbox dispatch)`);
-    console.log(`========================================\n`);
-
+    console.warn(`[EmailService] SMTP transporter not configured for ${to}`);
     return {
-      success: true,
+      success: false,
       delivered: false,
-      simulated: true,
-      otp,
-      message: `OTP sent! (Test OTP: ${otp})`
+      error: 'Email service is not configured. Please set GMAIL_USER and GMAIL_APP_PASSWORD in environment.'
     };
   }
 
@@ -159,14 +151,10 @@ export async function sendOtpEmail({ to, otp, purpose = 'login' }) {
     };
   } catch (err) {
     console.error('[EmailService Error]:', err.message);
-    // Fallback to simulated delivery if sending failed so user is not stuck
     return {
-      success: true,
+      success: false,
       delivered: false,
-      simulated: true,
-      otp,
-      warning: `Email sending error: ${err.message}`,
-      message: `OTP generated (Test code: ${otp})`
+      error: `Failed to deliver email: ${err.message}`
     };
   }
 }

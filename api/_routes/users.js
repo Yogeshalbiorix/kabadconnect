@@ -82,7 +82,7 @@ export default async function handler(req, res) {
     }
 
     // ==========================================
-    // ACTION: SEND OTP (Gmail, Yopmail, any email)
+    // ACTION: SEND OTP (Email verification)
     // ==========================================
     if (action === 'send-otp') {
       const email = (body.email || '').toLowerCase().trim();
@@ -91,7 +91,7 @@ export default async function handler(req, res) {
       if (!email || !email.includes('@')) {
         return res.status(400).json({
           success: false,
-          error: 'Please enter a valid email address (e.g. Gmail or Yopmail).'
+          error: 'Please enter a valid email address.'
         });
       }
 
@@ -126,13 +126,16 @@ export default async function handler(req, res) {
 
         const emailResult = await sendOtpEmail({ to: email, otp: otpCode, purpose });
 
+        if (!emailResult.success) {
+          return res.status(500).json({
+            success: false,
+            error: emailResult.error || 'Failed to deliver OTP email. Please check your email address.'
+          });
+        }
+
         return res.status(200).json({
           success: true,
-          message: emailResult.delivered
-            ? `Verification OTP sent to ${email}. Please check your inbox or spam folder.`
-            : `OTP sent! (Test mode OTP: ${otpCode})`,
-          simulated: emailResult.simulated || false,
-          previewOtp: emailResult.simulated ? otpCode : undefined,
+          message: `Verification code sent to ${email}. Please check your inbox or spam folder.`,
           email,
           purpose
         });
