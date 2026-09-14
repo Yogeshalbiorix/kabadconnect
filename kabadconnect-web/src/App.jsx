@@ -29,7 +29,7 @@ import { INITIAL_ORDERS } from './data/mockOrders';
 import { SCRAP_ITEMS } from './data/scrapRates';
 import { INITIAL_MARKETPLACE_ITEMS } from './data/marketplaceItems';
 import { KABADWALA_PARTNERS } from './data/kabadwalas';
-import { getUserCoordinates, reverseGeocodeMapbox } from './utils/geolocation';
+import { getUserCoordinates, reverseGeocodeMapbox, fetchIpLocation, resolveCityFullName } from './utils/geolocation';
 import { getMapboxToken } from './utils/mapboxConfig';
 import { getCurrentUser, saveAuthUser, logoutUser } from './utils/auth';
 import { 
@@ -50,9 +50,28 @@ import { initSmoothScroll, destroySmoothScroll, getLenis } from './utils/smoothS
 
 export default function App() {
   const [currentRoute, navigateTo] = useHashRoute();
-  const [activeCity, setActiveCity] = useState('Delhi NCR (Indirapuram / Noida)');
-  const [userLocation, setUserLocation] = useState(null);
+  const [activeCity, setActiveCity] = useState(() => {
+    try {
+      const saved = localStorage.getItem('kabadconnect_active_city');
+      if (saved) return saved;
+    } catch (e) {}
+    return 'Delhi NCR (Indirapuram / Noida)';
+  });
+  const [userLocation, setUserLocation] = useState(() => {
+    try {
+      const saved = localStorage.getItem('kabadconnect_user_location');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return null;
+  });
   const [isDetectingLocation, setIsDetectingLocation] = useState(false);
+
+  const handleSetActiveCity = (city) => {
+    setActiveCity(city);
+    try {
+      localStorage.setItem('kabadconnect_active_city', city);
+    } catch (e) {}
+  };
 
   // Database Connection Health State (MongoDB Atlas / Vercel Serverless)
   const [dbStatus, setDbStatus] = useState({
@@ -507,33 +526,82 @@ export default function App() {
     setCartItems([]);
   };
 
-  // Location detection
-  const handleDetectLocation = async () => {
+  // Auto-detect user current location on startup (GPS if permitted, or instant IP fallback)
+  useEffect(() => {
+    const autoDetect = async () => {
+      const savedCity = localStorage.getItem('kabadconnect_active_city');
+      // If user hasn't explicitly chosen a city or if it's the default Delhi, auto-detect actual location!
+      if (!savedCity || savedCity === 'Delhi NCR (Indirapuram / Noida)') {
+        await handleDetectLocation({ silent: true });
+      }
+    };
+    autoDetect();
+  }, []);
+
+  // Location detection (GPS with instant IP fallback)
+  const handleDetectLocation = async (opts = {}) => {
+    const { silent = false } = typeof opts === 'object' && opts !== null ? opts : {};
     setIsDetectingLocation(true);
     try {
-      const coords = await getUserCoordinates();
-      const token = getMapboxToken();
-      const geo = await reverseGeocodeMapbox(coords.longitude, coords.latitude, token);
-      setUserLocation(geo);
+      let geo = null;
 
-      if (geo.city?.toLowerCase().includes('ahmedabad')) {
-        setActiveCity('Ahmedabad (SG Highway / Prahlad Nagar)');
-      } else if (geo.city?.toLowerCase().includes('delhi') || geo.state?.toLowerCase().includes('delhi')) {
-        setActiveCity('Delhi NCR (Indirapuram / Noida)');
-      } else if (geo.city?.toLowerCase().includes('bengaluru') || geo.city?.toLowerCase().includes('bangalore')) {
-        setActiveCity('Bengaluru (Koramangala / HSR)');
-      } else if (geo.city?.toLowerCase().includes('mumbai')) {
-        setActiveCity('Mumbai (Bandra / Andheri)');
-      } else if (geo.city?.toLowerCase().includes('gurugram') || geo.city?.toLowerCase().includes('gurgaon')) {
-        setActiveCity('Gurugram (Cyber City / Sohna Rd)');
-      } else if (geo.city) {
-        setActiveCity(`${geo.city} (${geo.locality || 'Doorstep Area'})`);
+      // 1. Try Browser GPS first if permission is already granted or user clicked explicitly
+      let canUseGps = false;
+      if (navigator.permissions && navigator.permissions.query) {
+        try {
+          const status = await navigator.permissions.query({ name: 'geolocation' });
+          if (status.state === 'granted') {
+            canUseGps = true;
+          } else if (!silent && status.state === 'prompt') {
+            canUseGps = true;
+          }
+        } catch (e) {
+          if (!silent) canUseGps = true;
+        }
+      } else if (!silent) {
+        canUseGps = true;
       }
 
-      return geo;
+      if (canUseGps) {
+        try {
+          const coords = await getUserCoordinates();
+          const token = getMapboxToken();
+          geo = await reverseGeocodeMapbox(coords.longitude, coords.latitude, token);
+        } catch (gpsErr) {
+          console.log('[Location] GPS detection skipped or unavailable, falling back to IP:', gpsErr.message);
+        }
+      }
+
+      // 2. If GPS didn't return a location, fallback to fast IP Geolocation (e.g. Ahmedabad)
+      if (!geo) {
+        geo = await fetchIpLocation();
+      }
+
+      // 3. Update state & localStorage if location resolved
+      if (geo && geo.city) {
+        setUserLocation(geo);
+        try {
+          localStorage.setItem('kabadconnect_user_location', JSON.stringify(geo));
+        } catch (e) {}
+
+        const hubCity = resolveCityFullName(geo.city, geo.state, geo.locality);
+        setActiveCity(hubCity);
+        try {
+          localStorage.setItem('kabadconnect_active_city', hubCity);
+        } catch (e) {}
+
+        return geo;
+      }
+
+      if (!silent) {
+        alert('Could not detect your current location. Please check browser permissions.');
+      }
+      return null;
     } catch (err) {
       console.error('Location detection failed:', err);
-      alert(err.message || 'Could not detect your current location. Please check browser permissions.');
+      if (!silent) {
+        alert(err.message || 'Could not detect your current location. Please check browser permissions.');
+      }
       return null;
     } finally {
       setIsDetectingLocation(false);
@@ -551,7 +619,7 @@ export default function App() {
         onOpenSellModal={() => setIsSellModalOpen(true)}
         cartCount={cartItems.reduce((acc, item) => acc + item.quantity, 0)}
         activeCity={activeCity}
-        setActiveCity={setActiveCity}
+        setActiveCity={handleSetActiveCity}
         userLocation={userLocation}
         onDetectLocation={handleDetectLocation}
         isDetectingLocation={isDetectingLocation}

@@ -424,3 +424,121 @@ export const detectCurrentLocationWithAddress = async (token = '') => {
   };
 };
 
+/**
+ * Fast IP-based Geolocation resolution (No browser permission required)
+ * Uses ipwho.is with fallback to bigdatacloud reverse-geocode-client.
+ * @returns {Promise<{
+ *   fullAddress: string,
+ *   locality: string,
+ *   city: string,
+ *   pincode: string,
+ *   state: string,
+ *   country: string,
+ *   coords: [number, number],
+ *   lngLat: [number, number]
+ * } | null>}
+ */
+export const fetchIpLocation = async () => {
+  // Provider 1: ipwho.is (fast, HTTPS, CORS enabled)
+  try {
+    const res = await fetch('https://ipwho.is/');
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.success !== false && data.city) {
+        const lat = Number(data.latitude);
+        const lng = Number(data.longitude);
+        return {
+          fullAddress: `${data.city}, ${data.region || ''}, ${data.country || 'India'}`.replace(', ,', ','),
+          locality: data.city,
+          city: data.city,
+          pincode: data.postal || '',
+          state: data.region || '',
+          country: data.country || 'India',
+          coords: [lat, lng],
+          lngLat: [lng, lat]
+        };
+      }
+    }
+  } catch (err) {
+    console.warn('[Geolocation] ipwho.is lookup failed, trying backup provider:', err.message);
+  }
+
+  // Provider 2: bigdatacloud reverse-geocode-client
+  try {
+    const res = await fetch('https://api.bigdatacloud.net/data/reverse-geocode-client');
+    if (res.ok) {
+      const data = await res.json();
+      if (data && (data.city || data.locality)) {
+        const city = data.city || data.locality;
+        const lat = Number(data.latitude);
+        const lng = Number(data.longitude);
+        return {
+          fullAddress: `${city}, ${data.principalSubdivision || ''}, ${data.countryName || 'India'}`,
+          locality: data.locality || city,
+          city: city,
+          pincode: data.postcode || '',
+          state: data.principalSubdivision || '',
+          country: data.countryName || 'India',
+          coords: [lat, lng],
+          lngLat: [lng, lat]
+        };
+      }
+    }
+  } catch (err) {
+    console.warn('[Geolocation] bigdatacloud lookup failed:', err.message);
+  }
+
+  return null;
+};
+
+/**
+ * Resolves any raw detected city name into the app's standard city hub names
+ * @param {string} city
+ * @param {string} state
+ * @param {string} locality
+ * @returns {string} Hub full name (e.g. "Ahmedabad (SG Highway / Prahlad Nagar)")
+ */
+export const resolveCityFullName = (city = '', state = '', locality = '') => {
+  const c = (city || '').toLowerCase();
+  const s = (state || '').toLowerCase();
+
+  if (c.includes('ahmedabad') || (s.includes('gujarat') && c.includes('ahmedabad'))) {
+    return 'Ahmedabad (SG Highway / Prahlad Nagar)';
+  }
+  if (c.includes('gurugram') || c.includes('gurgaon')) {
+    return 'Gurugram (Cyber City / Sohna Rd)';
+  }
+  if (c.includes('ghaziabad') || c.includes('vaishali') || c.includes('indirapuram')) {
+    return 'Ghaziabad & Vaishali';
+  }
+  if (c.includes('bengaluru') || c.includes('bangalore')) {
+    return 'Bengaluru (Koramangala / HSR)';
+  }
+  if (c.includes('mumbai') || c.includes('bombay') || c.includes('thane') || c.includes('navi mumbai')) {
+    return 'Mumbai (Bandra / Andheri)';
+  }
+  if (c.includes('delhi') || s.includes('delhi') || c.includes('noida')) {
+    return 'Delhi NCR (Indirapuram / Noida)';
+  }
+  if (c.includes('pune')) {
+    return 'Pune (Kothrud / Hinjewadi)';
+  }
+  if (c.includes('hyderabad')) {
+    return 'Hyderabad (Gachibowli / Hitech City)';
+  }
+  if (c.includes('jaipur')) {
+    return 'Jaipur (Malviya Nagar / Mansarovar)';
+  }
+  if (c.includes('kolkata')) {
+    return 'Kolkata (Salt Lake / New Town)';
+  }
+  if (c.includes('chennai')) {
+    return 'Chennai (OMR / Anna Nagar)';
+  }
+  if (city) {
+    return `${city} (${locality || 'Doorstep Area'})`;
+  }
+  return 'Delhi NCR (Indirapuram / Noida)';
+};
+
+
