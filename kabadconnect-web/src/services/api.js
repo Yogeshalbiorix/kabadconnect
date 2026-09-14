@@ -236,6 +236,60 @@ export async function apiLoginUser(credentials) {
   }
 }
 
+export async function apiSendOtp({ email, purpose = 'login' }) {
+  try {
+    const res = await fetchWithTimeout(`${API_BASE}/users?action=send-otp`, {
+      method: 'POST',
+      body: JSON.stringify({ email, purpose })
+    }, 12000);
+    const data = await res.json();
+    if (res.ok && data.success) {
+      return {
+        success: true,
+        message: data.message,
+        simulated: data.simulated,
+        previewOtp: data.previewOtp,
+        email: data.email
+      };
+    }
+    return { success: false, error: data.error || 'Failed to send OTP.' };
+  } catch (err) {
+    return { success: false, error: err.message || 'Network error sending OTP.' };
+  }
+}
+
+export async function apiVerifyOtpLogin({ email, otp }) {
+  try {
+    const res = await fetchWithTimeout(`${API_BASE}/users?action=verify-otp-login`, {
+      method: 'POST',
+      body: JSON.stringify({ email, otp })
+    }, 10000);
+    const data = await res.json();
+    if (res.ok && data.success) {
+      return { success: true, user: data.data, message: data.message };
+    }
+    return { success: false, error: data.error || 'Invalid or expired OTP.' };
+  } catch (err) {
+    return { success: false, error: err.message || 'Network error verifying OTP.' };
+  }
+}
+
+export async function apiVerifyOtpRegister({ email, otp }) {
+  try {
+    const res = await fetchWithTimeout(`${API_BASE}/users?action=verify-otp-register`, {
+      method: 'POST',
+      body: JSON.stringify({ email, otp })
+    }, 10000);
+    const data = await res.json();
+    if (res.ok && data.success) {
+      return { success: true, message: data.message };
+    }
+    return { success: false, error: data.error || 'Invalid or expired OTP.' };
+  } catch (err) {
+    return { success: false, error: err.message || 'Network error verifying OTP.' };
+  }
+}
+
 export async function apiUpdateUserProfile(identifier, updates) {
   try {
     const param = identifier && identifier.includes('@') 

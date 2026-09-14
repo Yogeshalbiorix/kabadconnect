@@ -1,5 +1,7 @@
 import { connectToDatabase, isDbConfigured } from '../_lib/dbConnect.js';
 import User, { hashPassword, verifyPassword } from '../_models/User.js';
+import Otp from '../_models/Otp.js';
+import { sendOtpEmail } from '../_lib/emailService.js';
 
 export default async function handler(req, res) {
   // CORS Headers
@@ -77,6 +79,156 @@ export default async function handler(req, res) {
         success: false,
         error: 'MongoDB Atlas is not configured. Please check MONGODB_URI in .env.'
       });
+    }
+
+    // ==========================================
+    // ACTION: SEND OTP (Gmail, Yopmail, any email)
+    // ==========================================
+    if (action === 'send-otp') {
+      const email = (body.email || '').toLowerCase().trim();
+      const purpose = body.purpose === 'register' ? 'register' : 'login';
+
+      if (!email || !email.includes('@')) {
+        return res.status(400).json({
+          success: false,
+          error: 'Please enter a valid email address (e.g. Gmail or Yopmail).'
+        });
+      }
+
+      try {
+        await connectToDatabase();
+
+        const user = await User.findOne({ email }).lean();
+
+        if (purpose === 'login' && !user) {
+          return res.status(404).json({
+            success: false,
+            error: `No account found with ${email}. Please register a new account first.`
+          });
+        }
+
+        if (purpose === 'register' && user) {
+          return res.status(409).json({
+            success: false,
+            error: `An account already exists with ${email}. Please sign in instead.`
+          });
+        }
+
+        // Generate 6-digit numeric OTP
+        const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+        const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes expiry
+
+        await Otp.findOneAndUpdate(
+          { email, purpose },
+          { otp: otpCode, expiresAt },
+          { upsert: true, returnDocument: 'after' }
+        );
+
+        const emailResult = await sendOtpEmail({ to: email, otp: otpCode, purpose });
+
+        return res.status(200).json({
+          success: true,
+          message: emailResult.delivered
+            ? `Verification OTP sent to ${email}. Please check your inbox or spam folder.`
+            : `OTP sent! (Test mode OTP: ${otpCode})`,
+          simulated: emailResult.simulated || false,
+          previewOtp: emailResult.simulated ? otpCode : undefined,
+          email,
+          purpose
+        });
+      } catch (err) {
+        console.error('[API Send OTP Error]:', err);
+        return res.status(500).json({ success: false, error: err.message || 'Failed to send OTP.' });
+      }
+    }
+
+    // ==========================================
+    // ACTION: VERIFY OTP FOR SIGN IN / LOGIN
+    // ==========================================
+    if (action === 'verify-otp-login') {
+      const email = (body.email || '').toLowerCase().trim();
+      const otp = (body.otp || '').trim();
+
+      if (!email || !otp) {
+        return res.status(400).json({ success: false, error: 'Email and 6-digit OTP are required.' });
+      }
+
+      try {
+        await connectToDatabase();
+
+        const otpRecord = await Otp.findOne({
+          email,
+          purpose: 'login',
+          expiresAt: { $gt: new Date() }
+        });
+
+        if (!otpRecord || otpRecord.otp !== otp) {
+          return res.status(400).json({
+            success: false,
+            error: 'Invalid or expired OTP. Please check your code or request a new one.'
+          });
+        }
+
+        // Delete used OTP
+        await Otp.deleteOne({ _id: otpRecord._id });
+
+        const user = await User.findOne({ email }).lean();
+        if (!user) {
+          return res.status(404).json({
+            success: false,
+            error: 'No user account found for this email. Please register.'
+          });
+        }
+
+        delete user.password;
+
+        return res.status(200).json({
+          success: true,
+          source: 'mongodb',
+          message: `Welcome back, ${user.name}!`,
+          data: user
+        });
+      } catch (err) {
+        console.error('[API Verify OTP Login Error]:', err);
+        return res.status(500).json({ success: false, error: err.message || 'OTP verification failed.' });
+      }
+    }
+
+    // ==========================================
+    // ACTION: VERIFY OTP FOR REGISTRATION (Pre-check)
+    // ==========================================
+    if (action === 'verify-otp-register') {
+      const email = (body.email || '').toLowerCase().trim();
+      const otp = (body.otp || '').trim();
+
+      if (!email || !otp) {
+        return res.status(400).json({ success: false, error: 'Email and 6-digit OTP are required.' });
+      }
+
+      try {
+        await connectToDatabase();
+
+        const otpRecord = await Otp.findOne({
+          email,
+          purpose: 'register',
+          expiresAt: { $gt: new Date() }
+        });
+
+        if (!otpRecord || otpRecord.otp !== otp) {
+          return res.status(400).json({
+            success: false,
+            error: 'Invalid or expired OTP. Please check your code or request a new one.'
+          });
+        }
+
+        return res.status(200).json({
+          success: true,
+          message: 'Email successfully verified!'
+        });
+      } catch (err) {
+        console.error('[API Verify OTP Register Error]:', err);
+        return res.status(500).json({ success: false, error: err.message || 'OTP verification failed.' });
+      }
     }
 
     // ==========================================
@@ -163,6 +315,25 @@ export default async function handler(req, res) {
         });
       }
 
+      // If OTP is provided, verify against the OTP record
+      if (body.otp) {
+        const otpRecord = await Otp.findOne({
+          email,
+          purpose: 'register',
+          expiresAt: { $gt: new Date() }
+        });
+
+        if (!otpRecord || otpRecord.otp !== body.otp.toString().trim()) {
+          return res.status(400).json({
+            success: false,
+            error: 'Invalid or expired OTP. Please verify your email before registering.'
+          });
+        }
+
+        // Cleanup used OTP
+        await Otp.deleteOne({ _id: otpRecord._id });
+      }
+
       // Hash password
       const hashedPassword = hashPassword(rawPassword);
 
@@ -240,7 +411,7 @@ export default async function handler(req, res) {
       const updated = await User.findOneAndUpdate(
         filter,
         { $set: updateData },
-        { new: true }
+        { returnDocument: 'after' }
       ).select('-password').lean();
 
       return res.status(200).json({

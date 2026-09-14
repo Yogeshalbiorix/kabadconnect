@@ -1,5 +1,5 @@
 {
-  "buildCommand": "cd kabadconnect-web && npm install && npm run build",
+  "buildCommand": "npm install && cd kabadconnect-web && npm install && npm run build",
   "outputDirectory": "kabadconnect-web/dist",
   "framework": "vite",
   "rewrites": [

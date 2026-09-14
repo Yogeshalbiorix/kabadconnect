@@ -4,7 +4,13 @@
  * Persists authenticated session in localStorage.
  */
 
-import { apiLoginUser, apiRegisterUser } from '../services/api';
+import {
+  apiLoginUser,
+  apiRegisterUser,
+  apiSendOtp,
+  apiVerifyOtpLogin,
+  apiVerifyOtpRegister
+} from '../services/api';
 
 const AUTH_STORAGE_KEY = 'kabadconnect_auth_user';
 const AUTH_IS_LOGGED_IN_KEY = 'kabadconnect_is_authenticated';
@@ -72,6 +78,51 @@ export const loginUser = async (emailOrPhone, password) => {
   }
 
   return { success: false, error: result.error || 'Invalid credentials. Please check your details.' };
+};
+
+/**
+ * Send OTP for login or registration via Gmail / Yopmail / SMTP
+ */
+export const sendAuthOtp = async (email, purpose = 'login') => {
+  const trimmed = (email || '').trim().toLowerCase();
+  if (!trimmed || !trimmed.includes('@')) {
+    return { success: false, error: 'Please provide a valid email address (e.g. Gmail or Yopmail).' };
+  }
+  return await apiSendOtp({ email: trimmed, purpose });
+};
+
+/**
+ * Login using 6-digit OTP
+ */
+export const loginWithOtp = async (email, otp) => {
+  const trimmedEmail = (email || '').trim().toLowerCase();
+  const trimmedOtp = (otp || '').trim();
+
+  if (!trimmedEmail || !trimmedEmail.includes('@')) {
+    return { success: false, error: 'Please provide a valid email address.' };
+  }
+  if (!trimmedOtp || trimmedOtp.length !== 6) {
+    return { success: false, error: 'Please enter the complete 6-digit OTP.' };
+  }
+
+  const result = await apiVerifyOtpLogin({ email: trimmedEmail, otp: trimmedOtp });
+  if (result.success && result.user) {
+    saveAuthUser(result.user);
+    return { success: true, user: result.user, message: result.message };
+  }
+  return { success: false, error: result.error || 'Failed to verify OTP.' };
+};
+
+/**
+ * Verify OTP for registration pre-check
+ */
+export const verifyRegisterOtp = async (email, otp) => {
+  const trimmedEmail = (email || '').trim().toLowerCase();
+  const trimmedOtp = (otp || '').trim();
+  if (!trimmedEmail || !trimmedOtp) {
+    return { success: false, error: 'Email and 6-digit OTP are required.' };
+  }
+  return await apiVerifyOtpRegister({ email: trimmedEmail, otp: trimmedOtp });
 };
 
 /**
