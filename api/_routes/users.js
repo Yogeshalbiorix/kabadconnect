@@ -1,5 +1,5 @@
-import { connectToDatabase, isDbConfigured } from './lib/dbConnect.js';
-import User from './models/User.js';
+import { connectToDatabase, isDbConfigured } from '../_lib/dbConnect.js';
+import User from '../_models/User.js';
 
 export default async function handler(req, res) {
   // CORS Headers

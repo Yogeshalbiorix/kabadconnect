@@ -1,6 +1,6 @@
-import { connectToDatabase, isDbConfigured } from './lib/dbConnect.js';
-import Partner from './models/Partner.js';
-import { DEFAULT_PARTNERS } from './lib/seedData.js';
+import { connectToDatabase, isDbConfigured } from '../_lib/dbConnect.js';
+import Partner from '../_models/Partner.js';
+import { DEFAULT_PARTNERS } from '../_lib/seedData.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Credentials', true);

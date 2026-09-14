@@ -1,6 +1,6 @@
-import { connectToDatabase, isDbConfigured } from './lib/dbConnect.js';
-import ScrapRate from './models/ScrapRate.js';
-import { DEFAULT_SCRAP_ITEMS } from './lib/seedData.js';
+import { connectToDatabase, isDbConfigured } from '../_lib/dbConnect.js';
+import ScrapRate from '../_models/ScrapRate.js';
+import { DEFAULT_SCRAP_ITEMS } from '../_lib/seedData.js';
 
 export default async function handler(req, res) {
   // CORS Headers

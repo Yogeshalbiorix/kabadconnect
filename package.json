@@ -7,7 +7,9 @@
   "scripts": {
     "dev": "npm --prefix kabadconnect-web run dev",
     "build": "npm --prefix kabadconnect-web run build",
-    "preview": "npm --prefix kabadconnect-web run preview"
+    "preview": "npm --prefix kabadconnect-web run preview",
+    "test-db": "node scripts/test-db.js",
+    "seed-db": "node scripts/seed-db.js"
   },
   "dependencies": {
     "dotenv": "^17.4.2",

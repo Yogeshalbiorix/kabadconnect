@@ -1,18 +1,18 @@
 import fs from 'fs';
 import path from 'path';
-import { connectToDatabase, resetConnection, setMongoUri, getMongoUri, isDbConfigured } from './lib/dbConnect.js';
-import ScrapRate from './models/ScrapRate.js';
-import Partner from './models/Partner.js';
-import MarketplaceItem from './models/MarketplaceItem.js';
-import Order from './models/Order.js';
-import User from './models/User.js';
+import { connectToDatabase, resetConnection, setMongoUri, getMongoUri, isDbConfigured } from '../_lib/dbConnect.js';
+import ScrapRate from '../_models/ScrapRate.js';
+import Partner from '../_models/Partner.js';
+import MarketplaceItem from '../_models/MarketplaceItem.js';
+import Order from '../_models/Order.js';
+import User from '../_models/User.js';
 import {
   DEFAULT_SCRAP_ITEMS,
   DEFAULT_PARTNERS,
   DEFAULT_MARKETPLACE_ITEMS,
   DEFAULT_ORDERS,
   DEFAULT_USERS
-} from './lib/seedData.js';
+} from '../_lib/seedData.js';
 
 function updateEnvFile(filePath, key, value) {
   try {

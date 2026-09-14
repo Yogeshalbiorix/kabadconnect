@@ -1,16 +1,16 @@
-import { connectToDatabase, isDbConfigured } from './lib/dbConnect.js';
-import Order from './models/Order.js';
-import ScrapRate from './models/ScrapRate.js';
-import Partner from './models/Partner.js';
-import MarketplaceItem from './models/MarketplaceItem.js';
-import User from './models/User.js';
+import { connectToDatabase, isDbConfigured } from '../_lib/dbConnect.js';
+import Order from '../_models/Order.js';
+import ScrapRate from '../_models/ScrapRate.js';
+import Partner from '../_models/Partner.js';
+import MarketplaceItem from '../_models/MarketplaceItem.js';
+import User from '../_models/User.js';
 import { 
   DEFAULT_SCRAP_ITEMS, 
   DEFAULT_PARTNERS, 
   DEFAULT_MARKETPLACE_ITEMS,
   DEFAULT_ORDERS,
   DEFAULT_USERS
-} from './lib/seedData.js';
+} from '../_lib/seedData.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Credentials', true);

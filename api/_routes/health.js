@@ -1,4 +1,4 @@
-import { connectToDatabase, isDbConfigured, getMongoUri } from './lib/dbConnect.js';
+import { connectToDatabase, isDbConfigured, getMongoUri } from '../_lib/dbConnect.js';
 
 export default async function handler(req, res) {
   // CORS Headers

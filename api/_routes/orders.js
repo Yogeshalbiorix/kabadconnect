@@ -1,5 +1,5 @@
-import { connectToDatabase, isDbConfigured } from './lib/dbConnect.js';
-import Order from './models/Order.js';
+import { connectToDatabase, isDbConfigured } from '../_lib/dbConnect.js';
+import Order from '../_models/Order.js';
 
 // Fallback initial demo orders if DB is not yet populated
 const INITIAL_DEMO_ORDERS = [

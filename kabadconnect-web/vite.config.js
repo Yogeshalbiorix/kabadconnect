@@ -14,13 +14,6 @@ function vercelServerlessDevPlugin() {
           return next()
         }
 
-        const url = new URL(req.url, 'http://localhost')
-        const endpoint = url.pathname.replace(/^\/api\/?/, '').split('?')[0]
-
-        if (!endpoint) {
-          return next()
-        }
-
         // Polyfill Vercel res helper methods immediately
         if (!res.status) {
           res.status = function (code) {
@@ -37,7 +30,8 @@ function vercelServerlessDevPlugin() {
         }
 
         try {
-          const apiFile = path.resolve(__dirname, 'api', `${endpoint}.js`)
+          // Unified API router in root /api/index.js
+          const apiFile = path.resolve(__dirname, '../api/index.js')
           const fileUrl = `${pathToFileURL(apiFile).href}?t=${Date.now()}`
           const module = await import(fileUrl)
           const handler = module.default
@@ -47,10 +41,11 @@ function vercelServerlessDevPlugin() {
           }
 
           // Parse query parameters
+          const url = new URL(req.url, 'http://localhost')
           req.query = Object.fromEntries(url.searchParams.entries())
 
           // Parse body for mutations
-          if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
+          if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
             let body = ''
             req.on('data', (chunk) => {
               body += chunk
@@ -86,5 +81,7 @@ function vercelServerlessDevPlugin() {
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), vercelServerlessDevPlugin()],
+  build: {
+    chunkSizeWarningLimit: 3000,
+  }
 })
-

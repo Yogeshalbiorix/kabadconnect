@@ -1,6 +1,6 @@
-import { connectToDatabase, isDbConfigured } from './lib/dbConnect.js';
-import MarketplaceItem from './models/MarketplaceItem.js';
-import { DEFAULT_MARKETPLACE_ITEMS } from './lib/seedData.js';
+import { connectToDatabase, isDbConfigured } from '../_lib/dbConnect.js';
+import MarketplaceItem from '../_models/MarketplaceItem.js';
+import { DEFAULT_MARKETPLACE_ITEMS } from '../_lib/seedData.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Credentials', true);
