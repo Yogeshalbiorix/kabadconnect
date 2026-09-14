@@ -124,12 +124,13 @@ export const Navbar = ({
       <div style={{
         background: 'linear-gradient(90deg, #072e1c 0%, #0D5C3A 50%, #072e1c 100%)',
         color: '#FFFFFF',
-        padding: '0.45rem clamp(0.75rem, 2vw, 2rem)',
+        padding: '0.4rem clamp(0.75rem, 2vw, 2rem)',
         fontSize: '0.825rem',
         borderBottom: '1px solid rgba(16, 185, 129, 0.2)',
         width: '100%',
         maxWidth: '100vw',
-        overflow: 'hidden'
+        position: 'relative',
+        zIndex: 950
       }}>
         <div style={{
           width: '100%',
@@ -159,10 +160,159 @@ export const Navbar = ({
             </span>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }} className="hide-on-mobile">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'nowrap' }}>
+            {/* City Locality Dropdown Selector moved to Topbar */}
+            <div ref={cityDropdownRef} style={{ position: 'relative' }}>
+              <button
+                onClick={() => {
+                  setCityDropdownOpen(prev => !prev);
+                  setUserMenuOpen(false);
+                }}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.3rem',
+                  padding: '0.22rem 0.65rem',
+                  background: 'rgba(255, 255, 255, 0.12)',
+                  border: '1px solid rgba(52, 211, 153, 0.45)',
+                  borderRadius: 'var(--radius-full)',
+                  fontSize: '0.76rem',
+                  fontWeight: 800,
+                  color: '#FFFFFF',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  boxShadow: '0 2px 6px rgba(0, 0, 0, 0.15)',
+                  whiteSpace: 'nowrap'
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.22)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.12)'; }}
+                title={`Active Region: ${activeCity}`}
+                aria-label={`City Short Code: ${activeShortCode}`}
+              >
+                <MapPin size={13} color="#34D399" />
+                <span style={{ letterSpacing: '0.04em', color: '#34D399' }}>
+                  {activeShortCode}
+                </span>
+                <ChevronDown size={12} color="#E2E8F0" />
+              </button>
+
+              {cityDropdownOpen && (
+                <div style={{
+                  position: 'absolute',
+                  top: '125%',
+                  right: 0,
+                  width: '290px',
+                  background: '#FFFFFF',
+                  borderRadius: 'var(--radius-md)',
+                  boxShadow: '0 10px 30px rgba(0,0,0,0.3)',
+                  border: '1px solid var(--color-border)',
+                  padding: '0.65rem',
+                  zIndex: 1100,
+                  animation: 'scaleUp 0.15s ease',
+                  color: 'var(--color-text-primary)'
+                }}>
+                  {/* Auto-Detect Location Button */}
+                  <button
+                    onClick={async () => {
+                      if (onDetectLocation) {
+                        await onDetectLocation({ silent: false });
+                      }
+                      setCityDropdownOpen(false);
+                    }}
+                    disabled={isDetectingLocation}
+                    style={{
+                      width: '100%',
+                      textAlign: 'left',
+                      padding: '0.6rem 0.75rem',
+                      borderRadius: 'var(--radius-sm)',
+                      fontSize: '0.85rem',
+                      color: '#FFFFFF',
+                      fontWeight: 700,
+                      background: 'linear-gradient(135deg, #0D5C3A 0%, #10B981 100%)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      marginBottom: '0.65rem',
+                      boxShadow: 'var(--shadow-xs)',
+                      cursor: isDetectingLocation ? 'wait' : 'pointer'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      {isDetectingLocation ? <Loader2 size={15} className="animate-spin" /> : <Locate size={15} />}
+                      <span>{isDetectingLocation ? 'Detecting GPS...' : 'Use Current Location'}</span>
+                    </div>
+                    <span style={{ fontSize: '0.65rem', background: 'rgba(255,255,255,0.25)', padding: '2px 6px', borderRadius: '4px' }}>
+                      LIVE GPS
+                    </span>
+                  </button>
+
+                  <div style={{
+                    fontSize: '0.725rem',
+                    fontWeight: 700,
+                    color: 'var(--color-text-muted)',
+                    padding: '0.25rem 0.5rem',
+                    textTransform: 'uppercase'
+                  }}>
+                    Select City Hub
+                  </div>
+                  {CITIES.map((city) => {
+                    const isSelected = activeCity === city.fullName;
+                    return (
+                      <button
+                        key={city.fullName}
+                        onClick={() => {
+                          setActiveCity(city.fullName);
+                          setCityDropdownOpen(false);
+                        }}
+                        style={{
+                          width: '100%',
+                          textAlign: 'left',
+                          padding: '0.5rem 0.65rem',
+                          borderRadius: 'var(--radius-sm)',
+                          fontSize: '0.825rem',
+                          color: isSelected ? 'var(--color-primary)' : 'var(--color-text-primary)',
+                          fontWeight: isSelected ? 700 : 500,
+                          background: isSelected ? 'var(--color-accent-mint-soft)' : 'transparent',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          border: 'none',
+                          cursor: 'pointer',
+                          margin: '2px 0',
+                          transition: 'background 0.15s ease'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
+                          <span style={{
+                            fontSize: '0.7rem',
+                            fontWeight: 800,
+                            padding: '2px 6px',
+                            borderRadius: '4px',
+                            background: isSelected ? 'var(--color-primary)' : '#E2E8F0',
+                            color: isSelected ? '#FFFFFF' : '#334155',
+                            letterSpacing: '0.04em'
+                          }}>
+                            {city.code}
+                          </span>
+                          <div>
+                            <div style={{ fontWeight: 600, lineHeight: 1.2 }}>{city.name}</div>
+                            <div style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)' }}>{city.zone}</div>
+                          </div>
+                        </div>
+                        {isSelected && <span style={{ color: 'var(--color-accent-mint)', fontWeight: 800 }}>✓</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            <span style={{ opacity: 0.4 }} className="hide-on-mobile">|</span>
+
             {/* My Pickups Shortcut */}
             <button 
               onClick={onOpenMyPickups}
+              className="hide-on-mobile"
               style={{ 
                 color: '#34D399', 
                 fontWeight: 600, 
@@ -320,153 +470,6 @@ export const Navbar = ({
               </div>
             </a>
 
-            {/* City Locality Dropdown Selector with Short Code */}
-            <div ref={cityDropdownRef} style={{ position: 'relative' }}>
-              <button
-                onClick={() => {
-                  setCityDropdownOpen(prev => !prev);
-                  setUserMenuOpen(false);
-                }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.25rem',
-                  padding: '0.35rem clamp(0.45rem, 1vw, 0.8rem)',
-                  background: 'var(--color-bg)',
-                  border: '1.5px solid var(--color-border)',
-                  borderRadius: 'var(--radius-full)',
-                  fontSize: 'clamp(0.75rem, 2vw, 0.825rem)',
-                  fontWeight: 700,
-                  color: 'var(--color-text-primary)',
-                  cursor: 'pointer',
-                  transition: 'all var(--transition-fast)',
-                  boxShadow: 'var(--shadow-xs)',
-                  whiteSpace: 'nowrap'
-                }}
-                title={`Active Region: ${activeCity}`}
-                aria-label={`City Short Code: ${activeShortCode}`}
-              >
-                <MapPin size={14} color="var(--color-accent-mint)" />
-                <span style={{
-                  fontWeight: 800,
-                  letterSpacing: '0.05em',
-                  color: 'var(--color-primary-dark)',
-                  fontSize: 'clamp(0.75rem, 2vw, 0.85rem)'
-                }}>
-                  {activeShortCode}
-                </span>
-                <ChevronDown size={12} color="var(--color-text-muted)" />
-              </button>
-
-              {cityDropdownOpen && (
-                <div style={{
-                  position: 'absolute',
-                  top: '110%',
-                  left: 0,
-                  width: '290px',
-                  background: '#FFFFFF',
-                  borderRadius: 'var(--radius-md)',
-                  boxShadow: 'var(--shadow-xl)',
-                  border: '1px solid var(--color-border)',
-                  padding: '0.65rem',
-                  zIndex: 999,
-                  animation: 'scaleUp 0.15s ease'
-                }}>
-                  {/* Auto-Detect Location Button */}
-                  <button
-                    onClick={async () => {
-                      if (onDetectLocation) {
-                        await onDetectLocation();
-                      }
-                      setCityDropdownOpen(false);
-                    }}
-                    disabled={isDetectingLocation}
-                    style={{
-                      width: '100%',
-                      textAlign: 'left',
-                      padding: '0.6rem 0.75rem',
-                      borderRadius: 'var(--radius-sm)',
-                      fontSize: '0.85rem',
-                      color: '#FFFFFF',
-                      fontWeight: 700,
-                      background: 'linear-gradient(135deg, #0D5C3A 0%, #10B981 100%)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      marginBottom: '0.65rem',
-                      boxShadow: 'var(--shadow-xs)',
-                      cursor: isDetectingLocation ? 'wait' : 'pointer'
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      {isDetectingLocation ? <Loader2 size={15} className="animate-spin" /> : <Locate size={15} />}
-                      <span>{isDetectingLocation ? 'Detecting GPS...' : 'Use Current Location'}</span>
-                    </div>
-                    <span style={{ fontSize: '0.65rem', background: 'rgba(255,255,255,0.25)', padding: '2px 6px', borderRadius: '4px' }}>
-                      LIVE GPS
-                    </span>
-                  </button>
-
-                  <div style={{
-                    fontSize: '0.725rem',
-                    fontWeight: 700,
-                    color: 'var(--color-text-muted)',
-                    padding: '0.25rem 0.5rem',
-                    textTransform: 'uppercase'
-                  }}>
-                    Select City Hub
-                  </div>
-                  {CITIES.map((city) => {
-                    const isSelected = activeCity === city.fullName;
-                    return (
-                      <button
-                        key={city.fullName}
-                        onClick={() => {
-                          setActiveCity(city.fullName);
-                          setCityDropdownOpen(false);
-                        }}
-                        style={{
-                          width: '100%',
-                          textAlign: 'left',
-                          padding: '0.5rem 0.65rem',
-                          borderRadius: 'var(--radius-sm)',
-                          fontSize: '0.825rem',
-                          color: isSelected ? 'var(--color-primary)' : 'var(--color-text-primary)',
-                          fontWeight: isSelected ? 700 : 500,
-                          background: isSelected ? 'var(--color-accent-mint-soft)' : 'transparent',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          border: 'none',
-                          cursor: 'pointer',
-                          margin: '2px 0',
-                          transition: 'background 0.15s ease'
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
-                          <span style={{
-                            fontSize: '0.7rem',
-                            fontWeight: 800,
-                            padding: '2px 6px',
-                            borderRadius: '4px',
-                            background: isSelected ? 'var(--color-primary)' : '#E2E8F0',
-                            color: isSelected ? '#FFFFFF' : '#334155',
-                            letterSpacing: '0.04em'
-                          }}>
-                            {city.code}
-                          </span>
-                          <div>
-                            <div style={{ fontWeight: 600, lineHeight: 1.2 }}>{city.name}</div>
-                            <div style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)' }}>{city.zone}</div>
-                          </div>
-                        </div>
-                        {isSelected && <span style={{ color: 'var(--color-accent-mint)', fontWeight: 800 }}>✓</span>}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
           </div>
 
           {/* Desktop Navigation Links (Multi-Page Routed) */}
