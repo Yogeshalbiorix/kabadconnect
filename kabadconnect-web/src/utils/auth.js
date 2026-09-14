@@ -101,21 +101,28 @@ export const DEMO_USERS = {
 };
 
 const AUTH_STORAGE_KEY = 'kabadconnect_auth_user';
+const AUTH_IS_LOGGED_IN_KEY = 'kabadconnect_is_authenticated';
 
 /**
- * Retrieve current logged-in user from localStorage, defaults to customer for rich initial UX
+ * Retrieve current logged-in user from localStorage.
+ * Defaults to null (logged out) so guest users browse as guests until they explicitly sign in.
  */
 export const getCurrentUser = () => {
   try {
+    const isAuthenticated = localStorage.getItem(AUTH_IS_LOGGED_IN_KEY);
     const raw = localStorage.getItem(AUTH_STORAGE_KEY);
-    if (raw) {
+    if (isAuthenticated === 'true' && raw) {
       return JSON.parse(raw);
+    }
+    // If not explicitly authenticated, clear any legacy default demo session
+    if (raw && isAuthenticated !== 'true') {
+      localStorage.removeItem(AUTH_STORAGE_KEY);
     }
   } catch (err) {
     console.warn('Error reading auth user from storage:', err);
   }
-  // Default to customer so the user immediately sees a functional experience
-  return DEMO_USERS.customer;
+  // Default to null: logged out by default
+  return null;
 };
 
 /**
@@ -125,8 +132,10 @@ export const saveAuthUser = (user) => {
   try {
     if (user) {
       localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
+      localStorage.setItem(AUTH_IS_LOGGED_IN_KEY, 'true');
     } else {
       localStorage.removeItem(AUTH_STORAGE_KEY);
+      localStorage.removeItem(AUTH_IS_LOGGED_IN_KEY);
     }
   } catch (err) {
     console.warn('Error saving auth user:', err);
@@ -189,6 +198,7 @@ export const switchUserRole = (roleKey) => {
 export const logoutUser = () => {
   try {
     localStorage.removeItem(AUTH_STORAGE_KEY);
+    localStorage.removeItem(AUTH_IS_LOGGED_IN_KEY);
   } catch (err) {}
 };
 

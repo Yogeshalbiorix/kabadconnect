@@ -31,7 +31,8 @@ export const BookingWizardModal = ({
   onBookingSuccess,
   activeCity = 'Delhi NCR',
   userLocation = null,
-  onLocationDetected = null
+  onLocationDetected = null,
+  currentUser = null
 }) => {
   const [step, setStep] = useState(1);
   const [isLocatingAddress, setIsLocatingAddress] = useState(false);
@@ -44,14 +45,14 @@ export const BookingWizardModal = ({
 
   // Step 2: Address & User Info
   const [formData, setFormData] = useState({
-    name: 'Aarav Sharma',
-    phone: '98100 23456',
-    address: 'Flat 402, Tower B, Amrapali Village',
-    landmark: 'Near Shipra Mall',
-    pincode: '201014',
-    city: 'Indirapuram, Ghaziabad',
+    name: currentUser?.name || '',
+    phone: currentUser?.phone || '',
+    address: currentUser?.address || '',
+    landmark: '',
+    pincode: currentUser?.pincode || (activeCity.includes('Delhi') ? '201014' : ''),
+    city: currentUser?.city || activeCity,
     hasLift: true,
-    floor: '4'
+    floor: '1'
   });
 
   // Step 3: Slot selection
@@ -62,7 +63,16 @@ export const BookingWizardModal = ({
   const [bookingId, setBookingId] = useState('');
 
   useEffect(() => {
-    if (userLocation) {
+    if (currentUser) {
+      setFormData(prev => ({
+        ...prev,
+        name: currentUser.name || prev.name,
+        phone: currentUser.phone || prev.phone,
+        address: currentUser.address || prev.address,
+        pincode: currentUser.pincode || prev.pincode,
+        city: currentUser.city || prev.city
+      }));
+    } else if (userLocation) {
       setFormData(prev => ({
         ...prev,
         address: userLocation.street || userLocation.fullAddress?.split(',')[0] || prev.address,
@@ -71,18 +81,8 @@ export const BookingWizardModal = ({
         city: userLocation.city || prev.city
       }));
       setGpsAutoFilled(true);
-    } else if (activeCity && activeCity.toLowerCase().includes('ahmedabad')) {
-      setFormData(prev => ({
-        ...prev,
-        address: 'B-304, Shivalik Yash, 132 Feet Ring Rd',
-        landmark: 'Near Iscon Cross Road, Prahlad Nagar',
-        pincode: '380015',
-        city: 'Ahmedabad'
-      }));
-      const amdPartner = KABADWALA_PARTNERS.find(p => p.city === 'Ahmedabad');
-      if (amdPartner) setAssignedPartner(amdPartner);
     }
-  }, [activeCity, isOpen, userLocation]);
+  }, [activeCity, isOpen, userLocation, currentUser]);
 
   const [isFetchingPincode, setIsFetchingPincode] = useState(false);
   const [pincodeFeedback, setPincodeFeedback] = useState('');
@@ -492,6 +492,7 @@ export const BookingWizardModal = ({
                     <input
                       type="text"
                       className="form-input"
+                      placeholder="e.g. Rahul Sharma"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       style={{ paddingLeft: '36px' }}
@@ -504,8 +505,9 @@ export const BookingWizardModal = ({
                   <label className="form-label">Phone Number (For OTP/Call)</label>
                   <div style={{ position: 'relative' }}>
                     <input
-                      type="text"
+                      type="tel"
                       className="form-input"
+                      placeholder="e.g. 98100 23456"
                       value={formData.phone}
                       onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                       style={{ paddingLeft: '36px' }}
@@ -520,6 +522,7 @@ export const BookingWizardModal = ({
                 <input
                   type="text"
                   className="form-input"
+                  placeholder="e.g. Flat 402, Block B, Society Name"
                   value={formData.address}
                   onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                 />
@@ -531,6 +534,7 @@ export const BookingWizardModal = ({
                   <input
                     type="text"
                     className="form-input"
+                    placeholder="e.g. Near Metro Station / Landmark"
                     value={formData.landmark}
                     onChange={(e) => setFormData({ ...formData, landmark: e.target.value })}
                   />

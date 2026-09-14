@@ -690,6 +690,7 @@ export default function App() {
         activeCity={activeCity}
         userLocation={userLocation}
         onLocationDetected={(geo) => setUserLocation(geo)}
+        currentUser={currentUser}
       />
 
       <LiveOrderTrackerModal
