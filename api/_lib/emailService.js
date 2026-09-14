@@ -3,19 +3,23 @@ import dotenv from 'dotenv';
 import path from 'path';
 
 // Ensure .env is loaded
-dotenv.config();
 try {
-  dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+  dotenv.config({ override: true });
+  dotenv.config({ path: path.resolve(process.cwd(), '.env'), override: true });
 } catch {}
 
 /**
  * Returns configured nodemailer transporter or null if SMTP not set
  */
 function getTransporter() {
-  const gmailUser = process.env.GMAIL_USER;
-  const gmailPass = process.env.GMAIL_APP_PASSWORD || process.env.GMAIL_PASS;
+  const rawGmailUser = process.env.GMAIL_USER;
+  const rawGmailPass = process.env.GMAIL_APP_PASSWORD || process.env.GMAIL_PASS;
 
-  if (gmailUser && gmailPass) {
+  if (rawGmailUser && rawGmailPass) {
+    const gmailUser = rawGmailUser.trim();
+    // Google App Passwords are 16 characters, often with spaces like 'dyci xkqh jknl zwwq'
+    const gmailPass = rawGmailPass.replace(/\s+/g, '');
+
     return nodemailer.createTransport({
       service: 'gmail',
       auth: {
