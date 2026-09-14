@@ -40,6 +40,7 @@ import {
   apiUpdateRate, 
   checkDatabaseHealth,
   apiCreateOrUpdateUser,
+  apiUpdateUserProfile,
   apiFetchMarketplaceItems,
   apiCreateMarketplaceItem,
   apiUpdateMarketplaceItem,
@@ -83,13 +84,18 @@ export default function App() {
   // Authentication state
   const [currentUser, setCurrentUser] = useState(getCurrentUser());
 
-  // Centralized Orders State (initialized from localStorage or INITIAL_ORDERS)
+  // Centralized Orders State (initialized from localStorage or fresh empty state)
   const [orders, setOrders] = useState(() => {
     try {
       const saved = localStorage.getItem('kabadconnect_orders');
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          return parsed.filter(o => !['KC-7729', 'KC-7681', 'KC-DEMO-1', 'KC-DEMO-2'].includes(o.id));
+        }
+      }
     } catch (e) {}
-    return INITIAL_ORDERS;
+    return [];
   });
 
   // Centralized Scrap Rates State (allows Admin live editing)
@@ -127,7 +133,7 @@ export default function App() {
   // Dynamic booking state & pickup list
   const [selectedScrapItems, setSelectedScrapItems] = useState([]);
   const [calculatedScrapData, setCalculatedScrapData] = useState(null);
-  const [activeOrder, setActiveOrder] = useState(orders[0] || INITIAL_ORDERS[0]);
+  const [activeOrder, setActiveOrder] = useState(orders[0] || null);
 
   // Shopping cart for recycled products (empty by default)
   const [cartItems, setCartItems] = useState(() => {
@@ -175,8 +181,11 @@ export default function App() {
 
     // 2. Fetch live orders from MongoDB
     apiFetchOrders().then((res) => {
-      if (res && res.success && Array.isArray(res.orders) && res.orders.length > 0) {
+      if (res && res.success && Array.isArray(res.orders)) {
         setOrders(res.orders);
+        if (res.orders.length > 0 && !activeOrder) {
+          setActiveOrder(res.orders[0]);
+        }
       }
     }).catch(() => {});
 
@@ -308,19 +317,30 @@ export default function App() {
     setIsBookingOpen(true);
   };
 
+
   // ----------------------------------------------------
   // Order Operations (Cancel, Update / Reschedule, Create, Reorder)
   // ----------------------------------------------------
   const handleBookingSuccess = (newOrder) => {
-    const updated = [newOrder, ...orders];
+    const enrichedOrder = {
+      ...newOrder,
+      userId: currentUser?.id || newOrder.userId || `usr-${Date.now()}`,
+      customer: {
+        ...newOrder.customer,
+        name: currentUser?.name || newOrder.customer?.name || 'Customer',
+        email: currentUser?.email || newOrder.customer?.email || '',
+        phone: currentUser?.phone || newOrder.customer?.phone || ''
+      }
+    };
+    const updated = [enrichedOrder, ...orders];
     setOrders(updated);
-    setActiveOrder(newOrder);
+    setActiveOrder(enrichedOrder);
     setSelectedScrapItems([]); // clear pickup list once scheduled
     setIsBookingOpen(false);
     setIsTrackerOpen(true);
 
     // Persist booking directly to MongoDB Atlas
-    apiCreateOrder(newOrder).catch(() => {});
+    apiCreateOrder(enrichedOrder).catch(() => {});
   };
 
   const handleReorder = (order) => {
@@ -475,15 +495,18 @@ export default function App() {
   const handleLoginSuccess = (user) => {
     setCurrentUser(user);
     saveAuthUser(user);
-    // Persist new user or login session directly into MongoDB Atlas
-    apiCreateOrUpdateUser(user).catch(() => {});
+    setIsAuthModalOpen(false);
   };
 
-  const handleUpdateUser = (updatedUser) => {
+  const handleUpdateUser = async (updatedUser) => {
     setCurrentUser(updatedUser);
     saveAuthUser(updatedUser);
     // Persist profile updates (address, city, state, pincode, upiId) into MongoDB Atlas
-    apiCreateOrUpdateUser(updatedUser).catch(() => {});
+    try {
+      await apiUpdateUserProfile(updatedUser.email || updatedUser.id, updatedUser);
+    } catch (e) {
+      console.warn('Failed to sync profile update to MongoDB Atlas:', e);
+    }
   };
 
   const handleLogout = () => {

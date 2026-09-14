@@ -204,20 +204,59 @@ export async function apiFetchUser(identifier) {
   return { success: false, source: 'local' };
 }
 
-export async function apiCreateOrUpdateUser(userData) {
+export async function apiRegisterUser(userData) {
   try {
-    const res = await fetchWithTimeout(`${API_BASE}/users`, {
+    const res = await fetchWithTimeout(`${API_BASE}/users?action=register`, {
       method: 'POST',
       body: JSON.stringify(userData)
-    });
-    if (res.ok) {
-      const data = await res.json();
-      return { success: true, source: data.source, user: data.data };
+    }, 10000);
+    const data = await res.json();
+    if (res.ok && data.success) {
+      return { success: true, user: data.data, message: data.message };
     }
+    return { success: false, error: data.error || 'Failed to create account in database.' };
   } catch (err) {
-    console.warn('[API Service] User save to MongoDB Atlas failed:', err.message);
+    return { success: false, error: err.message || 'Network error connecting to database.' };
   }
-  return { success: false, source: 'local', user: userData };
+}
+
+export async function apiLoginUser(credentials) {
+  try {
+    const res = await fetchWithTimeout(`${API_BASE}/users?action=login`, {
+      method: 'POST',
+      body: JSON.stringify(credentials)
+    }, 10000);
+    const data = await res.json();
+    if (res.ok && data.success) {
+      return { success: true, user: data.data, message: data.message };
+    }
+    return { success: false, error: data.error || 'Invalid credentials.' };
+  } catch (err) {
+    return { success: false, error: err.message || 'Network error connecting to database.' };
+  }
+}
+
+export async function apiUpdateUserProfile(identifier, updates) {
+  try {
+    const param = identifier && identifier.includes('@') 
+      ? `email=${encodeURIComponent(identifier)}` 
+      : `id=${encodeURIComponent(identifier || '')}`;
+    const res = await fetchWithTimeout(`${API_BASE}/users?${param}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates)
+    }, 10000);
+    const data = await res.json();
+    if (res.ok && data.success) {
+      return { success: true, user: data.data, message: data.message };
+    }
+    return { success: false, error: data.error || 'Failed to update profile.' };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+}
+
+export async function apiCreateOrUpdateUser(userData) {
+  return await apiRegisterUser(userData);
 }
 
 // ----------------------------------------------------

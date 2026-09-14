@@ -781,7 +781,7 @@ export const ProfilePage = ({
                   </div>
                 </div>
                 <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--color-primary)' }}>
-                  ₹{DEMO_USERS.customer.totalEarned.toLocaleString()}
+                  ₹{(currentUser?.totalEarned || 0).toLocaleString()}
                 </div>
                 <div style={{ fontSize: '0.75rem', color: 'var(--color-accent-mint)', fontWeight: 600, marginTop: '4px' }}>
                   Instant digital UPI settlement
@@ -798,7 +798,7 @@ export const ProfilePage = ({
                   </div>
                 </div>
                 <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#1E293B' }}>
-                  {DEMO_USERS.customer.totalRecycledKg} kg
+                  {currentUser?.totalRecycledKg || 0} kg
                 </div>
                 <div style={{ fontSize: '0.75rem', color: '#64748B', marginTop: '4px' }}>
                   Diverted from city landfills
@@ -815,10 +815,10 @@ export const ProfilePage = ({
                   </div>
                 </div>
                 <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0D5C3A' }}>
-                  {DEMO_USERS.customer.co2SavedKg} kg
+                  {currentUser?.co2SavedKg || (currentUser?.totalRecycledKg ? (currentUser.totalRecycledKg * 1.85).toFixed(1) : 0)} kg
                 </div>
                 <div style={{ fontSize: '0.75rem', color: '#059669', fontWeight: 600, marginTop: '4px' }}>
-                  Equivalent to 3,200 km driven
+                  Clean air impact
                 </div>
               </div>
 
@@ -832,7 +832,7 @@ export const ProfilePage = ({
                   </div>
                 </div>
                 <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#B45309' }}>
-                  {DEMO_USERS.customer.treesSaved} Trees
+                  {currentUser?.treesSaved || (currentUser?.totalRecycledKg ? (currentUser.totalRecycledKg / 58).toFixed(1) : 0)} Trees
                 </div>
                 <div style={{ fontSize: '0.75rem', color: '#64748B', marginTop: '4px' }}>
                   From paper & cardboard recycling
@@ -1079,7 +1079,7 @@ export const ProfilePage = ({
                       PRIMARY INSTANT UPI ID (ACTIVE)
                     </div>
                     <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0F172A', marginTop: '4px' }}>
-                      {currentUser?.upiId || DEMO_USERS.customer.upiId}
+                      {currentUser?.upiId || 'Not linked yet (Instant UPI active on order)'}
                     </div>
                     <div style={{ fontSize: '0.75rem', color: 'var(--color-accent-mint)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
                       <CheckCircle2 size={13} /> Verified by NPCI UPI Gateway
@@ -1124,7 +1124,7 @@ export const ProfilePage = ({
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.25rem' }}>
-                  {DEMO_USERS.customer.savedAddresses.map((addr) => (
+                  {((currentUser?.savedAddresses && currentUser.savedAddresses.length > 0) ? currentUser.savedAddresses : (currentUser?.address ? [{ id: 'addr-1', label: 'Primary Registered Address', address: currentUser.address, city: currentUser.city || 'Delhi NCR', pincode: currentUser.pincode || '', isDefault: true }] : [])).map((addr) => (
                     <div
                       key={addr.id}
                       style={{
@@ -1177,7 +1177,7 @@ export const ProfilePage = ({
                         Green Landfill Diversion Certificate
                       </h3>
                       <div style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>
-                        Certificate ID: <strong>KC-CERT-2026-IND-0984</strong> • Issued to: <strong>{currentUser?.name || DEMO_USERS.customer.name}</strong>
+                        Certificate ID: <strong>KC-CERT-{currentUser?.id ? currentUser.id.slice(-6).toUpperCase() : '2026-IND'}</strong> • Issued to: <strong>{currentUser?.name || 'Verified Member'}</strong>
                       </div>
                     </div>
 
@@ -1188,7 +1188,7 @@ export const ProfilePage = ({
                   </div>
 
                   <p style={{ fontSize: '0.9rem', color: '#334155', lineHeight: 1.6, marginBottom: '1.5rem', maxWidth: '750px' }}>
-                    This certifies that <strong>{currentUser?.name || DEMO_USERS.customer.name}</strong> has segregated and responsibly recycled <strong>{DEMO_USERS.customer.totalRecycledKg} kg of household & office scrap</strong> through KabadConnect's verified hyperlocal network, preventing <strong>{DEMO_USERS.customer.co2SavedKg} kg of CO₂ greenhouse emissions</strong> and conserving <strong>{DEMO_USERS.customer.treesSaved} mature forest trees</strong>.
+                    This certifies that <strong>{currentUser?.name || 'Verified Member'}</strong> has segregated and responsibly recycled <strong>{currentUser?.totalRecycledKg || 0} kg of household & office scrap</strong> through KabadConnect's verified hyperlocal network, preventing <strong>{currentUser?.co2SavedKg || (currentUser?.totalRecycledKg ? (currentUser.totalRecycledKg * 1.85).toFixed(1) : 0)} kg of CO₂ greenhouse emissions</strong> and conserving <strong>{currentUser?.treesSaved || (currentUser?.totalRecycledKg ? (currentUser.totalRecycledKg / 58).toFixed(1) : 0)} mature forest trees</strong>.
                   </p>
 
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '1rem', borderTop: '1px dashed #A7F3D0', paddingTop: '1rem' }}>

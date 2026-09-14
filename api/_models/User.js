@@ -1,4 +1,34 @@
 import mongoose from 'mongoose';
+import crypto from 'crypto';
+
+/**
+ * Hash password using Node native crypto scrypt with random salt
+ */
+export function hashPassword(password) {
+  if (!password) return '';
+  const salt = crypto.randomBytes(16).toString('hex');
+  const hash = crypto.scryptSync(password, salt, 64).toString('hex');
+  return `${salt}:${hash}`;
+}
+
+/**
+ * Verify password against stored salt:hash
+ */
+export function verifyPassword(password, storedHash) {
+  if (!password || !storedHash) return false;
+  const parts = storedHash.split(':');
+  if (parts.length !== 2) {
+    // Fallback for plain-text or direct match
+    return password === storedHash;
+  }
+  const [salt, originalHash] = parts;
+  try {
+    const hash = crypto.scryptSync(password, salt, 64).toString('hex');
+    return crypto.timingSafeEqual(Buffer.from(hash, 'hex'), Buffer.from(originalHash, 'hex'));
+  } catch (err) {
+    return false;
+  }
+}
 
 const AddressSchema = new mongoose.Schema({
   id: String,
@@ -18,16 +48,26 @@ const UserSchema = new mongoose.Schema({
   },
   name: {
     type: String,
-    required: true
+    required: true,
+    trim: true
   },
   email: {
     type: String,
     required: true,
-    index: true
+    unique: true,
+    index: true,
+    lowercase: true,
+    trim: true
+  },
+  password: {
+    type: String,
+    required: true,
+    select: false // excluded by default in queries for security
   },
   phone: {
     type: String,
-    default: ''
+    default: '',
+    trim: true
   },
   role: {
     type: String,
@@ -37,7 +77,7 @@ const UserSchema = new mongoose.Schema({
   },
   avatar: {
     type: String,
-    default: ''
+    default: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80'
   },
   address: {
     type: String,
@@ -66,6 +106,14 @@ const UserSchema = new mongoose.Schema({
     default: 0
   },
   totalRecycledKg: {
+    type: Number,
+    default: 0
+  },
+  co2SavedKg: {
+    type: Number,
+    default: 0
+  },
+  treesSaved: {
     type: Number,
     default: 0
   },

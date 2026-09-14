@@ -21,7 +21,6 @@ import {
   KeyRound,
   ChevronRight
 } from 'lucide-react';
-import { switchUserRole } from '../../utils/auth';
 
 export const Navbar = ({ 
   onOpenBooking, 

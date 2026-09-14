@@ -16,17 +16,18 @@ import {
   UserPlus,
   LogIn,
   Building2,
-  Truck
+  Truck,
+  Loader2,
+  Database
 } from 'lucide-react';
-import { loginUser, saveAuthUser, DEMO_USERS } from '../../utils/auth';
-import { apiCreateOrUpdateUser } from '../../services/api';
+import { loginUser, registerUser } from '../../utils/auth';
 
 export const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
   const [authMode, setAuthMode] = useState('login'); // 'login' or 'register'
-  const [activeTab, setActiveTab] = useState('user'); // 'user', 'agent', 'partner', 'admin'
   const [emailOrPhone, setEmailOrPhone] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
@@ -45,11 +46,12 @@ export const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
   if (!isOpen) return null;
 
   // ----------------------------------------------------
-  // Sign In Handler
+  // Sign In Handler (Authenticates with MongoDB Atlas)
   // ----------------------------------------------------
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
     setErrorMessage('');
+    setSuccessMessage('');
     
     if (!emailOrPhone.trim()) {
       setErrorMessage('Please enter your email or mobile number.');
@@ -60,27 +62,32 @@ export const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
       return;
     }
 
-    const res = loginUser(emailOrPhone, password, activeTab);
-    if (res.success) {
-      // Save entry into MongoDB Atlas
-      apiCreateOrUpdateUser(res.user).catch(() => {});
-
-      setSuccessMessage(`Welcome back, ${res.user.name}!`);
-      setTimeout(() => {
-        onLoginSuccess(res.user);
-        onClose();
-      }, 700);
-    } else {
-      setErrorMessage(res.error || 'Login failed. Please check your credentials.');
+    setIsSubmitting(true);
+    try {
+      const res = await loginUser(emailOrPhone, password);
+      if (res.success && res.user) {
+        setSuccessMessage(`✓ Welcome back, ${res.user.name}!`);
+        setTimeout(() => {
+          onLoginSuccess(res.user);
+          onClose();
+        }, 600);
+      } else {
+        setErrorMessage(res.error || 'Invalid credentials. Please check your email/phone and password.');
+      }
+    } catch (err) {
+      setErrorMessage(err.message || 'Login failed. Please check your database connection.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   // ----------------------------------------------------
-  // Register / New User Handler (Saves to MongoDB Atlas)
+  // Register / New User Handler (Direct MongoDB Atlas Persistence)
   // ----------------------------------------------------
   const handleRegisterSubmit = async (e) => {
     e.preventDefault();
     setErrorMessage('');
+    setSuccessMessage('');
 
     if (!regData.name.trim()) {
       setErrorMessage('Please enter your full name.');
@@ -91,55 +98,31 @@ export const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
       return;
     }
     if (!regData.password.trim()) {
-      setErrorMessage('Please set a password.');
+      setErrorMessage('Please set a password (min 6 characters).');
+      return;
+    }
+    if (regData.password.length < 6) {
+      setErrorMessage('Password must be at least 6 characters long.');
       return;
     }
 
-    const newUser = {
-      id: `usr-${Date.now()}`,
-      name: regData.name.trim(),
-      email: regData.email.trim().toLowerCase(),
-      phone: regData.phone.trim(),
-      role: regData.role || 'user',
-      city: regData.city || 'Delhi NCR',
-      pincode: regData.pincode.trim(),
-      address: regData.address.trim(),
-      upiId: '',
-      memberSince: 'Just now',
-      totalEarned: 0,
-      totalRecycledKg: 0,
-      createdAt: new Date().toISOString()
-    };
-
-    // Save to local storage
-    saveAuthUser(newUser);
-
-    // Persist new entry directly into MongoDB Atlas
+    setIsSubmitting(true);
     try {
-      await apiCreateOrUpdateUser(newUser);
-    } catch {}
-
-    setSuccessMessage(`✓ Account created & saved to MongoDB Atlas! Welcome, ${newUser.name}!`);
-    setTimeout(() => {
-      onLoginSuccess(newUser);
-      onClose();
-    }, 750);
-  };
-
-  // Quick 1-click Demo Logins
-  const handleQuickLogin = (role) => {
-    setErrorMessage('');
-    const demoUser = 
-      role === 'admin' ? DEMO_USERS.admin : 
-      role === 'agent' ? DEMO_USERS.agent : 
-      role === 'partner' ? DEMO_USERS.partner : DEMO_USERS.customer;
-    loginUser(demoUser.email, 'demo123', role);
-    apiCreateOrUpdateUser(demoUser).catch(() => {});
-    setSuccessMessage(`Logged in as ${demoUser.name} (${role.toUpperCase()})`);
-    setTimeout(() => {
-      onLoginSuccess(demoUser);
-      onClose();
-    }, 600);
+      const res = await registerUser(regData);
+      if (res.success && res.user) {
+        setSuccessMessage(`✓ Account created & saved to MongoDB database! Welcome, ${res.user.name}!`);
+        setTimeout(() => {
+          onLoginSuccess(res.user);
+          onClose();
+        }, 700);
+      } else {
+        setErrorMessage(res.error || 'Registration failed. Please try again.');
+      }
+    } catch (err) {
+      setErrorMessage(err.message || 'Network error saving user to database.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -148,7 +131,7 @@ export const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
         className="modal-content auth-modal-content" 
         onClick={(e) => e.stopPropagation()}
         style={{ 
-          maxWidth: authMode === 'register' ? '500px' : '440px', 
+          maxWidth: authMode === 'register' ? '520px' : '440px', 
           width: '100%',
           maxHeight: '90vh',
           maxHeight: '90dvh',
@@ -172,9 +155,7 @@ export const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
               width: '40px',
               height: '40px',
               borderRadius: '12px',
-              background: activeTab === 'admin' 
-                ? 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)' 
-                : 'linear-gradient(135deg, #0D5C3A 0%, #10B981 100%)',
+              background: 'linear-gradient(135deg, #0D5C3A 0%, #10B981 100%)',
               color: '#FFFFFF',
               display: 'flex',
               alignItems: 'center',
@@ -182,14 +163,15 @@ export const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
               boxShadow: 'var(--shadow-sm)',
               flexShrink: 0
             }}>
-              {authMode === 'register' ? <UserPlus size={20} /> : activeTab === 'admin' ? <KeyRound size={20} /> : <User size={20} />}
+              {authMode === 'register' ? <UserPlus size={20} /> : <LogIn size={20} />}
             </div>
             <div>
               <h3 style={{ fontSize: '1.15rem', margin: 0, fontWeight: 700 }}>
-                {authMode === 'register' ? 'Create New Account' : activeTab === 'admin' ? 'Admin Portal Login' : 'Customer Sign In'}
+                {authMode === 'register' ? 'Create New Account' : 'Account Sign In'}
               </h3>
-              <p style={{ fontSize: '0.785rem', color: 'var(--color-text-muted)', margin: 0 }}>
-                {authMode === 'register' ? 'Saved directly to MongoDB Atlas database' : 'Access your pickups & scrap earnings'}
+              <p style={{ fontSize: '0.785rem', color: 'var(--color-text-muted)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                <Database size={12} color="#10B981" />
+                <span>Backed directly by MongoDB Atlas database</span>
               </p>
             </div>
           </div>
@@ -222,11 +204,12 @@ export const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
               onClick={() => {
                 setAuthMode('login');
                 setErrorMessage('');
+                setSuccessMessage('');
               }}
               style={{
-                padding: '0.45rem',
+                padding: '0.5rem',
                 borderRadius: 'var(--radius-full)',
-                fontSize: '0.8rem',
+                fontSize: '0.85rem',
                 fontWeight: 700,
                 border: 'none',
                 cursor: 'pointer',
@@ -240,7 +223,7 @@ export const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
                 transition: 'all 0.2s ease'
               }}
             >
-              <LogIn size={14} />
+              <LogIn size={15} />
               <span>Sign In</span>
             </button>
 
@@ -249,11 +232,12 @@ export const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
               onClick={() => {
                 setAuthMode('register');
                 setErrorMessage('');
+                setSuccessMessage('');
               }}
               style={{
-                padding: '0.45rem',
+                padding: '0.5rem',
                 borderRadius: 'var(--radius-full)',
-                fontSize: '0.8rem',
+                fontSize: '0.85rem',
                 fontWeight: 700,
                 border: 'none',
                 cursor: 'pointer',
@@ -267,217 +251,65 @@ export const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
                 transition: 'all 0.2s ease'
               }}
             >
-              <UserPlus size={14} />
+              <UserPlus size={15} />
               <span>Create New User</span>
             </button>
           </div>
 
-        {/* ============================================================ */}
-        {/* MODE 1: SIGN IN FORM                                         */}
-        {/* ============================================================ */}
-        {authMode === 'login' && (
-          <div>
-            {/* Role Tabs for Login */}
+          {/* Feedback Alerts */}
+          {errorMessage && (
             <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(4, 1fr)',
-              background: 'var(--color-bg)',
-              borderRadius: 'var(--radius-full)',
-              padding: '4px',
-              marginBottom: '1.25rem',
-              border: '1px solid var(--color-border)',
-              gap: '2px'
+              padding: '0.75rem 0.95rem',
+              background: '#FEF2F2',
+              border: '1px solid #F87171',
+              borderRadius: 'var(--radius-md)',
+              color: '#991B1B',
+              fontSize: '0.825rem',
+              marginBottom: '1rem',
+              lineHeight: 1.4
             }}>
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveTab('user');
-                  setErrorMessage('');
-                  setEmailOrPhone(DEMO_USERS.customer.email);
-                  setPassword('user123');
-                }}
-                style={{
-                  padding: '0.45rem 0.2rem',
-                  borderRadius: 'var(--radius-full)',
-                  fontSize: '0.75rem',
-                  fontWeight: 700,
-                  border: 'none',
-                  cursor: 'pointer',
-                  background: activeTab === 'user' ? '#FFFFFF' : 'transparent',
-                  color: activeTab === 'user' ? 'var(--color-primary)' : 'var(--color-text-secondary)',
-                  boxShadow: activeTab === 'user' ? 'var(--shadow-xs)' : 'none',
-                  textAlign: 'center'
-                }}
-              >
-                Resident
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveTab('agent');
-                  setErrorMessage('');
-                  setEmailOrPhone(DEMO_USERS.agent.email);
-                  setPassword('agent123');
-                }}
-                style={{
-                  padding: '0.45rem 0.2rem',
-                  borderRadius: 'var(--radius-full)',
-                  fontSize: '0.75rem',
-                  fontWeight: 700,
-                  border: 'none',
-                  cursor: 'pointer',
-                  background: activeTab === 'agent' ? '#FFFFFF' : 'transparent',
-                  color: activeTab === 'agent' ? '#2563EB' : 'var(--color-text-secondary)',
-                  boxShadow: activeTab === 'agent' ? 'var(--shadow-xs)' : 'none',
-                  textAlign: 'center'
-                }}
-              >
-                Agent
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveTab('partner');
-                  setErrorMessage('');
-                  setEmailOrPhone(DEMO_USERS.partner.email);
-                  setPassword('partner123');
-                }}
-                style={{
-                  padding: '0.45rem 0.2rem',
-                  borderRadius: 'var(--radius-full)',
-                  fontSize: '0.75rem',
-                  fontWeight: 700,
-                  border: 'none',
-                  cursor: 'pointer',
-                  background: activeTab === 'partner' ? '#FFFFFF' : 'transparent',
-                  color: activeTab === 'partner' ? '#D97706' : 'var(--color-text-secondary)',
-                  boxShadow: activeTab === 'partner' ? 'var(--shadow-xs)' : 'none',
-                  textAlign: 'center'
-                }}
-              >
-                Partner
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveTab('admin');
-                  setErrorMessage('');
-                  setEmailOrPhone(DEMO_USERS.admin.email);
-                  setPassword('admin123');
-                }}
-                style={{
-                  padding: '0.45rem 0.2rem',
-                  borderRadius: 'var(--radius-full)',
-                  fontSize: '0.75rem',
-                  fontWeight: 700,
-                  border: 'none',
-                  cursor: 'pointer',
-                  background: activeTab === 'admin' ? '#FFFFFF' : 'transparent',
-                  color: activeTab === 'admin' ? '#0F172A' : 'var(--color-text-secondary)',
-                  boxShadow: activeTab === 'admin' ? 'var(--shadow-xs)' : 'none',
-                  textAlign: 'center'
-                }}
-              >
-                Admin
-              </button>
+              {errorMessage}
             </div>
+          )}
 
-            {/* Quick 1-Click Fill */}
-            <div style={{ marginBottom: '1.25rem' }}>
-              <button
-                type="button"
-                onClick={() => handleQuickLogin(activeTab)}
-                style={{
-                  width: '100%',
-                  padding: '0.65rem',
-                  borderRadius: 'var(--radius-md)',
-                  background: 'rgba(245, 158, 11, 0.08)',
-                  border: '1px solid rgba(245, 158, 11, 0.25)',
-                  color: '#B45309',
-                  fontSize: '0.8rem',
-                  fontWeight: 600,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '0.4rem',
-                  cursor: 'pointer'
-                }}
-              >
-                <Sparkles size={16} color="var(--color-accent-gold)" />
-                <span>
-                  1-Click Demo Login as {
-                    activeTab === 'admin' ? 'Super Admin (Vikram)' :
-                    activeTab === 'agent' ? 'Field Agent (Rajesh Kumar)' :
-                    activeTab === 'partner' ? 'Scrap Yard Partner (Rameshwar)' :
-                    'Customer (Aarav Sharma)'
-                  }
-                </span>
-              </button>
-            </div>
-
+          {successMessage && (
             <div style={{
+              padding: '0.75rem 0.95rem',
+              background: '#ECFDF5',
+              border: '1px solid #34D399',
+              borderRadius: 'var(--radius-md)',
+              color: '#065F46',
+              fontSize: '0.825rem',
+              marginBottom: '1rem',
               display: 'flex',
               alignItems: 'center',
-              gap: '0.75rem',
-              marginBottom: '1.25rem',
-              color: 'var(--color-text-muted)',
-              fontSize: '0.75rem',
-              textTransform: 'uppercase'
+              gap: '0.45rem',
+              lineHeight: 1.4
             }}>
-              <div style={{ flex: 1, height: '1px', background: 'var(--color-border)' }} />
-              <span>Or sign in manually</span>
-              <div style={{ flex: 1, height: '1px', background: 'var(--color-border)' }} />
+              <CheckCircle2 size={16} color="#10B981" />
+              <span>{successMessage}</span>
             </div>
+          )}
 
-            {/* Login Form */}
+          {/* ============================================================ */}
+          {/* MODE 1: SIGN IN FORM                                         */}
+          {/* ============================================================ */}
+          {authMode === 'login' && (
             <form onSubmit={handleLoginSubmit}>
-              {errorMessage && (
-                <div style={{
-                  padding: '0.65rem 0.85rem',
-                  background: '#FEF2F2',
-                  border: '1px solid #F87171',
-                  borderRadius: 'var(--radius-md)',
-                  color: '#991B1B',
-                  fontSize: '0.825rem',
-                  marginBottom: '1rem'
-                }}>
-                  {errorMessage}
-                </div>
-              )}
-
-              {successMessage && (
-                <div style={{
-                  padding: '0.65rem 0.85rem',
-                  background: '#ECFDF5',
-                  border: '1px solid #34D399',
-                  borderRadius: 'var(--radius-md)',
-                  color: '#065F46',
-                  fontSize: '0.825rem',
-                  marginBottom: '1rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.45rem'
-                }}>
-                  <CheckCircle2 size={16} color="#10B981" />
-                  <span>{successMessage}</span>
-                </div>
-              )}
-
               <div className="form-group" style={{ marginBottom: '1rem' }}>
                 <label className="form-label">
-                  {activeTab === 'admin' ? 'Admin Email' : 'Email or Phone Number'}
+                  Email Address or Mobile Number
                 </label>
                 <div style={{ position: 'relative' }}>
                   <input
                     type="text"
                     className="form-input"
-                    placeholder={activeTab === 'admin' ? 'admin@kabadconnect.com' : 'aarav@kabadconnect.com'}
+                    placeholder="Enter your registered email or phone"
                     value={emailOrPhone}
                     onChange={(e) => setEmailOrPhone(e.target.value)}
                     style={{ paddingLeft: '38px' }}
+                    autoComplete="username"
+                    required
                   />
                   <Mail size={16} color="#94A3B8" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
                 </div>
@@ -493,6 +325,8 @@ export const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     style={{ paddingLeft: '38px', paddingRight: '38px' }}
+                    autoComplete="current-password"
+                    required
                   />
                   <Lock size={16} color="#94A3B8" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
                   <button
@@ -517,223 +351,278 @@ export const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
 
               <button
                 type="submit"
-                className={`btn btn-full ${activeTab === 'admin' ? 'btn-primary' : 'btn-accent'}`}
-                style={{ padding: '0.75rem', fontSize: '0.95rem' }}
+                disabled={isSubmitting}
+                className="btn btn-primary btn-full"
+                style={{ padding: '0.8rem', fontSize: '0.95rem', fontWeight: 700 }}
               >
-                <span>{activeTab === 'admin' ? 'Login to Admin Panel' : 'Sign In to My Account'}</span>
-                <ArrowRight size={17} />
+                {isSubmitting ? (
+                  <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem' }}>
+                    <Loader2 size={17} className="animate-spin" />
+                    <span>Verifying with MongoDB Atlas...</span>
+                  </span>
+                ) : (
+                  <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem' }}>
+                    <span>Sign In</span>
+                    <ArrowRight size={17} />
+                  </span>
+                )}
               </button>
-            </form>
-          </div>
-        )}
 
-        {/* ============================================================ */}
-        {/* MODE 2: REGISTER / CREATE NEW USER (MONGODB ENTRY)           */}
-        {/* ============================================================ */}
-        {authMode === 'register' && (
-          <form onSubmit={handleRegisterSubmit}>
-            {errorMessage && (
               <div style={{
-                padding: '0.65rem 0.85rem',
-                background: '#FEF2F2',
-                border: '1px solid #F87171',
-                borderRadius: 'var(--radius-md)',
-                color: '#991B1B',
-                fontSize: '0.825rem',
-                marginBottom: '1rem'
+                textAlign: 'center',
+                marginTop: '1.25rem',
+                fontSize: '0.8rem',
+                color: 'var(--color-text-muted)'
               }}>
-                {errorMessage}
-              </div>
-            )}
-
-            {successMessage && (
-              <div style={{
-                padding: '0.65rem 0.85rem',
-                background: '#ECFDF5',
-                border: '1px solid #34D399',
-                borderRadius: 'var(--radius-md)',
-                color: '#065F46',
-                fontSize: '0.825rem',
-                marginBottom: '1rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.45rem'
-              }}>
-                <CheckCircle2 size={16} color="#10B981" />
-                <span>{successMessage}</span>
-              </div>
-            )}
-
-            {/* Account Role Selector */}
-            <div className="form-group" style={{ marginBottom: '1rem' }}>
-              <label className="form-label" style={{ fontSize: '0.8rem', fontWeight: 700 }}>
-                Select Your Role
-              </label>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem' }}>
-                {[
-                  { role: 'user', label: 'Resident / Customer', icon: User },
-                  { role: 'agent', label: 'Field Executive', icon: Truck },
-                  { role: 'partner', label: 'Scrap Merchant', icon: Building2 }
-                ].map((r) => {
-                  const Icon = r.icon;
-                  const isSelected = regData.role === r.role;
-                  return (
-                    <button
-                      key={r.role}
-                      type="button"
-                      onClick={() => setRegData({ ...regData, role: r.role })}
-                      style={{
-                        padding: '0.5rem 0.35rem',
-                        borderRadius: 'var(--radius-md)',
-                        border: isSelected ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
-                        background: isSelected ? 'rgba(13, 92, 58, 0.08)' : '#FFFFFF',
-                        color: isSelected ? 'var(--color-primary)' : 'var(--color-text-secondary)',
-                        fontSize: '0.725rem',
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        gap: '0.25rem',
-                        textAlign: 'center'
-                      }}
-                    >
-                      <Icon size={16} />
-                      <span>{r.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Full Name */}
-            <div className="form-group" style={{ marginBottom: '0.85rem' }}>
-              <label className="form-label">Full Name</label>
-              <div style={{ position: 'relative' }}>
-                <input
-                  type="text"
-                  className="form-input"
-                  placeholder="e.g. Yogesh Patel"
-                  value={regData.name}
-                  onChange={(e) => setRegData({ ...regData, name: e.target.value })}
-                  style={{ paddingLeft: '38px' }}
-                  required
-                />
-                <User size={16} color="#94A3B8" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
-              </div>
-            </div>
-
-            {/* Email & Phone */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem', marginBottom: '0.85rem' }}>
-              <div className="form-group">
-                <label className="form-label">Email Address</label>
-                <input
-                  type="email"
-                  className="form-input"
-                  placeholder="name@example.com"
-                  value={regData.email}
-                  onChange={(e) => setRegData({ ...regData, email: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Phone Number</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  placeholder="+91 98765 43210"
-                  value={regData.phone}
-                  onChange={(e) => setRegData({ ...regData, phone: e.target.value })}
-                  required
-                />
-              </div>
-            </div>
-
-            {/* City & Pincode */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem', marginBottom: '0.85rem' }}>
-              <div className="form-group">
-                <label className="form-label">City / Region</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  placeholder="e.g. Ahmedabad / Delhi NCR"
-                  value={regData.city}
-                  onChange={(e) => setRegData({ ...regData, city: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Pincode</label>
-                <input
-                  type="text"
-                  maxLength={6}
-                  className="form-input"
-                  placeholder="e.g. 380015"
-                  value={regData.pincode}
-                  onChange={(e) => setRegData({ ...regData, pincode: e.target.value })}
-                />
-              </div>
-            </div>
-
-            {/* Password */}
-            <div className="form-group" style={{ marginBottom: '1.25rem' }}>
-              <label className="form-label">Password</label>
-              <div style={{ position: 'relative' }}>
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  className="form-input"
-                  placeholder="Create a secure password"
-                  value={regData.password}
-                  onChange={(e) => setRegData({ ...regData, password: e.target.value })}
-                  style={{ paddingLeft: '38px', paddingRight: '38px' }}
-                  required
-                />
-                <Lock size={16} color="#94A3B8" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
+                Don't have an account yet?{' '}
                 <button
                   type="button"
-                  onClick={() => setShowPassword(!showPassword)}
+                  onClick={() => {
+                    setAuthMode('register');
+                    setErrorMessage('');
+                  }}
                   style={{
-                    position: 'absolute',
-                    right: '12px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
                     background: 'none',
                     border: 'none',
+                    color: 'var(--color-primary)',
+                    fontWeight: 700,
                     cursor: 'pointer',
-                    color: '#94A3B8'
+                    textDecoration: 'underline'
                   }}
                 >
-                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  Create one now
                 </button>
               </div>
-            </div>
+            </form>
+          )}
 
-            <button
-              type="submit"
-              className="btn btn-primary btn-full btn-lg"
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem' }}
-            >
-              <CheckCircle2 size={18} />
-              <span>Create Account & Save to Database</span>
-            </button>
-          </form>
-        )}
+          {/* ============================================================ */}
+          {/* MODE 2: REGISTER / CREATE NEW USER                           */}
+          {/* ============================================================ */}
+          {authMode === 'register' && (
+            <form onSubmit={handleRegisterSubmit}>
+              {/* Account Role Selector */}
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label className="form-label" style={{ fontSize: '0.8rem', fontWeight: 700 }}>
+                  Select Account Role
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem' }}>
+                  {[
+                    { role: 'user', label: 'Resident / Customer', icon: User },
+                    { role: 'agent', label: 'Field Executive', icon: Truck },
+                    { role: 'partner', label: 'Scrap Merchant', icon: Building2 }
+                  ].map((r) => {
+                    const Icon = r.icon;
+                    const isSelected = regData.role === r.role;
+                    return (
+                      <button
+                        key={r.role}
+                        type="button"
+                        onClick={() => setRegData({ ...regData, role: r.role })}
+                        style={{
+                          padding: '0.55rem 0.35rem',
+                          borderRadius: 'var(--radius-md)',
+                          border: isSelected ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
+                          background: isSelected ? 'rgba(13, 92, 58, 0.08)' : '#FFFFFF',
+                          color: isSelected ? 'var(--color-primary)' : 'var(--color-text-secondary)',
+                          fontSize: '0.75rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          gap: '0.25rem',
+                          textAlign: 'center',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <Icon size={18} color={isSelected ? 'var(--color-primary)' : '#64748B'} />
+                        <span>{r.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Full Name */}
+              <div className="form-group" style={{ marginBottom: '0.85rem' }}>
+                <label className="form-label">Full Name *</label>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type="text"
+                    className="form-input"
+                    placeholder="Enter your full name"
+                    value={regData.name}
+                    onChange={(e) => setRegData({ ...regData, name: e.target.value })}
+                    style={{ paddingLeft: '38px' }}
+                    required
+                  />
+                  <User size={16} color="#94A3B8" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
+                </div>
+              </div>
+
+              {/* Email & Phone Grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.85rem' }}>
+                <div className="form-group">
+                  <label className="form-label">Email Address *</label>
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      type="email"
+                      className="form-input"
+                      placeholder="you@domain.com"
+                      value={regData.email}
+                      onChange={(e) => setRegData({ ...regData, email: e.target.value })}
+                      style={{ paddingLeft: '36px' }}
+                      required
+                    />
+                    <Mail size={15} color="#94A3B8" style={{ position: 'absolute', left: '11px', top: '50%', transform: 'translateY(-50%)' }} />
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Mobile Number</label>
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      type="tel"
+                      className="form-input"
+                      placeholder="e.g. 9876543210"
+                      value={regData.phone}
+                      onChange={(e) => setRegData({ ...regData, phone: e.target.value })}
+                      style={{ paddingLeft: '36px' }}
+                    />
+                    <Phone size={15} color="#94A3B8" style={{ position: 'absolute', left: '11px', top: '50%', transform: 'translateY(-50%)' }} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Password */}
+              <div className="form-group" style={{ marginBottom: '0.85rem' }}>
+                <label className="form-label">Set Password * (min 6 chars)</label>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    className="form-input"
+                    placeholder="Create a strong password"
+                    value={regData.password}
+                    onChange={(e) => setRegData({ ...regData, password: e.target.value })}
+                    style={{ paddingLeft: '38px', paddingRight: '38px' }}
+                    minLength={6}
+                    required
+                  />
+                  <Lock size={16} color="#94A3B8" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    style={{
+                      position: 'absolute',
+                      right: '12px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      color: '#94A3B8'
+                    }}
+                  >
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+              </div>
+
+              {/* City & Pincode */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '0.75rem', marginBottom: '0.85rem' }}>
+                <div className="form-group">
+                  <label className="form-label">City Hub</label>
+                  <select
+                    className="form-select"
+                    value={regData.city}
+                    onChange={(e) => setRegData({ ...regData, city: e.target.value })}
+                  >
+                    <option value="Delhi NCR">Delhi NCR</option>
+                    <option value="Ahmedabad">Ahmedabad</option>
+                    <option value="Gurugram">Gurugram</option>
+                    <option value="Ghaziabad">Ghaziabad & Noida</option>
+                    <option value="Bengaluru">Bengaluru</option>
+                    <option value="Mumbai">Mumbai</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Pincode</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    placeholder="e.g. 380015"
+                    value={regData.pincode}
+                    onChange={(e) => setRegData({ ...regData, pincode: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              {/* Address */}
+              <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+                <label className="form-label">Street Address / Locality</label>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type="text"
+                    className="form-input"
+                    placeholder="Flat / Building, Area, Landmark"
+                    value={regData.address}
+                    onChange={(e) => setRegData({ ...regData, address: e.target.value })}
+                    style={{ paddingLeft: '38px' }}
+                  />
+                  <MapPin size={16} color="#94A3B8" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="btn btn-primary btn-full"
+                style={{ padding: '0.8rem', fontSize: '0.95rem', fontWeight: 700 }}
+              >
+                {isSubmitting ? (
+                  <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem' }}>
+                    <Loader2 size={17} className="animate-spin" />
+                    <span>Saving to MongoDB Atlas Database...</span>
+                  </span>
+                ) : (
+                  <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem' }}>
+                    <UserPlus size={17} />
+                    <span>Create Account & Save in MongoDB</span>
+                  </span>
+                )}
+              </button>
+
+              <div style={{
+                textAlign: 'center',
+                marginTop: '1.25rem',
+                fontSize: '0.8rem',
+                color: 'var(--color-text-muted)'
+              }}>
+                Already have an account?{' '}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAuthMode('login');
+                    setErrorMessage('');
+                  }}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--color-primary)',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    textDecoration: 'underline'
+                  }}
+                >
+                  Sign In here
+                </button>
+              </div>
+            </form>
+          )}
         </div>
       </div>
-
-      <style>{`
-        .auth-modal-content {
-          padding: 0 !important;
-        }
-        @media (max-width: 480px) {
-          .auth-modal-header {
-            padding: 1rem 1.15rem !important;
-          }
-          .auth-modal-body {
-            padding: 1rem 1.15rem !important;
-          }
-        }
-      `}</style>
     </div>
   );
 };

@@ -57,6 +57,7 @@ export default async function handler(req, res) {
       case 'marketplace':
         return await marketplaceHandler(req, res);
       case 'users':
+      case 'auth':
         return await usersHandler(req, res);
       case 'seed':
         return await seedHandler(req, res);
