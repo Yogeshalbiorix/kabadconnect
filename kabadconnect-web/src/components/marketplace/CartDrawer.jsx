@@ -21,7 +21,7 @@ export const CartDrawer = ({
   onClearCart
 }) => {
   const [checkoutComplete, setCheckoutComplete] = useState(false);
-  const [shippingAddress, setShippingAddress] = useState('Indirapuram, Ghaziabad (201014)');
+  const [shippingAddress, setShippingAddress] = useState('');
 
   if (!isOpen) return null;
 

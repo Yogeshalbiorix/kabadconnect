@@ -47,7 +47,8 @@ export const AdminPanelModal = ({
   onRefreshDbHealth = () => {},
   marketplaceItems = [],
   onDeleteProduct = null,
-  partners = []
+  partners = [],
+  onOpenDoorstepVerification = null
 }) => {
   const [activeTab, setActiveTab] = useState('orders'); // 'orders', 'rates', 'partners', 'marketplace', 'database'
   const [orderFilter, setOrderFilter] = useState('all');
@@ -577,6 +578,31 @@ export const AdminPanelModal = ({
                           {/* Admin Actions */}
                           <td style={{ padding: '0.85rem 1rem' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                              {onOpenDoorstepVerification && order.status !== 'cancelled' && (
+                                <button
+                                  onClick={() => {
+                                    onOpenDoorstepVerification(order);
+                                    onClose();
+                                  }}
+                                  style={{
+                                    padding: '3px 8px',
+                                    borderRadius: 'var(--radius-sm)',
+                                    fontSize: '0.75rem',
+                                    background: '#ECFDF5',
+                                    color: '#065F46',
+                                    border: '1px solid #A7F3D0',
+                                    cursor: 'pointer',
+                                    fontWeight: 600,
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '3px'
+                                  }}
+                                  title="Inspect items, verify OTP and pay"
+                                >
+                                  <Scale size={12} />
+                                  <span>Doorstep Pay</span>
+                                </button>
+                              )}
                               {onReorder && (
                                 <button
                                   onClick={() => {

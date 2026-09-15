@@ -21,27 +21,71 @@ export const SellProductModal = ({
   onClose,
   onSubmitProduct,
   currentUser,
-  activeCity = 'Delhi NCR'
+  activeCity = 'Delhi NCR',
+  onOpenAuth = null
 }) => {
-  const [selectedPresetId, setSelectedPresetId] = useState('almirah');
-  const [title, setTitle] = useState('Solid Teak Wood 3-Door Almirah');
+  const [selectedPresetId, setSelectedPresetId] = useState('');
+  const [title, setTitle] = useState('');
   const [category, setCategory] = useState('furniture');
-  const [subcategory, setSubcategory] = useState('almirah');
-  const [price, setPrice] = useState('4500');
-  const [originalPrice, setOriginalPrice] = useState('18000');
-  const [condition, setCondition] = useState('excellent');
-  const [imageUrl, setImageUrl] = useState('https://images.unsplash.com/photo-1595428774223-ef52624120d2?auto=format&fit=crop&w=600&q=80');
-  const [description, setDescription] = useState('Spacious teak wood almirah with lockable internal locker, hanging rod, shelves, and full mirror in great condition.');
-  const [city, setCity] = useState(activeCity || 'Delhi NCR');
-  const [locality, setLocality] = useState('Sector 62, Indirapuram');
-  const [sellerName, setSellerName] = useState(currentUser?.name || 'Aarav Sharma');
-  const [sellerPhone, setSellerPhone] = useState(currentUser?.phone || '+91 98100 23456');
-  const [sellerWhatsapp, setSellerWhatsapp] = useState(currentUser?.phone ? currentUser.phone.replace(/[^0-9]/g, '') : '919810023456');
+  const [subcategory, setSubcategory] = useState('');
+  const [price, setPrice] = useState('');
+  const [originalPrice, setOriginalPrice] = useState('');
+  const [condition, setCondition] = useState('good');
+  const [imageUrl, setImageUrl] = useState('');
+  const [description, setDescription] = useState('');
+  const [city, setCity] = useState(currentUser?.city || activeCity || 'Delhi NCR');
+  const [locality, setLocality] = useState(currentUser?.address || '');
+  const [sellerName, setSellerName] = useState(currentUser?.name || '');
+  const [sellerPhone, setSellerPhone] = useState(currentUser?.phone || '');
+  const [sellerWhatsapp, setSellerWhatsapp] = useState(currentUser?.phone ? currentUser.phone.replace(/[^0-9]/g, '') : '');
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
   if (!isOpen) return null;
+
+  // Gatekeeper: User must be logged in to sell products
+  if (!currentUser) {
+    return (
+      <div className="modal-overlay" onClick={onClose} style={{ zIndex: 1200 }}>
+        <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '480px', textAlign: 'center', padding: '2rem' }}>
+          <div style={{
+            width: '60px',
+            height: '60px',
+            borderRadius: '50%',
+            background: '#FEF3C7',
+            color: '#D97706',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 1rem auto'
+          }}>
+            <ShieldCheck size={30} />
+          </div>
+          <h3 style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: '0.5rem', color: '#0F172A' }}>
+            Login Required to Sell
+          </h3>
+          <p style={{ fontSize: '0.88rem', color: '#64748B', marginBottom: '1.5rem', lineHeight: 1.5 }}>
+            Without logging in, you cannot sell scrap or pre-loved goods. Please sign in or create an account to start selling.
+          </p>
+          <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
+            <button onClick={onClose} className="btn btn-secondary">
+              Cancel
+            </button>
+            <button 
+              onClick={() => {
+                onClose();
+                if (onOpenAuth) onOpenAuth();
+              }} 
+              className="btn btn-primary"
+            >
+              Sign In / Register
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Handle Preset Click
   const handleSelectPreset = (preset) => {

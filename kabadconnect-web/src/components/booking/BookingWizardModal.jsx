@@ -17,7 +17,8 @@ import {
   ShieldCheck,
   Locate,
   Loader2,
-  RotateCcw
+  RotateCcw,
+  AlertCircle
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { KABADWALA_PARTNERS } from '../../data/kabadwalas';
@@ -32,14 +33,16 @@ export const BookingWizardModal = ({
   activeCity = 'Delhi NCR',
   userLocation = null,
   onLocationDetected = null,
-  currentUser = null
+  currentUser = null,
+  onOpenAuth = null
 }) => {
   const [step, setStep] = useState(1);
   const [isLocatingAddress, setIsLocatingAddress] = useState(false);
   const [gpsAutoFilled, setGpsAutoFilled] = useState(false);
   
   // Step 1: Scrap items & estimated weight
-  const [selectedCategories, setSelectedCategories] = useState(['paper', 'plastic']);
+  const [selectedCategories, setSelectedCategories] = useState([]);
+  const [categoryError, setCategoryError] = useState('');
   const [weightBracket, setWeightBracket] = useState('20-50 kg');
   const [notes, setNotes] = useState('');
 
@@ -49,8 +52,8 @@ export const BookingWizardModal = ({
     phone: currentUser?.phone || '',
     address: currentUser?.address || '',
     landmark: '',
-    pincode: currentUser?.pincode || (activeCity.includes('Delhi') ? '201014' : ''),
-    city: currentUser?.city || activeCity,
+    pincode: currentUser?.pincode || '',
+    city: currentUser?.city || '',
     hasLift: true,
     floor: '1'
   });
@@ -183,25 +186,48 @@ export const BookingWizardModal = ({
         else if (tw <= 100) setWeightBracket('50-100 kg');
         else setWeightBracket('100+ kg Bulk');
       }
+    } else if (isOpen) {
+      // Fresh pickup booking: start with 0 products selected
+      setSelectedCategories([]);
+      setStep(1);
+      setCategoryError('');
     }
-  }, [initialScrapData]);
+  }, [initialScrapData, isOpen]);
 
   if (!isOpen) return null;
 
   const toggleCategory = (catId) => {
+    setCategoryError('');
     if (selectedCategories.includes(catId)) {
-      if (selectedCategories.length > 1) {
-        setSelectedCategories(selectedCategories.filter(c => c !== catId));
-      }
+      setSelectedCategories(selectedCategories.filter(c => c !== catId));
     } else {
       setSelectedCategories([...selectedCategories, catId]);
     }
   };
 
   const handleNext = () => {
-    if (step < 3) {
-      setStep(step + 1);
-    } else if (step === 3) {
+    if (step === 1) {
+      if (selectedCategories.length === 0) {
+        setCategoryError('Please select at least one scrap product/category before proceeding to the address step.');
+        return;
+      }
+      setCategoryError('');
+      setStep(2);
+      return;
+    }
+    if (step === 2) {
+      if (!formData.address?.trim()) {
+        alert('Please enter your pickup address.');
+        return;
+      }
+      if (!formData.phone?.trim()) {
+        alert('Please enter your contact mobile number.');
+        return;
+      }
+      setStep(3);
+      return;
+    }
+    if (step === 3) {
       // Generate Booking
       const newId = `KC-${Math.floor(1000 + Math.random() * 9000)}`;
       setBookingId(newId);
@@ -241,6 +267,51 @@ export const BookingWizardModal = ({
     onBookingSuccess(newOrder);
     onClose();
   };
+
+  if (!isOpen) return null;
+
+  // Gatekeeper: User must be logged in to sell scrap
+  if (!currentUser) {
+    return (
+      <div className="modal-overlay" onClick={onClose} style={{ zIndex: 1200 }}>
+        <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '480px', textAlign: 'center', padding: '2rem' }}>
+          <div style={{
+            width: '60px',
+            height: '60px',
+            borderRadius: '50%',
+            background: '#FEF3C7',
+            color: '#D97706',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 1rem auto'
+          }}>
+            <ShieldCheck size={30} />
+          </div>
+          <h3 style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: '0.5rem', color: '#0F172A' }}>
+            Login Required to Sell Scrap
+          </h3>
+          <p style={{ fontSize: '0.88rem', color: '#64748B', marginBottom: '1.5rem', lineHeight: 1.5 }}>
+            Without login, you cannot schedule doorstep scrap pickups or receive cash/UPI payments. Please sign in to your account.
+          </p>
+          <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
+            <button onClick={onClose} className="btn btn-secondary">
+              Cancel
+            </button>
+            <button 
+              onClick={() => {
+                onClose();
+                if (onOpenAuth) onOpenAuth();
+              }} 
+              className="btn btn-primary"
+            >
+              Sign In / Register
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -331,9 +402,47 @@ export const BookingWizardModal = ({
               <h3 style={{ fontSize: '1.15rem', marginBottom: '0.45rem' }}>
                 What type of scrap do you want to sell?
               </h3>
-              <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', marginBottom: '1.25rem' }}>
+              <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', marginBottom: '1rem' }}>
                 Select all that apply. Our partner brings appropriate digital scales and vehicle capacity.
               </p>
+
+              {selectedCategories.length === 0 ? (
+                <div style={{
+                  padding: '0.65rem 0.85rem',
+                  background: '#FEF3C7',
+                  border: '1.5px solid #F59E0B',
+                  borderRadius: 'var(--radius-md)',
+                  color: '#92400E',
+                  fontSize: '0.825rem',
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  marginBottom: '1.25rem'
+                }}>
+                  <AlertCircle size={16} color="#D97706" style={{ flexShrink: 0 }} />
+                  <span>
+                    <strong>Select scrap items:</strong> Please select at least one scrap product category below to unlock the Address step.
+                  </span>
+                </div>
+              ) : (
+                <div style={{
+                  padding: '0.55rem 0.85rem',
+                  background: 'var(--color-accent-mint-soft)',
+                  border: '1px solid rgba(16, 185, 129, 0.3)',
+                  borderRadius: 'var(--radius-md)',
+                  color: 'var(--color-primary)',
+                  fontSize: '0.825rem',
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.45rem',
+                  marginBottom: '1.25rem'
+                }}>
+                  <CheckCircle2 size={16} color="var(--color-accent-mint)" style={{ flexShrink: 0 }} />
+                  <span>{selectedCategories.length} {selectedCategories.length === 1 ? 'category' : 'categories'} selected. Ready to continue!</span>
+                </div>
+              )}
 
               <div style={{
                 display: 'grid',
@@ -793,9 +902,17 @@ export const BookingWizardModal = ({
           {step < 3 && (
             <button
               onClick={handleNext}
+              disabled={step === 1 && selectedCategories.length === 0}
               className="btn btn-primary"
+              style={{
+                opacity: (step === 1 && selectedCategories.length === 0) ? 0.5 : 1,
+                cursor: (step === 1 && selectedCategories.length === 0) ? 'not-allowed' : 'pointer',
+                background: (step === 1 && selectedCategories.length === 0) ? '#64748B' : undefined,
+                borderColor: (step === 1 && selectedCategories.length === 0) ? '#64748B' : undefined
+              }}
+              title={(step === 1 && selectedCategories.length === 0) ? "Please select at least 1 scrap category to unlock Step 2" : undefined}
             >
-              <span>Continue</span>
+              <span>{step === 1 && selectedCategories.length === 0 ? 'Select Item to Continue' : 'Continue'}</span>
               <ArrowRight size={16} />
             </button>
           )}

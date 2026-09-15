@@ -1,5 +1,6 @@
 import { connectToDatabase, isDbConfigured } from '../_lib/dbConnect.js';
 import Order from '../_models/Order.js';
+import { sendOtpEmail } from '../_lib/emailService.js';
 
 export default async function handler(req, res) {
   // CORS Headers
@@ -93,7 +94,7 @@ export default async function handler(req, res) {
   }
 
   // ----------------------------------------------------
-  // PUT /api/orders: Update order status, kabadwala, or cancellation
+  // PUT /api/orders: Update order status, kabadwala, doorstep verification, or cancellation
   // ----------------------------------------------------
   if (req.method === 'PUT') {
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
@@ -101,6 +102,19 @@ export default async function handler(req, res) {
 
     if (!orderId) {
       return res.status(400).json({ success: false, error: 'Order ID is required' });
+    }
+
+    // Optional email dispatch for Doorstep OTP
+    const targetEmail = body.customerEmail || body.customer?.email;
+    const doorstepOtp = body.doorstepVerification?.otp;
+    if (body.sendDoorstepOtpEmail && targetEmail && doorstepOtp) {
+      sendOtpEmail({
+        to: targetEmail,
+        otp: doorstepOtp,
+        purpose: 'doorstep_verification',
+        orderId: orderId,
+        amount: body.totalPaid || body.doorstepVerification?.paidAmount || ''
+      }).catch(e => console.warn('[Orders API] Doorstep OTP Email dispatch error:', e.message));
     }
 
     if (!configured) {

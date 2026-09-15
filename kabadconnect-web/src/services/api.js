@@ -421,4 +421,70 @@ export async function apiCreatePartner(partnerData) {
   return { success: false, source: 'local', partner: partnerData };
 }
 
+// ----------------------------------------------------
+// 8. Doorstep Verification & Payment API
+// ----------------------------------------------------
+export async function apiSendDoorstepOtp(orderId, { customerEmail, otp, inspectedItems, totalPaid }) {
+  try {
+    const res = await fetchWithTimeout(`${API_BASE}/orders?id=${encodeURIComponent(orderId)}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        id: orderId,
+        sendDoorstepOtpEmail: Boolean(customerEmail),
+        customerEmail,
+        status: 'weighing',
+        doorstepVerification: {
+          otp,
+          otpExpiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+          isVerified: false,
+          paymentStatus: 'locked',
+          inspectedItems: inspectedItems || [],
+          paidAmount: totalPaid || 0
+        },
+        itemsWeighed: inspectedItems || [],
+        totalPaid: totalPaid || 0
+      })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return { success: true, source: data.source, order: data.data };
+    }
+  } catch (err) {
+    console.warn('[API Service] Send doorstep OTP failed, fallback to local:', err.message);
+  }
+  return { success: true, source: 'local' };
+}
+
+export async function apiCompleteOrderPayment(orderId, paymentData) {
+  try {
+    const res = await fetchWithTimeout(`${API_BASE}/orders?id=${encodeURIComponent(orderId)}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        id: orderId,
+        status: 'completed',
+        doorstepVerification: {
+          isVerified: true,
+          verifiedAt: new Date().toISOString(),
+          paymentStatus: 'completed',
+          paymentMethod: paymentData.paymentMethod,
+          transactionRef: paymentData.transactionRef,
+          paidAmount: paymentData.paidAmount,
+          inspectedItems: paymentData.inspectedItems || []
+        },
+        paymentMethod: paymentData.paymentMethod,
+        totalPaid: paymentData.paidAmount,
+        paidAt: new Date().toISOString()
+      })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return { success: true, source: data.source, order: data.data };
+    }
+  } catch (err) {
+    console.warn('[API Service] Complete payment failed, fallback to local:', err.message);
+  }
+  return { success: true, source: 'local' };
+}
+
+
 

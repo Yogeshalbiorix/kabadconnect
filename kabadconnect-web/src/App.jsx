@@ -23,6 +23,7 @@ import { AuthModal } from './components/auth/AuthModal';
 import { MyPickupsModal } from './components/orders/MyPickupsModal';
 import { AdminPanelModal } from './components/admin/AdminPanelModal';
 import { SellProductModal } from './components/marketplace/SellProductModal';
+import { DoorstepVerificationModal } from './components/orders/DoorstepVerificationModal';
 
 // Initial data & utilities
 import { INITIAL_ORDERS } from './data/mockOrders';
@@ -32,12 +33,12 @@ import { KABADWALA_PARTNERS } from './data/kabadwalas';
 import { getUserCoordinates, reverseGeocodeMapbox, fetchIpLocation, resolveCityFullName } from './utils/geolocation';
 import { getMapboxToken } from './utils/mapboxConfig';
 import { getCurrentUser, saveAuthUser, logoutUser } from './utils/auth';
-import { 
-  apiFetchOrders, 
-  apiCreateOrder, 
-  apiUpdateOrder, 
-  apiFetchRates, 
-  apiUpdateRate, 
+import {
+  apiFetchOrders,
+  apiCreateOrder,
+  apiUpdateOrder,
+  apiFetchRates,
+  apiUpdateRate,
   checkDatabaseHealth,
   apiCreateOrUpdateUser,
   apiUpdateUserProfile,
@@ -55,14 +56,14 @@ export default function App() {
     try {
       const saved = localStorage.getItem('kabadconnect_active_city');
       if (saved) return saved;
-    } catch (e) {}
+    } catch (e) { }
     return 'Delhi NCR (Indirapuram / Noida)';
   });
   const [userLocation, setUserLocation] = useState(() => {
     try {
       const saved = localStorage.getItem('kabadconnect_user_location');
       if (saved) return JSON.parse(saved);
-    } catch (e) {}
+    } catch (e) { }
     return null;
   });
   const [isDetectingLocation, setIsDetectingLocation] = useState(false);
@@ -71,7 +72,7 @@ export default function App() {
     setActiveCity(city);
     try {
       localStorage.setItem('kabadconnect_active_city', city);
-    } catch (e) {}
+    } catch (e) { }
   };
 
   // Database Connection Health State (MongoDB Atlas / Vercel Serverless)
@@ -96,20 +97,20 @@ export default function App() {
           return cleaned;
         }
       }
-    } catch (e) {}
+    } catch (e) { }
     return [];
   });
 
   // Filter orders strictly for the active user
-  const userOrders = currentUser 
+  const userOrders = currentUser
     ? orders.filter(o => {
-        if (['KC-7729', 'KC-7681', 'KC-DEMO-1', 'KC-DEMO-2', 'KC-8842', 'KC-8721'].includes(o.id)) return false;
-        if (o.userId && o.userId === currentUser.id) return true;
-        if (currentUser.email && o.customer?.email && o.customer.email.toLowerCase() === currentUser.email.toLowerCase()) return true;
-        if (currentUser.phone && o.customer?.phone && o.customer.phone === currentUser.phone) return true;
-        if (currentUser.role === 'admin') return true;
-        return false;
-      })
+      if (['KC-7729', 'KC-7681', 'KC-DEMO-1', 'KC-DEMO-2', 'KC-8842', 'KC-8721'].includes(o.id)) return false;
+      if (o.userId && o.userId === currentUser.id) return true;
+      if (currentUser.email && o.customer?.email && o.customer.email.toLowerCase() === currentUser.email.toLowerCase()) return true;
+      if (currentUser.phone && o.customer?.phone && o.customer.phone === currentUser.phone) return true;
+      if (currentUser.role === 'admin') return true;
+      return false;
+    })
     : [];
 
   // Centralized Scrap Rates State (allows Admin live editing)
@@ -120,7 +121,7 @@ export default function App() {
     try {
       const saved = localStorage.getItem('kabadconnect_marketplace');
       if (saved) return JSON.parse(saved);
-    } catch (e) {}
+    } catch (e) { }
     return INITIAL_MARKETPLACE_ITEMS;
   });
 
@@ -129,10 +130,10 @@ export default function App() {
     try {
       const saved = localStorage.getItem('kabadconnect_partners');
       if (saved) return JSON.parse(saved);
-    } catch (e) {}
+    } catch (e) { }
     return KABADWALA_PARTNERS;
   });
-  
+
   // Modal & Drawer visibility states
   const [isBookingOpen, setIsBookingOpen] = useState(false);
   const [isTrackerOpen, setIsTrackerOpen] = useState(false);
@@ -143,6 +144,8 @@ export default function App() {
   const [isMyPickupsOpen, setIsMyPickupsOpen] = useState(false);
   const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
   const [isSellModalOpen, setIsSellModalOpen] = useState(false);
+  const [isDoorstepModalOpen, setIsDoorstepModalOpen] = useState(false);
+  const [doorstepOrder, setDoorstepOrder] = useState(null);
 
   // Dynamic booking state & pickup list
   const [selectedScrapItems, setSelectedScrapItems] = useState([]);
@@ -154,7 +157,7 @@ export default function App() {
     try {
       const saved = localStorage.getItem('kabadconnect_cart');
       if (saved) return JSON.parse(saved);
-    } catch (e) {}
+    } catch (e) { }
     return [];
   });
 
@@ -162,28 +165,28 @@ export default function App() {
   useEffect(() => {
     try {
       localStorage.setItem('kabadconnect_cart', JSON.stringify(cartItems));
-    } catch (e) {}
+    } catch (e) { }
   }, [cartItems]);
 
   // Sync orders to localStorage
   useEffect(() => {
     try {
       localStorage.setItem('kabadconnect_orders', JSON.stringify(orders));
-    } catch (e) {}
+    } catch (e) { }
   }, [orders]);
 
   // Sync marketplace items to localStorage
   useEffect(() => {
     try {
       localStorage.setItem('kabadconnect_marketplace', JSON.stringify(marketplaceItems));
-    } catch (e) {}
+    } catch (e) { }
   }, [marketplaceItems]);
 
   // Sync partners to localStorage
   useEffect(() => {
     try {
       localStorage.setItem('kabadconnect_partners', JSON.stringify(partners));
-    } catch (e) {}
+    } catch (e) { }
   }, [partners]);
 
   // Initial load: Verify MongoDB connection & load live records from database
@@ -191,7 +194,7 @@ export default function App() {
     // 1. Health check
     checkDatabaseHealth().then((health) => {
       setDbStatus(health);
-    }).catch(() => {});
+    }).catch(() => { });
 
     // 2. Fetch live orders from MongoDB
     apiFetchOrders().then((res) => {
@@ -201,28 +204,28 @@ export default function App() {
           setActiveOrder(res.orders[0]);
         }
       }
-    }).catch(() => {});
+    }).catch(() => { });
 
     // 3. Fetch live rates from MongoDB
     apiFetchRates().then((res) => {
       if (res && res.success && Array.isArray(res.rates) && res.rates.length > 0) {
         setScrapItems(res.rates);
       }
-    }).catch(() => {});
+    }).catch(() => { });
 
     // 4. Fetch live marketplace items from MongoDB Atlas
     apiFetchMarketplaceItems().then((res) => {
       if (res && res.success && Array.isArray(res.items) && res.items.length > 0) {
         setMarketplaceItems(res.items);
       }
-    }).catch(() => {});
+    }).catch(() => { });
 
     // 5. Fetch live verified partners from MongoDB Atlas
     apiFetchPartners().then((res) => {
       if (res && res.success && Array.isArray(res.partners) && res.partners.length > 0) {
         setPartners(res.partners);
       }
-    }).catch(() => {});
+    }).catch(() => { });
   }, []);
 
   // 1. Initialize Lenis Smooth Scrolling Engine
@@ -235,9 +238,9 @@ export default function App() {
 
   // 2. Pause Lenis smooth scroll while modals or drawers are open so background page stays fixed
   useEffect(() => {
-    const isAnyModalOpen = isBookingOpen || isTrackerOpen || isPartnerModalOpen || 
-      isCartOpen || isPickupListOpen || isAuthModalOpen || isMyPickupsOpen || isAdminPanelOpen || isSellModalOpen;
-    
+    const isAnyModalOpen = isBookingOpen || isTrackerOpen || isPartnerModalOpen ||
+      isCartOpen || isPickupListOpen || isAuthModalOpen || isMyPickupsOpen || isAdminPanelOpen || isSellModalOpen || isDoorstepModalOpen;
+
     const lenis = getLenis();
     if (lenis) {
       if (isAnyModalOpen) {
@@ -246,7 +249,7 @@ export default function App() {
         lenis.start();
       }
     }
-  }, [isBookingOpen, isTrackerOpen, isPartnerModalOpen, isCartOpen, isPickupListOpen, isAuthModalOpen, isMyPickupsOpen, isAdminPanelOpen, isSellModalOpen]);
+  }, [isBookingOpen, isTrackerOpen, isPartnerModalOpen, isCartOpen, isPickupListOpen, isAuthModalOpen, isMyPickupsOpen, isAdminPanelOpen, isSellModalOpen, isDoorstepModalOpen]);
 
   // 3. Reset scroll position to top on route change
   useEffect(() => {
@@ -322,13 +325,30 @@ export default function App() {
     setIsPickupListOpen(false);
   };
 
+  const handleOpenBookingProtected = (scrapData = null) => {
+    if (!currentUser) {
+      if (scrapData) setCalculatedScrapData(scrapData);
+      setIsAuthModalOpen(true);
+      return;
+    }
+    if (scrapData) setCalculatedScrapData(scrapData);
+    setIsBookingOpen(true);
+  };
+
+  const handleOpenSellProtected = () => {
+    if (!currentUser) {
+      setIsAuthModalOpen(true);
+      return;
+    }
+    setIsSellModalOpen(true);
+  };
+
   const handleProceedToBookingFromPickupList = (pickupData) => {
-    setCalculatedScrapData({
+    handleOpenBookingProtected({
       estimatedRupees: pickupData.totalPayout,
       totalWeight: pickupData.totalWeight,
       items: pickupData.items
     });
-    setIsBookingOpen(true);
   };
 
 
@@ -354,7 +374,7 @@ export default function App() {
     setIsTrackerOpen(true);
 
     // Persist booking directly to MongoDB Atlas
-    apiCreateOrder(enrichedOrder).catch(() => {});
+    apiCreateOrder(enrichedOrder).catch(() => { });
   };
 
   const handleReorder = (order) => {
@@ -362,8 +382,8 @@ export default function App() {
     let reorderedItems = [];
     if (order.itemsWeighed && order.itemsWeighed.length > 0) {
       reorderedItems = order.itemsWeighed.map((it, idx) => {
-        const match = scrapItems.find(s => 
-          s.name.toLowerCase().includes(it.name.toLowerCase()) || 
+        const match = scrapItems.find(s =>
+          s.name.toLowerCase().includes(it.name.toLowerCase()) ||
           it.name.toLowerCase().includes(s.name.toLowerCase())
         );
         const weightNum = parseFloat(it.weight) || 10;
@@ -418,11 +438,11 @@ export default function App() {
     const updated = orders.map((o) =>
       o.id === orderId
         ? {
-            ...o,
-            status: 'cancelled',
-            cancelReason: cancelReasonText,
-            cancelledAt: new Date().toISOString()
-          }
+          ...o,
+          status: 'cancelled',
+          cancelReason: cancelReasonText,
+          cancelledAt: new Date().toISOString()
+        }
         : o
     );
     setOrders(updated);
@@ -435,26 +455,34 @@ export default function App() {
       status: 'cancelled',
       cancelReason: cancelReasonText,
       cancelledAt: new Date().toISOString()
-    }).catch(() => {});
+    }).catch(() => { });
   };
 
   const handleUpdateOrder = (orderId, updatedFields) => {
     const updated = orders.map((o) =>
       o.id === orderId
         ? {
-            ...o,
-            ...updatedFields,
-            updatedAt: new Date().toISOString()
-          }
+          ...o,
+          ...updatedFields,
+          updatedAt: new Date().toISOString()
+        }
         : o
     );
     setOrders(updated);
     if (activeOrder?.id === orderId) {
       setActiveOrder({ ...activeOrder, ...updatedFields });
     }
+    if (doorstepOrder?.id === orderId) {
+      setDoorstepOrder({ ...doorstepOrder, ...updatedFields });
+    }
 
     // Persist updates to MongoDB Atlas
-    apiUpdateOrder(orderId, updatedFields).catch(() => {});
+    apiUpdateOrder(orderId, updatedFields).catch(() => { });
+  };
+
+  const handleOpenDoorstepVerification = (order) => {
+    setDoorstepOrder(order);
+    setIsDoorstepModalOpen(true);
   };
 
   // ----------------------------------------------------
@@ -470,7 +498,7 @@ export default function App() {
     }
 
     // Persist status change to MongoDB Atlas
-    apiUpdateOrder(orderId, { status: newStatus }).catch(() => {});
+    apiUpdateOrder(orderId, { status: newStatus }).catch(() => { });
   };
 
   const handleAssignKabadwala = (orderId, partner) => {
@@ -483,7 +511,7 @@ export default function App() {
     }
 
     // Persist kabadwala assignment to MongoDB Atlas
-    apiUpdateOrder(orderId, { kabadwala: partner, status: 'assigned' }).catch(() => {});
+    apiUpdateOrder(orderId, { kabadwala: partner, status: 'assigned' }).catch(() => { });
   };
 
   const handleUpdateScrapRate = (itemId, newRate, newTrend) => {
@@ -491,16 +519,16 @@ export default function App() {
       prev.map((it) =>
         it.id === itemId
           ? {
-              ...it,
-              rate: newRate,
-              trendType: newTrend || it.trendType
-            }
+            ...it,
+            rate: newRate,
+            trendType: newTrend || it.trendType
+          }
           : it
       )
     );
 
     // Persist live rate change to MongoDB Atlas
-    apiUpdateRate({ id: itemId, rate: newRate, trendType: newTrend }).catch(() => {});
+    apiUpdateRate({ id: itemId, rate: newRate, trendType: newTrend }).catch(() => { });
   };
 
   // ----------------------------------------------------
@@ -619,13 +647,13 @@ export default function App() {
         setUserLocation(geo);
         try {
           localStorage.setItem('kabadconnect_user_location', JSON.stringify(geo));
-        } catch (e) {}
+        } catch (e) { }
 
         const hubCity = resolveCityFullName(geo.city, geo.state, geo.locality);
         setActiveCity(hubCity);
         try {
           localStorage.setItem('kabadconnect_active_city', hubCity);
-        } catch (e) {}
+        } catch (e) { }
 
         return geo;
       }
@@ -649,11 +677,11 @@ export default function App() {
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       {/* Header & Navigation */}
       <Navbar
-        onOpenBooking={() => setIsBookingOpen(true)}
+        onOpenBooking={() => handleOpenBookingProtected()}
         onOpenTracker={() => setIsTrackerOpen(true)}
         onOpenPartnerModal={() => setIsPartnerModalOpen(true)}
         onOpenCart={() => setIsCartOpen(true)}
-        onOpenSellModal={() => setIsSellModalOpen(true)}
+        onOpenSellModal={handleOpenSellProtected}
         cartCount={cartItems.reduce((acc, item) => acc + item.quantity, 0)}
         activeCity={activeCity}
         setActiveCity={handleSetActiveCity}
@@ -682,7 +710,7 @@ export default function App() {
           <RatesPage
             onAddScrapItem={handleAddScrapItem}
             selectedItems={selectedScrapItems}
-            onOpenBooking={() => setIsBookingOpen(true)}
+            onOpenBooking={() => handleOpenBookingProtected()}
             onOpenPickupList={() => setIsPickupListOpen(true)}
             scrapItems={scrapItems}
             onNavigate={navigateTo}
@@ -691,17 +719,14 @@ export default function App() {
 
         {currentRoute === 'calculator' && (
           <CalculatorPage
-            onBookCalculatedScrap={(calcData) => {
-              setCalculatedScrapData(calcData);
-              setIsBookingOpen(true);
-            }}
+            onBookCalculatedScrap={(calcData) => handleOpenBookingProtected(calcData)}
             onNavigate={navigateTo}
           />
         )}
 
         {currentRoute === 'kabadwalas' && (
           <KabadwalasPage
-            onSelectPartnerForBooking={() => setIsBookingOpen(true)}
+            onSelectPartnerForBooking={() => handleOpenBookingProtected()}
             onOpenPartnerModal={() => setIsPartnerModalOpen(true)}
             activeCity={activeCity}
             userLocation={userLocation}
@@ -717,7 +742,7 @@ export default function App() {
             cartItems={cartItems}
             onOpenCart={() => setIsCartOpen(true)}
             onNavigate={navigateTo}
-            onOpenSellModal={() => setIsSellModalOpen(true)}
+            onOpenSellModal={handleOpenSellProtected}
             marketplaceItems={marketplaceItems}
             onUpdateProduct={handleUpdateProduct}
             onDeleteProduct={handleDeleteProduct}
@@ -728,7 +753,7 @@ export default function App() {
 
         {currentRoute === 'how-it-works' && (
           <HowItWorksPage
-            onOpenBooking={() => setIsBookingOpen(true)}
+            onOpenBooking={() => handleOpenBookingProtected()}
             onNavigate={navigateTo}
           />
         )}
@@ -741,7 +766,7 @@ export default function App() {
             onCancelOrder={handleCancelOrder}
             onReorder={handleReorder}
             onUpdateOrder={handleUpdateOrder}
-            onOpenBooking={() => setIsBookingOpen(true)}
+            onOpenBooking={() => handleOpenBookingProtected()}
             onOpenAuth={() => setIsAuthModalOpen(true)}
             onOpenAdminPanel={() => setIsAdminPanelOpen(true)}
             onLogout={handleLogout}
@@ -752,7 +777,7 @@ export default function App() {
 
         {(currentRoute === 'home' || !['rates', 'calculator', 'kabadwalas', 'store', 'how-it-works', 'profile'].includes(currentRoute)) && (
           <HomePage
-            onOpenBooking={() => setIsBookingOpen(true)}
+            onOpenBooking={() => handleOpenBookingProtected()}
             activeCity={activeCity}
             userLocation={userLocation}
             onDetectLocation={handleDetectLocation}
@@ -761,18 +786,15 @@ export default function App() {
             selectedScrapItems={selectedScrapItems}
             onOpenPickupList={() => setIsPickupListOpen(true)}
             scrapItems={scrapItems}
-            onBookCalculatedScrap={(calcData) => {
-              setCalculatedScrapData(calcData);
-              setIsBookingOpen(true);
-            }}
-            onSelectPartnerForBooking={() => setIsBookingOpen(true)}
+            onBookCalculatedScrap={(calcData) => handleOpenBookingProtected(calcData)}
+            onSelectPartnerForBooking={() => handleOpenBookingProtected()}
             onOpenPartnerModal={() => setIsPartnerModalOpen(true)}
             onLocationDetected={(geo) => setUserLocation(geo)}
             onAddToCart={handleAddToCart}
             cartItems={cartItems}
             onOpenCart={() => setIsCartOpen(true)}
             onNavigate={navigateTo}
-            onOpenSellModal={() => setIsSellModalOpen(true)}
+            onOpenSellModal={handleOpenSellProtected}
             marketplaceItems={marketplaceItems}
             partners={partners}
           />
@@ -781,10 +803,11 @@ export default function App() {
 
       {/* Footer */}
       <Footer
-        onOpenBooking={() => setIsBookingOpen(true)}
+        onOpenBooking={() => handleOpenBookingProtected()}
         onOpenPartnerModal={() => setIsPartnerModalOpen(true)}
         onNavigate={navigateTo}
       />
+
 
       {/* Modals & Drawers */}
       <BookingWizardModal
@@ -796,12 +819,14 @@ export default function App() {
         userLocation={userLocation}
         onLocationDetected={(geo) => setUserLocation(geo)}
         currentUser={currentUser}
+        onOpenAuth={() => setIsAuthModalOpen(true)}
       />
 
       <LiveOrderTrackerModal
         isOpen={isTrackerOpen}
         onClose={() => setIsTrackerOpen(false)}
         activeOrder={activeOrder}
+        onOpenDoorstepVerification={handleOpenDoorstepVerification}
       />
 
       <PartnerJoinModal
@@ -851,6 +876,7 @@ export default function App() {
         }}
         onOpenBooking={() => setIsBookingOpen(true)}
         onReorder={handleReorder}
+        onOpenDoorstepVerification={handleOpenDoorstepVerification}
       />
 
       {/* NEW: Admin Panel Modal (All Orders, Rates Editor, Partners, Reorder, MongoDB Status, Marketplace) */}
@@ -867,11 +893,12 @@ export default function App() {
         onReorder={handleReorder}
         dbStatus={dbStatus}
         onRefreshDbHealth={() => {
-          checkDatabaseHealth().then(setDbStatus).catch(() => {});
+          checkDatabaseHealth().then(setDbStatus).catch(() => { });
         }}
         marketplaceItems={marketplaceItems}
         onDeleteProduct={handleDeleteProduct}
         partners={partners}
+        onOpenDoorstepVerification={handleOpenDoorstepVerification}
       />
 
       {/* NEW: Sell Product Modal (C2C Pre-Loved Goods Bazaar) */}
@@ -881,6 +908,16 @@ export default function App() {
         onSubmitProduct={handleCreateProduct}
         currentUser={currentUser}
         activeCity={activeCity}
+        onOpenAuth={() => setIsAuthModalOpen(true)}
+      />
+
+      {/* NEW: Doorstep Scrap Item Inspection, Customer OTP & Payment Modal */}
+      <DoorstepVerificationModal
+        isOpen={isDoorstepModalOpen}
+        onClose={() => setIsDoorstepModalOpen(false)}
+        order={doorstepOrder}
+        onUpdateOrder={handleUpdateOrder}
+        currentUser={currentUser}
       />
     </div>
   );

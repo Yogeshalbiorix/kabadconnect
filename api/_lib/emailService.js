@@ -60,8 +60,10 @@ function getTransporter() {
 /**
  * Send OTP to user's email address
  */
-export async function sendOtpEmail({ to, otp, purpose = 'login' }) {
-  const actionText = purpose === 'register' ? 'Account Registration' : 'Account Sign In';
+export async function sendOtpEmail({ to, otp, purpose = 'login', orderId = '', amount = '' }) {
+  let actionText = 'Account Sign In';
+  if (purpose === 'register') actionText = 'Account Registration';
+  if (purpose === 'doorstep_verification') actionText = 'Doorstep Scrap Verification';
   const transporter = getTransporter();
 
   // If SMTP is not yet configured, return error

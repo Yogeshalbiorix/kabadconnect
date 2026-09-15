@@ -61,7 +61,7 @@ const UserSchema = new mongoose.Schema({
   },
   password: {
     type: String,
-    required: true,
+    required: false,
     select: false // excluded by default in queries for security
   },
   phone: {

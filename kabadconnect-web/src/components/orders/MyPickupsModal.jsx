@@ -24,7 +24,8 @@ export const MyPickupsModal = ({
   onUpdateOrder, 
   onTrackOrder, 
   onOpenBooking,
-  onReorder = null 
+  onReorder = null,
+  onOpenDoorstepVerification = null 
 }) => {
   const [filterTab, setFilterTab] = useState('all'); // 'all', 'active', 'completed', 'cancelled'
   
@@ -359,6 +360,38 @@ export const MyPickupsModal = ({
                     )}
                   </div>
 
+                  {/* Doorstep OTP Badge if active */}
+                  {order.doorstepVerification?.otp && order.status !== 'completed' && (
+                    <div style={{
+                      padding: '0.65rem 0.85rem',
+                      background: '#FEF3C7',
+                      borderRadius: 'var(--radius-md)',
+                      border: '1px solid #F59E0B',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '0.5rem',
+                      fontSize: '0.8rem'
+                    }}>
+                      <div>
+                        <span style={{ fontWeight: 800, color: '#92400E' }}>Doorstep Verification OTP: </span>
+                        <span style={{ color: '#78350F' }}>Share with collector after item check</span>
+                      </div>
+                      <span style={{
+                        background: '#FFFFFF',
+                        color: '#92400E',
+                        fontWeight: 800,
+                        padding: '2px 8px',
+                        borderRadius: '4px',
+                        fontFamily: 'monospace',
+                        letterSpacing: '2px',
+                        border: '1px solid #FDE68A'
+                      }}>
+                        {order.doorstepVerification.otp}
+                      </span>
+                    </div>
+                  )}
+
                   {/* Actions Footer */}
                   <div style={{
                     display: 'flex',
@@ -369,18 +402,34 @@ export const MyPickupsModal = ({
                     flexWrap: 'wrap',
                     gap: '0.5rem'
                   }}>
-                    {/* Live Tracker Button */}
-                    <button
-                      onClick={() => {
-                        onTrackOrder(order);
-                        onClose();
-                      }}
-                      className="btn btn-secondary btn-sm"
-                      style={{ fontSize: '0.785rem' }}
-                    >
-                      <Truck size={14} color="var(--color-accent-mint)" />
-                      <span>{order.status === 'completed' ? 'View Final Receipt' : 'Live Tracking & Route'}</span>
-                    </button>
+                    {/* Live Tracker & Doorstep Verify Buttons */}
+                    <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                      <button
+                        onClick={() => {
+                          onTrackOrder(order);
+                          onClose();
+                        }}
+                        className="btn btn-secondary btn-sm"
+                        style={{ fontSize: '0.785rem' }}
+                      >
+                        <Truck size={14} color="var(--color-accent-mint)" />
+                        <span>{order.status === 'completed' ? 'View Final Receipt' : 'Live Tracking & Route'}</span>
+                      </button>
+
+                      {canCancelOrUpdate && onOpenDoorstepVerification && (
+                        <button
+                          onClick={() => {
+                            onOpenDoorstepVerification(order);
+                            onClose();
+                          }}
+                          className="btn btn-primary btn-sm"
+                          style={{ fontSize: '0.785rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                        >
+                          <Scale size={13} />
+                          <span>Doorstep Inspect & Pay</span>
+                        </button>
+                      )}
+                    </div>
 
                     {/* Cancellation & Update actions */}
                     {canCancelOrUpdate ? (

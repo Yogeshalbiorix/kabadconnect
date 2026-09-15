@@ -21,7 +21,6 @@ import {
   AlertCircle 
 } from 'lucide-react';
 import { 
-  loginUser, 
   registerUser, 
   sendAuthOtp, 
   loginWithOtp, 
@@ -30,12 +29,6 @@ import {
 
 export const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
   const [authMode, setAuthMode] = useState('login'); // 'login' or 'register'
-  const [loginMethod, setLoginMethod] = useState('otp'); // 'otp' or 'password'
-  
-  // Password Login State
-  const [emailOrPhone, setEmailOrPhone] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   
   // OTP Login State
   const [otpEmail, setOtpEmail] = useState('');
@@ -44,6 +37,7 @@ export const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
   const [otpCountdown, setOtpCountdown] = useState(0);
   
   // Register Form State
+  const [showPassword, setShowPassword] = useState(false);
   const [regData, setRegData] = useState({
     name: '',
     email: '',
@@ -147,42 +141,6 @@ export const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
       }
     } catch (err) {
       setErrorMessage(err.message || 'Failed to verify code.');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  // ----------------------------------------------------
-  // Password Login Handler
-  // ----------------------------------------------------
-  const handlePasswordLoginSubmit = async (e) => {
-    e.preventDefault();
-    setErrorMessage('');
-    setSuccessMessage('');
-    
-    if (!emailOrPhone.trim()) {
-      setErrorMessage('Please enter your email or mobile number.');
-      return;
-    }
-    if (!password.trim()) {
-      setErrorMessage('Please enter your password.');
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      const res = await loginUser(emailOrPhone, password);
-      if (res.success && res.user) {
-        setSuccessMessage(`✓ Welcome back, ${res.user.name}!`);
-        setTimeout(() => {
-          onLoginSuccess(res.user);
-          onClose();
-        }, 600);
-      } else {
-        setErrorMessage(res.error || 'Invalid credentials. Please check your details.');
-      }
-    } catch (err) {
-      setErrorMessage(err.message || 'Login failed. Please check your connection.');
     } finally {
       setIsSubmitting(false);
     }
@@ -312,7 +270,6 @@ export const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
         style={{ 
           maxWidth: authMode === 'register' ? '540px' : '450px', 
           width: '100%',
-          maxHeight: '90vh',
           maxHeight: '90dvh',
           display: 'flex',
           flexDirection: 'column',
@@ -474,301 +431,153 @@ export const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
           )}
 
           {/* ============================================================ */}
-          {/* MODE 1: SIGN IN FORM (OTP OR PASSWORD)                       */}
+          {/* MODE 1: SIGN IN FORM (SECURE EMAIL OTP)                      */}
           {/* ============================================================ */}
           {authMode === 'login' && (
             <div>
-              {/* Sign In Method Toggle */}
-              <div style={{
-                display: 'flex',
-                gap: '0.5rem',
-                marginBottom: '1.25rem',
-                padding: '3px',
-                background: '#F1F5F9',
-                borderRadius: '8px'
-              }}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setLoginMethod('otp');
-                    setErrorMessage('');
-                    setSuccessMessage('');
-                  }}
-                  style={{
-                    flex: 1,
-                    padding: '0.45rem',
-                    fontSize: '0.8rem',
-                    fontWeight: 700,
-                    borderRadius: '6px',
-                    border: 'none',
-                    cursor: 'pointer',
-                    background: loginMethod === 'otp' ? '#FFFFFF' : 'transparent',
-                    color: loginMethod === 'otp' ? 'var(--color-primary)' : '#64748B',
-                    boxShadow: loginMethod === 'otp' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.35rem'
-                  }}
-                >
-                  <Mail size={14} />
-                  <span>Email OTP Login</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setLoginMethod('password');
-                    setErrorMessage('');
-                    setSuccessMessage('');
-                  }}
-                  style={{
-                    flex: 1,
-                    padding: '0.45rem',
-                    fontSize: '0.8rem',
-                    fontWeight: 700,
-                    borderRadius: '6px',
-                    border: 'none',
-                    cursor: 'pointer',
-                    background: loginMethod === 'password' ? '#FFFFFF' : 'transparent',
-                    color: loginMethod === 'password' ? 'var(--color-primary)' : '#64748B',
-                    boxShadow: loginMethod === 'password' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.35rem'
-                  }}
-                >
-                  <Lock size={14} />
-                  <span>Password Login</span>
-                </button>
-              </div>
-
-              {/* -------------------- OPTION A: OTP LOGIN -------------------- */}
-              {loginMethod === 'otp' && (
-                <div>
-                  {!otpSent ? (
-                    /* Step 1: Request OTP */
-                    <form onSubmit={handleSendLoginOtp}>
-                      <div className="form-group" style={{ marginBottom: '1.25rem' }}>
-                        <label className="form-label">
-                          Email Address
-                        </label>
-                        <div style={{ position: 'relative' }}>
-                          <input
-                            type="email"
-                            className="form-input"
-                            placeholder="Enter your email address"
-                            value={otpEmail}
-                            onChange={(e) => setOtpEmail(e.target.value)}
-                            style={{ paddingLeft: '38px' }}
-                            autoComplete="email"
-                            required
-                          />
-                          <Mail size={16} color="#94A3B8" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
-                        </div>
-                        <p style={{ fontSize: '0.75rem', color: '#64748B', marginTop: '0.35rem', marginBottom: 0 }}>
-                          We will send a 6-digit verification code to your email inbox.
-                        </p>
-                      </div>
-
-                      <button
-                        type="submit"
-                        disabled={isSendingOtp}
-                        className="btn btn-primary btn-full"
-                        style={{ padding: '0.8rem', fontSize: '0.95rem', fontWeight: 700 }}
-                      >
-                        {isSendingOtp ? (
-                          <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem' }}>
-                            <Loader2 size={17} className="animate-spin" />
-                            <span>Sending Email to {otpEmail || 'your inbox'}...</span>
-                          </span>
-                        ) : (
-                          <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem' }}>
-                            <span>Send Verification Code</span>
-                            <ArrowRight size={17} />
-                          </span>
-                        )}
-                      </button>
-                    </form>
-                  ) : (
-                    /* Step 2: Enter & Verify OTP */
-                    <form onSubmit={handleVerifyLoginOtp}>
-                      <div className="form-group" style={{ marginBottom: '1.25rem' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
-                          <label className="form-label" style={{ margin: 0 }}>
-                            Enter 6-Digit Code *
-                          </label>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setOtpSent(false);
-                              setOtpCode('');
-                            }}
-                            style={{
-                              background: 'none',
-                              border: 'none',
-                              color: 'var(--color-primary)',
-                              fontSize: '0.75rem',
-                              fontWeight: 600,
-                              cursor: 'pointer',
-                              padding: 0
-                            }}
-                          >
-                            Change Email ({otpEmail})
-                          </button>
-                        </div>
-
-                        <div style={{ position: 'relative' }}>
-                          <input
-                            type="text"
-                            maxLength={6}
-                            className="form-input"
-                            placeholder="• • • • • •"
-                            value={otpCode}
-                            onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
-                            style={{ 
-                              textAlign: 'center', 
-                              letterSpacing: '8px', 
-                              fontSize: '1.4rem', 
-                              fontWeight: 800,
-                              fontFamily: 'monospace'
-                            }}
-                            autoFocus
-                            required
-                          />
-                        </div>
-                        <p style={{ fontSize: '0.75rem', color: '#64748B', marginTop: '0.45rem', marginBottom: 0 }}>
-                          Please check your inbox or spam folder for the code sent to <strong>{otpEmail}</strong>.
-                        </p>
-                      </div>
-
-                      <button
-                        type="submit"
-                        disabled={isSubmitting || otpCode.length !== 6}
-                        className="btn btn-primary btn-full"
-                        style={{ padding: '0.8rem', fontSize: '0.95rem', fontWeight: 700, marginBottom: '0.75rem' }}
-                      >
-                        {isSubmitting ? (
-                          <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem' }}>
-                            <Loader2 size={17} className="animate-spin" />
-                            <span>Verifying Code...</span>
-                          </span>
-                        ) : (
-                          <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem' }}>
-                            <ShieldCheck size={17} />
-                            <span>Verify & Sign In</span>
-                          </span>
-                        )}
-                      </button>
-
-                      {/* Resend OTP with countdown */}
-                      <div style={{ textAlign: 'center' }}>
-                        {otpCountdown > 0 ? (
-                          <span style={{ fontSize: '0.785rem', color: '#64748B' }}>
-                            Resend code in <strong>{otpCountdown}s</strong>
-                          </span>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={handleSendLoginOtp}
-                            disabled={isSendingOtp}
-                            style={{
-                              background: 'none',
-                              border: 'none',
-                              color: 'var(--color-primary)',
-                              fontSize: '0.8rem',
-                              fontWeight: 700,
-                              cursor: 'pointer',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '0.3rem'
-                            }}
-                          >
-                            <RefreshCw size={13} className={isSendingOtp ? 'animate-spin' : ''} />
-                            <span>Resend Code to Email</span>
-                          </button>
-                        )}
-                      </div>
-                    </form>
-                  )}
-                </div>
-              )}
-
-              {/* -------------------- OPTION B: PASSWORD LOGIN -------------------- */}
-              {loginMethod === 'password' && (
-                <form onSubmit={handlePasswordLoginSubmit}>
-                  <div className="form-group" style={{ marginBottom: '1rem' }}>
+              {!otpSent ? (
+                /* Step 1: Request OTP */
+                <form onSubmit={handleSendLoginOtp}>
+                  <div className="form-group" style={{ marginBottom: '1.25rem' }}>
                     <label className="form-label">
-                      Email Address or Mobile Number
+                      Email Address
                     </label>
                     <div style={{ position: 'relative' }}>
                       <input
-                        type="text"
+                        type="email"
                         className="form-input"
-                        placeholder="Enter your registered email or phone"
-                        value={emailOrPhone}
-                        onChange={(e) => setEmailOrPhone(e.target.value)}
+                        placeholder="Enter your email address"
+                        value={otpEmail}
+                        onChange={(e) => setOtpEmail(e.target.value)}
                         style={{ paddingLeft: '38px' }}
-                        autoComplete="username"
+                        autoComplete="email"
                         required
                       />
                       <Mail size={16} color="#94A3B8" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
                     </div>
-                  </div>
-
-                  <div className="form-group" style={{ marginBottom: '1.25rem' }}>
-                    <label className="form-label">Password</label>
-                    <div style={{ position: 'relative' }}>
-                      <input
-                        type={showPassword ? 'text' : 'password'}
-                        className="form-input"
-                        placeholder="Enter your password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        style={{ paddingLeft: '38px', paddingRight: '38px' }}
-                        autoComplete="current-password"
-                        required
-                      />
-                      <Lock size={16} color="#94A3B8" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        style={{
-                          position: 'absolute',
-                          right: '12px',
-                          top: '50%',
-                          transform: 'translateY(-50%)',
-                          background: 'none',
-                          border: 'none',
-                          cursor: 'pointer',
-                          color: '#94A3B8'
-                        }}
-                        aria-label="Toggle password visibility"
-                      >
-                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                      </button>
-                    </div>
+                    <p style={{ fontSize: '0.75rem', color: '#64748B', marginTop: '0.35rem', marginBottom: 0 }}>
+                      We will send a 6-digit verification code to your email inbox.
+                    </p>
                   </div>
 
                   <button
                     type="submit"
-                    disabled={isSubmitting}
+                    disabled={isSendingOtp}
                     className="btn btn-primary btn-full"
                     style={{ padding: '0.8rem', fontSize: '0.95rem', fontWeight: 700 }}
                   >
-                    {isSubmitting ? (
+                    {isSendingOtp ? (
                       <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem' }}>
                         <Loader2 size={17} className="animate-spin" />
-                        <span>Verifying Credentials...</span>
+                        <span>Sending Email to {otpEmail || 'your inbox'}...</span>
                       </span>
                     ) : (
                       <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem' }}>
-                        <span>Sign In</span>
+                        <span>Send Verification Code</span>
                         <ArrowRight size={17} />
                       </span>
                     )}
                   </button>
+                </form>
+              ) : (
+                /* Step 2: Enter & Verify OTP */
+                <form onSubmit={handleVerifyLoginOtp}>
+                  <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+                      <label className="form-label" style={{ margin: 0 }}>
+                        Enter 6-Digit Code *
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOtpSent(false);
+                          setOtpCode('');
+                        }}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: 'var(--color-primary)',
+                          fontSize: '0.75rem',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          padding: 0
+                        }}
+                      >
+                        Change Email ({otpEmail})
+                      </button>
+                    </div>
+
+                    <div style={{ position: 'relative' }}>
+                      <input
+                        type="text"
+                        maxLength={6}
+                        className="form-input"
+                        placeholder="• • • • • •"
+                        value={otpCode}
+                        onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                        style={{ 
+                          textAlign: 'center', 
+                          letterSpacing: '8px', 
+                          fontSize: '1.4rem', 
+                          fontWeight: 800,
+                          fontFamily: 'monospace'
+                        }}
+                        autoFocus
+                        required
+                      />
+                    </div>
+                    <p style={{ fontSize: '0.75rem', color: '#64748B', marginTop: '0.45rem', marginBottom: 0 }}>
+                      Please check your inbox or spam folder for the code sent to <strong>{otpEmail}</strong>.
+                    </p>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isSubmitting || otpCode.length !== 6}
+                    className="btn btn-primary btn-full"
+                    style={{ padding: '0.8rem', fontSize: '0.95rem', fontWeight: 700, marginBottom: '0.75rem' }}
+                  >
+                    {isSubmitting ? (
+                      <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem' }}>
+                        <Loader2 size={17} className="animate-spin" />
+                        <span>Verifying Code...</span>
+                      </span>
+                    ) : (
+                      <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem' }}>
+                        <ShieldCheck size={17} />
+                        <span>Verify & Sign In</span>
+                      </span>
+                    )}
+                  </button>
+
+                  {/* Resend OTP with countdown */}
+                  <div style={{ textAlign: 'center' }}>
+                    {otpCountdown > 0 ? (
+                      <span style={{ fontSize: '0.785rem', color: '#64748B' }}>
+                        Resend code in <strong>{otpCountdown}s</strong>
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleSendLoginOtp}
+                        disabled={isSendingOtp}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: 'var(--color-primary)',
+                          fontSize: '0.8rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.3rem'
+                        }}
+                      >
+                        <RefreshCw size={13} className={isSendingOtp ? 'animate-spin' : ''} />
+                        <span>Resend Code to Email</span>
+                      </button>
+                    )}
+                  </div>
                 </form>
               )}
 

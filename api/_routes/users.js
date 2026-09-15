@@ -100,13 +100,6 @@ export default async function handler(req, res) {
 
         const user = await User.findOne({ email }).lean();
 
-        if (purpose === 'login' && !user) {
-          return res.status(404).json({
-            success: false,
-            error: `No account found with ${email}. Please register a new account first.`
-          });
-        }
-
         if (purpose === 'register' && user) {
           return res.status(409).json({
             success: false,
@@ -175,15 +168,28 @@ export default async function handler(req, res) {
         // Delete used OTP
         await Otp.deleteOne({ _id: otpRecord._id });
 
-        const user = await User.findOne({ email }).lean();
+        let user = await User.findOne({ email }).lean();
         if (!user) {
-          return res.status(404).json({
-            success: false,
-            error: 'No user account found for this email. Please register.'
+          // Passwordless Auto-Provisioning: create new user account
+          const id = 'usr_' + Date.now();
+          const cleanName = email.split('@')[0].replace(/[._-]/g, ' ').trim();
+          const capitalizedName = cleanName.length > 0
+            ? cleanName.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+            : 'Eco Recycler';
+
+          const createdUser = await User.create({
+            id,
+            name: capitalizedName,
+            email,
+            role: 'user',
+            city: 'Delhi NCR'
           });
+          user = createdUser.toObject();
         }
 
-        delete user.password;
+        if (user.password) {
+          delete user.password;
+        }
 
         return res.status(200).json({
           success: true,

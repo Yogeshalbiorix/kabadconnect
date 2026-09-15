@@ -668,7 +668,7 @@ export const Navbar = ({
                   }}
                 >
                   <img
-                    src={currentUser.avatar}
+                    src={currentUser.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80'}
                     alt={currentUser.name}
                     style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover' }}
                   />
@@ -1130,7 +1130,7 @@ export const Navbar = ({
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
                   <img
-                    src={currentUser.avatar}
+                    src={currentUser.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80'}
                     alt={currentUser.name}
                     style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover' }}
                   />

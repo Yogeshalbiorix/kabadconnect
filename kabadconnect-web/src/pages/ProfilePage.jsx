@@ -1883,7 +1883,6 @@ export const ProfilePage = ({
             style={{ 
               maxWidth: '520px', 
               width: '100%', 
-              maxHeight: '90vh',
               maxHeight: '90dvh',
               display: 'flex',
               flexDirection: 'column',

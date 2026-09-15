@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   X, 
   Search, 
@@ -14,16 +14,37 @@ import {
   Play,
   RotateCcw,
   ShieldCheck,
-  FileCheck
+  FileCheck,
+  Lock
 } from 'lucide-react';
 import { INITIAL_ORDERS } from '../../data/mockOrders';
 import { OrderRouteMap } from './OrderRouteMap';
 
-export const LiveOrderTrackerModal = ({ isOpen, onClose, activeOrder = null }) => {
+export const LiveOrderTrackerModal = ({ 
+  isOpen, 
+  onClose, 
+  activeOrder = null,
+  onOpenDoorstepVerification = null 
+}) => {
   const [currentOrder, setCurrentOrder] = useState(activeOrder || INITIAL_ORDERS[0]);
   const [searchId, setSearchId] = useState('');
-  const [simulatedStage, setSimulatedStage] = useState(2); // 0: Placed, 1: Assigned, 2: En Route, 3: Weighing, 4: Completed
+  const [simulatedStage, setSimulatedStage] = useState(() => {
+    if (activeOrder?.status === 'completed') return 4;
+    if (activeOrder?.status === 'weighing') return 3;
+    return 2;
+  });
   const [showCertificate, setShowCertificate] = useState(false);
+
+  useEffect(() => {
+    if (activeOrder) {
+      setCurrentOrder(activeOrder);
+      if (activeOrder.status === 'completed') setSimulatedStage(4);
+      else if (activeOrder.status === 'weighing') setSimulatedStage(3);
+      else if (activeOrder.status === 'in_transit' || activeOrder.status === 'en_route') setSimulatedStage(2);
+      else if (activeOrder.status === 'assigned') setSimulatedStage(1);
+      else setSimulatedStage(0);
+    }
+  }, [activeOrder]);
 
   if (!isOpen) return null;
 
@@ -46,7 +67,19 @@ export const LiveOrderTrackerModal = ({ isOpen, onClose, activeOrder = null }) =
     }
   };
 
+  const isOtpVerified = Boolean(
+    currentOrder?.doorstepVerification?.isVerified || 
+    currentOrder?.doorstepVerification?.isConfirmed || 
+    currentOrder?.doorstepVerification?.paymentStatus === 'paid' || 
+    currentOrder?.status === 'completed'
+  );
+
+  const isNextDisabled = simulatedStage === 4 || (simulatedStage === 3 && !isOtpVerified);
+
   const handleNextStage = () => {
+    if (simulatedStage === 3 && !isOtpVerified) {
+      return;
+    }
     if (simulatedStage < 4) {
       setSimulatedStage(simulatedStage + 1);
     }
@@ -257,47 +290,124 @@ export const LiveOrderTrackerModal = ({ isOpen, onClose, activeOrder = null }) =
               </div>
             )}
 
-            {/* Stage 3: Live Digital Weighing in progress */}
+            {/* Stage 3: Live Digital Weighing & OTP Verification in progress */}
             {simulatedStage === 3 && (
               <div>
                 <div className="flex-between" style={{ marginBottom: '0.85rem' }}>
                   <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>
-                    Live Digital Scale Feed
+                    Doorstep Item Inspection & Scale Feed
                   </div>
                   <span className="badge badge-success">
                     Digital Scale Connected ⚖️
                   </span>
                 </div>
 
+                {/* Items preview */}
                 <div style={{
                   display: 'flex',
                   flexDirection: 'column',
                   gap: '0.5rem',
                   marginBottom: '1rem'
                 }}>
-                  <div className="flex-between" style={{ padding: '0.65rem', background: '#FFFFFF', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)', fontSize: '0.85rem' }}>
-                    <span>Newspaper (Akhbaar) — 22.5 kg @ ₹14/kg</span>
-                    <strong>₹315.00</strong>
-                  </div>
-                  <div className="flex-between" style={{ padding: '0.65rem', background: '#FFFFFF', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)', fontSize: '0.85rem' }}>
-                    <span>Cardboard / Gatta — 14.0 kg @ ₹10/kg</span>
-                    <strong>₹140.00</strong>
-                  </div>
-                  <div className="flex-between" style={{ padding: '0.65rem', background: '#FFFFFF', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)', fontSize: '0.85rem' }}>
-                    <span>Iron Scrap / Loha — 8.5 kg @ ₹32/kg</span>
-                    <strong>₹272.00</strong>
-                  </div>
+                  {(currentOrder.itemsWeighed && currentOrder.itemsWeighed.length > 0) ? (
+                    currentOrder.itemsWeighed.map((it, idx) => (
+                      <div key={idx} className="flex-between" style={{ padding: '0.65rem', background: '#FFFFFF', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)', fontSize: '0.85rem' }}>
+                        <span>{it.name} — {it.weight} @ {it.rate}</span>
+                        <strong>₹{it.subtotal || Math.round((parseFloat(it.weight) || 10) * (parseFloat(it.rate) || 14))}</strong>
+                      </div>
+                    ))
+                  ) : (
+                    <>
+                      <div className="flex-between" style={{ padding: '0.65rem', background: '#FFFFFF', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)', fontSize: '0.85rem' }}>
+                        <span>Newspaper (Akhbaar) — 22.5 kg @ ₹14/kg</span>
+                        <strong>₹315.00</strong>
+                      </div>
+                      <div className="flex-between" style={{ padding: '0.65rem', background: '#FFFFFF', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)', fontSize: '0.85rem' }}>
+                        <span>Cardboard / Gatta — 14.0 kg @ ₹10/kg</span>
+                        <strong>₹140.00</strong>
+                      </div>
+                      <div className="flex-between" style={{ padding: '0.65rem', background: '#FFFFFF', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)', fontSize: '0.85rem' }}>
+                        <span>Iron Scrap / Loha — 8.5 kg @ ₹32/kg</span>
+                        <strong>₹272.00</strong>
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 <div className="flex-between" style={{
                   padding: '0.85rem 1rem',
                   background: 'var(--color-accent-mint-soft)',
                   borderRadius: 'var(--radius-md)',
-                  border: '1px solid rgba(16, 185, 129, 0.3)'
+                  border: '1px solid rgba(16, 185, 129, 0.3)',
+                  marginBottom: '1rem'
                 }}>
                   <span style={{ fontWeight: 700, color: 'var(--color-primary)' }}>Verified Final Total:</span>
-                  <span style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--color-primary)' }}>₹727.00</span>
+                  <span style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--color-primary)' }}>
+                    ₹{currentOrder.totalPaid || currentOrder.estimatedAmount || 727}
+                  </span>
                 </div>
+
+                {/* Customer OTP Box if OTP exists */}
+                {currentOrder.doorstepVerification?.otp && (
+                  <div style={{
+                    padding: '0.85rem 1rem',
+                    background: '#FEF3C7',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1.5px solid #F59E0B',
+                    marginBottom: '1rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: '0.5rem'
+                  }}>
+                    <div>
+                      <div style={{ fontSize: '0.72rem', color: '#92400E', fontWeight: 800, textTransform: 'uppercase' }}>
+                        Customer Doorstep Confirmation OTP
+                      </div>
+                      <div style={{ fontSize: '0.78rem', color: '#78350F' }}>
+                        Share this code with collector after inspecting scrap weight
+                      </div>
+                    </div>
+                    <span style={{
+                      fontSize: '1.2rem',
+                      fontWeight: 800,
+                      fontFamily: 'monospace',
+                      letterSpacing: '4px',
+                      color: '#92400E',
+                      background: '#FFFFFF',
+                      padding: '3px 10px',
+                      borderRadius: '6px',
+                      border: '1px solid #FDE68A'
+                    }}>
+                      {currentOrder.doorstepVerification.otp}
+                    </span>
+                  </div>
+                )}
+
+                {/* Doorstep Verification Launch Button */}
+                {onOpenDoorstepVerification && (
+                  <button
+                    onClick={() => {
+                      onOpenDoorstepVerification(currentOrder);
+                      onClose();
+                    }}
+                    className="btn btn-primary btn-full"
+                    style={{
+                      padding: '0.75rem',
+                      fontSize: '0.88rem',
+                      fontWeight: 800,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.5rem',
+                      boxShadow: '0 4px 12px rgba(16, 185, 129, 0.25)'
+                    }}
+                  >
+                    <Scale size={18} />
+                    <span>Open Doorstep Weighing, OTP & Payment Terminal</span>
+                  </button>
+                )}
               </div>
             )}
 
@@ -376,34 +486,75 @@ export const LiveOrderTrackerModal = ({ isOpen, onClose, activeOrder = null }) =
           {/* Interactive Simulation Controls Bar */}
           <div style={{
             display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
+            flexDirection: 'column',
+            gap: '0.65rem',
             padding: '0.75rem 1rem',
             background: 'var(--color-bg-alt)',
             borderRadius: 'var(--radius-md)',
             border: '1px solid var(--color-border)'
           }}>
-            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>
-              TEST SIMULATOR CONTROLS:
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '0.5rem'
+            }}>
+              <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>
+                TEST SIMULATOR CONTROLS:
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button
+                  onClick={handlePrevStage}
+                  disabled={simulatedStage === 0}
+                  className="btn btn-sm btn-secondary"
+                  style={{ opacity: simulatedStage === 0 ? 0.5 : 1 }}
+                >
+                  ◀ Prev Stage
+                </button>
+                <button
+                  onClick={handleNextStage}
+                  disabled={isNextDisabled}
+                  className="btn btn-sm btn-primary"
+                  style={{ 
+                    opacity: isNextDisabled ? 0.55 : 1,
+                    cursor: isNextDisabled ? 'not-allowed' : 'pointer',
+                    background: simulatedStage === 3 && !isOtpVerified ? '#64748B' : undefined,
+                    borderColor: simulatedStage === 3 && !isOtpVerified ? '#64748B' : undefined
+                  }}
+                  title={simulatedStage === 3 && !isOtpVerified ? "Customer confirmation OTP is required before advancing to Payment" : undefined}
+                >
+                  {simulatedStage === 3 && !isOtpVerified ? (
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <Lock size={13} />
+                      <span>Next Stage (OTP Required)</span>
+                    </span>
+                  ) : (
+                    <span>Next Stage ▶</span>
+                  )}
+                </button>
+              </div>
             </div>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <button
-                onClick={handlePrevStage}
-                disabled={simulatedStage === 0}
-                className="btn btn-sm btn-secondary"
-                style={{ opacity: simulatedStage === 0 ? 0.5 : 1 }}
-              >
-                ◀ Prev Stage
-              </button>
-              <button
-                onClick={handleNextStage}
-                disabled={simulatedStage === 4}
-                className="btn btn-sm btn-primary"
-                style={{ opacity: simulatedStage === 4 ? 0.5 : 1 }}
-              >
-                Next Stage ▶
-              </button>
-            </div>
+
+            {simulatedStage === 3 && !isOtpVerified && (
+              <div style={{
+                fontSize: '0.75rem',
+                color: '#92400E',
+                background: '#FEF3C7',
+                border: '1px solid #F59E0B',
+                borderRadius: '6px',
+                padding: '0.45rem 0.75rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.45rem',
+                lineHeight: 1.4
+              }}>
+                <AlertCircle size={14} color="#D97706" style={{ flexShrink: 0 }} />
+                <span>
+                  <strong>OTP Required:</strong> Without verifying the customer doorstep OTP, the next step (Payment Completed) cannot be reached. Please click <em>"Open Doorstep Weighing, OTP & Payment Terminal"</em> above to confirm scrap items & OTP.
+                </span>
+              </div>
+            )}
           </div>
         </div>
 
