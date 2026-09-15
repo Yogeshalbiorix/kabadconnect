@@ -1,13 +1,13 @@
 import React from 'react';
-import { 
-  Calendar, 
-  Scale, 
-  Wallet, 
-  ShieldCheck, 
-  ArrowRight, 
-  Check, 
-  X as XIcon, 
-  Sparkles 
+import {
+  Calendar,
+  Scale,
+  Wallet,
+  ShieldCheck,
+  ArrowRight,
+  Check,
+  X as XIcon,
+  Sparkles
 } from 'lucide-react';
 
 export const HowItWorks = ({ onOpenBooking }) => {
@@ -93,7 +93,7 @@ export const HowItWorks = ({ onOpenBooking }) => {
           position: 'relative'
         }}>
           {steps.map((step, idx) => (
-            <div 
+            <div
               key={step.num}
               className="card"
               style={{
@@ -210,7 +210,7 @@ export const HowItWorks = ({ onOpenBooking }) => {
             gap: '0.85rem'
           }}>
             {comparisonRows.map((row, idx) => (
-              <div 
+              <div
                 key={idx}
                 style={{
                   background: 'var(--color-bg)',
@@ -288,7 +288,7 @@ export const HowItWorks = ({ onOpenBooking }) => {
               👉 Swipe table horizontally to see all columns
             </div>
 
-            <div className="scroll-touch-x" style={{
+            <div className="" style={{
               overflowX: 'auto',
               WebkitOverflowScrolling: 'touch',
               width: '100%',

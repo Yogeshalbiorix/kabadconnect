@@ -1,20 +1,20 @@
 import React, { useState } from 'react';
-import { 
-  X, 
-  ShieldCheck, 
-  Package, 
-  TrendingUp, 
-  TrendingDown, 
-  Scale, 
-  Users, 
-  Search, 
-  CheckCircle2, 
-  XCircle, 
-  Clock, 
-  Truck, 
-  DollarSign, 
-  Save, 
-  Filter, 
+import {
+  X,
+  ShieldCheck,
+  Package,
+  TrendingUp,
+  TrendingDown,
+  Scale,
+  Users,
+  Search,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  Truck,
+  DollarSign,
+  Save,
+  Filter,
   RefreshCw,
   Edit2,
   RotateCcw,
@@ -32,19 +32,19 @@ import {
 import { KABADWALA_PARTNERS } from '../../data/kabadwalas';
 import { apiSeedDatabase, apiGetDbConfig, apiUpdateDbConfig } from '../../services/api';
 
-export const AdminPanelModal = ({ 
-  isOpen, 
-  onClose, 
-  orders = [], 
-  onUpdateOrderStatus, 
-  onAssignKabadwala, 
+export const AdminPanelModal = ({
+  isOpen,
+  onClose,
+  orders = [],
+  onUpdateOrderStatus,
+  onAssignKabadwala,
   onCancelOrder,
   scrapItems = [],
   onUpdateScrapRate,
   currentUser,
   onReorder = null,
   dbStatus = { connected: false, status: 'checking', message: '' },
-  onRefreshDbHealth = () => {},
+  onRefreshDbHealth = () => { },
   marketplaceItems = [],
   onDeleteProduct = null,
   partners = [],
@@ -53,7 +53,7 @@ export const AdminPanelModal = ({
   const [activeTab, setActiveTab] = useState('orders'); // 'orders', 'rates', 'partners', 'marketplace', 'database'
   const [orderFilter, setOrderFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-  
+
   // Rate editor state: { [itemId]: { rate: number, trendType: string } }
   const [editingRates, setEditingRates] = useState({});
   const [rateSavedMessage, setRateSavedMessage] = useState('');
@@ -85,7 +85,7 @@ export const AdminPanelModal = ({
     setIsConfiguringDb(true);
     setDbConfigMessage({ type: 'info', text: 'Connecting to MongoDB Atlas cluster and validating credentials...' });
 
-    const payload = useCustomUri 
+    const payload = useCustomUri
       ? { uri: customUri.trim() }
       : { password: dbPassword.trim(), databaseName: 'kabadconnect' };
 
@@ -121,7 +121,7 @@ export const AdminPanelModal = ({
   // Filtered orders
   const filteredOrders = orders.filter((o) => {
     const matchesFilter = orderFilter === 'all' || o.status === orderFilter;
-    const matchesSearch = 
+    const matchesSearch =
       o.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
       o.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       o.phone.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -143,7 +143,7 @@ export const AdminPanelModal = ({
     const updated = editingRates[item.id];
     const newRate = updated?.rate !== undefined ? updated.rate : item.rate;
     const newTrend = updated?.trendType || item.trendType;
-    
+
     onUpdateScrapRate(item.id, newRate, newTrend);
     setRateSavedMessage(`Updated rate for "${item.name}" to ₹${newRate}/${item.unit || 'kg'}`);
     setTimeout(() => setRateSavedMessage(''), 3500);
@@ -151,8 +151,8 @@ export const AdminPanelModal = ({
 
   return (
     <div className="modal-overlay" onClick={onClose} style={{ zIndex: 1250 }}>
-      <div 
-        className="modal-content" 
+      <div
+        className="modal-content"
         onClick={(e) => e.stopPropagation()}
         style={{
           maxWidth: '960px',
@@ -557,14 +557,14 @@ export const AdminPanelModal = ({
                                 fontWeight: 700,
                                 border: 'none',
                                 cursor: 'pointer',
-                                background: 
+                                background:
                                   order.status === 'completed' ? '#DCFCE7' :
-                                  order.status === 'in_transit' ? '#DBEAFE' :
-                                  order.status === 'cancelled' ? '#FEE2E2' : '#FEF3C7',
+                                    order.status === 'in_transit' ? '#DBEAFE' :
+                                      order.status === 'cancelled' ? '#FEE2E2' : '#FEF3C7',
                                 color:
                                   order.status === 'completed' ? '#166534' :
-                                  order.status === 'in_transit' ? '#1E40AF' :
-                                  order.status === 'cancelled' ? '#991B1B' : '#92400E'
+                                    order.status === 'in_transit' ? '#1E40AF' :
+                                      order.status === 'cancelled' ? '#991B1B' : '#92400E'
                               }}
                             >
                               <option value="pending">⏳ Pending</option>
@@ -678,7 +678,7 @@ export const AdminPanelModal = ({
                 </div>
               )}
 
-              <div className="scroll-touch-x" style={{
+              <div className="" style={{
                 background: '#FFFFFF',
                 borderRadius: 'var(--radius-lg)',
                 border: '1px solid var(--color-border)',
@@ -698,8 +698,8 @@ export const AdminPanelModal = ({
                   </thead>
                   <tbody>
                     {scrapItems.map((item) => {
-                      const currentVal = editingRates[item.id]?.rate !== undefined 
-                        ? editingRates[item.id].rate 
+                      const currentVal = editingRates[item.id]?.rate !== undefined
+                        ? editingRates[item.id].rate
                         : item.rate;
 
                       return (
