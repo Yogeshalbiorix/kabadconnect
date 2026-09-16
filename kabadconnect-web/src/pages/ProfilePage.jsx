@@ -1330,9 +1330,13 @@ export const ProfilePage = ({
                           </div>
 
                           <div style={{ textAlign: 'right' }}>
-                            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>ESTIMATED PAYOUT</div>
-                            <div style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--color-primary)' }}>
-                              ₹{order.estimatedPayout || order.totalEstimated || 350}
+                            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>
+                              {order.status === 'completed' ? 'FINAL PAID' : 'ESTIMATED PAYOUT'}
+                            </div>
+                            <div style={{ fontSize: '1.35rem', fontWeight: 800, color: order.status === 'completed' ? '#059669' : 'var(--color-primary)' }}>
+                              ₹{order.status === 'completed' 
+                                ? (order.totalPaid || order.doorstepVerification?.paidAmount || order.paidAmount || order.estimatedPayout || order.estimatedAmount || 350)
+                                : (order.estimatedPayout || order.estimatedAmount || order.totalEstimated || 350)}
                             </div>
                           </div>
                         </div>

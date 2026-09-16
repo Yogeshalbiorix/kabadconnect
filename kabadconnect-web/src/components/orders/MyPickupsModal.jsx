@@ -320,10 +320,34 @@ export const MyPickupsModal = ({
 
                     {/* Scrap & Amount */}
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
-                      <Scale size={16} color="var(--color-accent-gold)" style={{ flexShrink: 0, marginTop: '2px' }} />
+                      <Scale size={16} color={order.status === 'completed' ? 'var(--color-accent-mint)' : 'var(--color-accent-gold)'} style={{ flexShrink: 0, marginTop: '2px' }} />
                       <div>
-                        <div style={{ fontSize: '0.725rem', color: 'var(--color-text-muted)' }}>Est. Weight & Value</div>
-                        <strong>{order.estimatedWeight}</strong> • <strong style={{ color: 'var(--color-primary)' }}>₹{order.estimatedAmount || order.totalPaid}</strong>
+                        <div style={{ fontSize: '0.725rem', color: 'var(--color-text-muted)' }}>
+                          {order.status === 'completed' ? 'Final Paid Value' : 'Est. Weight & Value'}
+                        </div>
+                        <strong>
+                          {order.status === 'completed' && order.doorstepVerification?.verifiedWeight 
+                            ? `${order.doorstepVerification.verifiedWeight} kg` 
+                            : order.estimatedWeight}
+                        </strong> • <strong style={{ color: order.status === 'completed' ? '#059669' : 'var(--color-primary)' }}>
+                          ₹{(order.status === 'completed' 
+                            ? (order.totalPaid || order.doorstepVerification?.paidAmount || order.paidAmount || order.estimatedAmount) 
+                            : (order.estimatedAmount || order.totalPaid))}
+                        </strong>
+                        {order.status === 'completed' && (
+                          <span style={{
+                            marginLeft: '6px',
+                            fontSize: '0.7rem',
+                            background: '#DCFCE7',
+                            color: '#166534',
+                            border: '1px solid #86EFAC',
+                            padding: '1px 6px',
+                            borderRadius: '999px',
+                            fontWeight: 700
+                          }}>
+                            ✓ Paid
+                          </span>
+                        )}
                         {order.itemsWeighed && order.itemsWeighed.length > 0 && (
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginTop: '0.35rem' }}>
                             {order.itemsWeighed.map((it, idx) => (
@@ -335,7 +359,7 @@ export const MyPickupsModal = ({
                                 padding: '1px 5px',
                                 color: '#334155'
                               }}>
-                                {it.name} ({it.weight})
+                                {it.name} ({typeof it.weight === 'string' && it.weight.includes('kg') ? it.weight : `${it.weight} kg`})
                               </span>
                             ))}
                           </div>
