@@ -170,8 +170,9 @@ export default async function handler(req, res) {
 
         let user = await User.findOne({ email }).lean();
         if (!user) {
-          // Passwordless Auto-Provisioning: create new user account
-          const id = 'usr_' + Date.now();
+          // Passwordless Auto-Provisioning: create new user account with permanent KC-USER-XXXX ID
+          const userNum = Math.floor(1000 + Math.random() * 9000);
+          const id = `KC-USER-${userNum}`;
           const cleanName = email.split('@')[0].replace(/[._-]/g, ' ').trim();
           const capitalizedName = cleanName.length > 0
             ? cleanName.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
@@ -345,9 +346,10 @@ export default async function handler(req, res) {
 
       // Hash password
       const hashedPassword = hashPassword(rawPassword);
+      const userNum = Math.floor(1000 + Math.random() * 9000);
 
       const newUserData = {
-        id: body.id || `usr-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+        id: body.id || `KC-USER-${userNum}`,
         name,
         email,
         password: hashedPassword,
@@ -409,8 +411,9 @@ export default async function handler(req, res) {
       await connectToDatabase();
       const filter = identifier.includes('@') ? { email: identifier.toLowerCase().trim() } : { id: identifier };
 
-      // If updating password, hash it
+      // If updating password, hash it & enforce immutable User ID
       const updateData = { ...body };
+      delete updateData.id; // STRICT: User ID cannot be modified after account creation
       if (updateData.password) {
         updateData.password = hashPassword(updateData.password);
       } else {

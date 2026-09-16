@@ -1,7 +1,7 @@
 /**
  * KabadCollect Unified API Service
  * Interacts with Vercel Serverless Functions (/api/*) and MongoDB Atlas.
- * Provides resilient offline/local state fallback when running offline or without database.
+
  */
 
 // Base API path (works automatically with Vercel Serverless Functions)
@@ -56,7 +56,7 @@ export async function apiGetDbConfig() {
     if (res.ok) {
       return await res.json();
     }
-  } catch (e) {}
+  } catch (e) { }
   return { configured: false, hasPlaceholder: true };
 }
 
@@ -290,8 +290,8 @@ export async function apiVerifyOtpRegister({ email, otp }) {
 
 export async function apiUpdateUserProfile(identifier, updates) {
   try {
-    const param = identifier && identifier.includes('@') 
-      ? `email=${encodeURIComponent(identifier)}` 
+    const param = identifier && identifier.includes('@')
+      ? `email=${encodeURIComponent(identifier)}`
       : `id=${encodeURIComponent(identifier || '')}`;
     const res = await fetchWithTimeout(`${API_BASE}/users?${param}`, {
       method: 'PUT',
@@ -485,6 +485,40 @@ export async function apiCompleteOrderPayment(orderId, paymentData) {
   }
   return { success: true, source: 'local' };
 }
+
+// ----------------------------------------------------
+// 9. Support Tickets API (MongoDB Persistence for Customer Service)
+// ----------------------------------------------------
+export async function apiSubmitSupportTicket(ticketData) {
+  try {
+    const res = await fetchWithTimeout(`${API_BASE}/tickets`, {
+      method: 'POST',
+      body: JSON.stringify(ticketData)
+    }, 10000);
+    const data = await res.json();
+    if (res.ok && data.success) {
+      return { success: true, source: data.source, ticket: data.data, message: data.message };
+    }
+  } catch (err) {
+    console.warn('[API Service] Submit support ticket API call failed, fallback to client state:', err.message);
+  }
+  return { success: false, source: 'local' };
+}
+
+export async function apiGetUserTickets(email = '') {
+  try {
+    const param = email ? `?email=${encodeURIComponent(email)}` : '';
+    const res = await fetchWithTimeout(`${API_BASE}/tickets${param}`, { method: 'GET' });
+    if (res.ok) {
+      const data = await res.json();
+      return { success: true, source: data.source, tickets: data.data || [] };
+    }
+  } catch (err) {
+    console.warn('[API Service] Fetch tickets failed:', err.message);
+  }
+  return { success: false, source: 'local', tickets: [] };
+}
+
 
 
 

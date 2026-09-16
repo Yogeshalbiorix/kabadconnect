@@ -6,6 +6,7 @@ import marketplaceHandler from './_routes/marketplace.js';
 import usersHandler from './_routes/users.js';
 import seedHandler from './_routes/seed.js';
 import configDbHandler from './_routes/config-db.js';
+import ticketsHandler from './_routes/tickets.js';
 
 export default async function handler(req, res) {
   // CORS Headers
@@ -63,6 +64,10 @@ export default async function handler(req, res) {
         return await seedHandler(req, res);
       case 'config-db':
         return await configDbHandler(req, res);
+      case 'tickets':
+      case 'support':
+      case 'contact':
+        return await ticketsHandler(req, res);
       case '':
         // Default root /api ping
         return await healthHandler(req, res);

@@ -19,6 +19,7 @@ import {
   Headphones,
   ExternalLink
 } from 'lucide-react';
+import { apiSubmitSupportTicket } from '../services/api';
 
 export const ContactPage = ({ 
   onOpenBooking = () => {}, 
@@ -42,7 +43,7 @@ export const ContactPage = ({
   const [selectedFaqCategory, setSelectedFaqCategory] = useState('All');
   const [expandedFaqIndex, setExpandedFaqIndex] = useState(0);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.name || !formData.email || !formData.message) {
       alert('Please complete all required fields (Name, Email, and Message).');
@@ -50,24 +51,27 @@ export const ContactPage = ({
     }
 
     setIsSubmitting(true);
-    setTimeout(() => {
-      const ticketId = `TICKET-${Math.floor(1000 + Math.random() * 9000)}`;
-      const newTicket = {
-        id: ticketId,
-        ...formData,
-        status: 'OPEN',
-        createdAt: new Date().toISOString(),
-        estimatedResolution: 'Under 15 minutes'
-      };
+    const ticketId = `TICKET-${Math.floor(1000 + Math.random() * 9000)}`;
+    const newTicket = {
+      id: ticketId,
+      ...formData,
+      userId: currentUser?.id || '',
+      status: 'OPEN',
+      createdAt: new Date().toISOString(),
+      estimatedResolution: 'Under 15 minutes'
+    };
 
-      try {
-        const existing = JSON.parse(localStorage.getItem('kabadcollect_support_tickets') || '[]');
-        localStorage.setItem('kabadcollect_support_tickets', JSON.stringify([newTicket, ...existing]));
-      } catch (err) {}
+    // Submit to MongoDB Atlas backend
+    const res = await apiSubmitSupportTicket(newTicket);
+    const finalTicket = (res.success && res.ticket) ? res.ticket : newTicket;
 
-      setSubmittedTicket(newTicket);
-      setIsSubmitting(false);
-    }, 600);
+    try {
+      const existing = JSON.parse(localStorage.getItem('kabadcollect_support_tickets') || '[]');
+      localStorage.setItem('kabadcollect_support_tickets', JSON.stringify([finalTicket, ...existing]));
+    } catch (err) {}
+
+    setSubmittedTicket(finalTicket);
+    setIsSubmitting(false);
   };
 
   const CATEGORIES = [
