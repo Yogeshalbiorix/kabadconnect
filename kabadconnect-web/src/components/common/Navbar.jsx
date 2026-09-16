@@ -19,7 +19,8 @@ import {
   LogOut,
   Package,
   KeyRound,
-  ChevronRight
+  ChevronRight,
+  Wallet
 } from 'lucide-react';
 
 export const Navbar = ({ 
@@ -44,8 +45,13 @@ export const Navbar = ({
   ordersCount = 0,
   currentPage = 'home',
   onNavigate = () => {},
-  onOpenSellModal = null
+  onOpenSellModal = null,
+  walletBalance = null
 }) => {
+  const displayWallet = walletBalance !== null && walletBalance !== undefined 
+    ? walletBalance 
+    : (currentUser?.totalEarned || 0);
+
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [cityDropdownOpen, setCityDropdownOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -307,6 +313,35 @@ export const Navbar = ({
             </div>
 
             <span style={{ opacity: 0.4 }} className="hide-on-mobile">|</span>
+
+            {/* Scrap Wallet Topbar Badge */}
+            {currentUser && (
+              <>
+                <button 
+                  onClick={() => onNavigate('profile')}
+                  className="hide-on-mobile"
+                  style={{ 
+                    color: '#FFFFFF', 
+                    fontWeight: 700, 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '0.35rem',
+                    fontSize: '0.8rem',
+                    cursor: 'pointer',
+                    background: 'rgba(16, 185, 129, 0.22)',
+                    border: '1px solid rgba(52, 211, 153, 0.4)',
+                    borderRadius: '999px',
+                    padding: '0.18rem 0.65rem',
+                    transition: 'all 0.2s ease'
+                  }}
+                  title="Your Live Scrap Cash Wallet - Click to View Profile & Manage Wallet"
+                >
+                  <Wallet size={13} color="#34D399" />
+                  <span>Wallet: <strong style={{ color: '#34D399' }}>₹{displayWallet.toLocaleString()}</strong></span>
+                </button>
+                <span style={{ opacity: 0.4 }} className="hide-on-mobile">|</span>
+              </>
+            )}
 
             {/* My Pickups Shortcut */}
             <button 
@@ -650,61 +685,142 @@ export const Navbar = ({
                 <User size={18} />
               </button>
             ) : (
-              <div ref={userMenuRef} className="nav-user-dropdown" style={{ position: 'relative' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                {/* Live Scrap Cash Wallet Pill in Top Navigation Bar */}
                 <button
-                  onClick={() => {
-                    setUserMenuOpen(prev => !prev);
-                    setCityDropdownOpen(false);
-                  }}
+                  type="button"
+                  onClick={() => onNavigate('profile')}
+                  className="nav-btn-wallet"
                   style={{
-                    display: 'flex',
+                    display: 'inline-flex',
                     alignItems: 'center',
                     gap: '0.45rem',
-                    background: 'var(--color-bg)',
-                    border: '1px solid var(--color-border)',
-                    padding: '0.35rem 0.75rem 0.35rem 0.4rem',
+                    padding: '0.35rem 0.85rem',
                     borderRadius: 'var(--radius-full)',
-                    cursor: 'pointer'
+                    background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(5, 150, 105, 0.2) 100%)',
+                    border: '1.5px solid rgba(16, 185, 129, 0.4)',
+                    color: 'var(--color-primary)',
+                    fontWeight: 800,
+                    fontSize: '0.85rem',
+                    cursor: 'pointer',
+                    transition: 'all var(--transition-fast)',
+                    boxShadow: '0 2px 6px rgba(16, 185, 129, 0.12)',
+                    flexShrink: 0
                   }}
+                  title="Your Scrap Cash Earnings & Wallet Balance (Click to view profile & wallet)"
                 >
-                  <img
-                    src={currentUser.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80'}
-                    alt={currentUser.name}
-                    style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover' }}
-                  />
-                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-primary)' }}>
-                    {currentUser.name.split(' ')[0]}
-                  </span>
-                  <ChevronDown size={14} color="var(--color-text-muted)" />
+                  <div style={{
+                    width: '22px',
+                    height: '22px',
+                    borderRadius: '50%',
+                    background: 'var(--color-accent-mint)',
+                    color: '#FFFFFF',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0
+                  }}>
+                    <Wallet size={12} />
+                  </div>
+                  <span>₹{displayWallet.toLocaleString()}</span>
                 </button>
 
-                {userMenuOpen && (
-                  <div style={{
-                    position: 'absolute',
-                    top: '115%',
-                    right: 0,
-                    width: '240px',
-                    background: '#FFFFFF',
-                    borderRadius: 'var(--radius-md)',
-                    boxShadow: 'var(--shadow-xl)',
-                    border: '1px solid var(--color-border)',
-                    padding: '0.65rem',
-                    zIndex: 999,
-                    animation: 'scaleUp 0.15s ease'
-                  }}>
-                    <div style={{ padding: '0.5rem', borderBottom: '1px solid var(--color-border)', marginBottom: '0.5rem' }}>
-                      <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#0F172A' }}>{currentUser.name}</div>
-                      <div style={{ fontSize: '0.75rem', color: '#64748B' }}>{currentUser.email || currentUser.phone}</div>
-                      <span className={`badge ${
-                        currentUser.role === 'admin' ? 'badge-warning' : 
-                        currentUser.role === 'agent' ? 'badge-primary' : 
-                        currentUser.role === 'partner' ? 'badge-warning' : 'badge-primary'
-                      }`} style={{ marginTop: '4px', fontSize: '0.65rem' }}>
-                        {currentUser.role === 'admin' ? 'Super Admin' : 
-                         currentUser.role === 'agent' ? 'Field Pickup Agent' : 
-                         currentUser.role === 'partner' ? 'Recycling Partner' : 'Verified Customer'}
-                      </span>
-                    </div>
+                <div ref={userMenuRef} className="nav-user-dropdown" style={{ position: 'relative' }}>
+                  <button
+                    onClick={() => {
+                      setUserMenuOpen(prev => !prev);
+                      setCityDropdownOpen(false);
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.45rem',
+                      background: 'var(--color-bg)',
+                      border: '1px solid var(--color-border)',
+                      padding: '0.35rem 0.75rem 0.35rem 0.4rem',
+                      borderRadius: 'var(--radius-full)',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <img
+                      src={currentUser.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80'}
+                      alt={currentUser.name}
+                      style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover' }}
+                    />
+                    <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-primary)' }}>
+                      {currentUser.name.split(' ')[0]}
+                    </span>
+                    <ChevronDown size={14} color="var(--color-text-muted)" />
+                  </button>
+
+                  {userMenuOpen && (
+                    <div style={{
+                      position: 'absolute',
+                      top: '115%',
+                      right: 0,
+                      width: '240px',
+                      background: '#FFFFFF',
+                      borderRadius: 'var(--radius-md)',
+                      boxShadow: 'var(--shadow-xl)',
+                      border: '1px solid var(--color-border)',
+                      padding: '0.65rem',
+                      zIndex: 999,
+                      animation: 'scaleUp 0.15s ease'
+                    }}>
+                      <div style={{ padding: '0.5rem', borderBottom: '1px solid var(--color-border)', marginBottom: '0.5rem' }}>
+                        <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#0F172A' }}>{currentUser.name}</div>
+                        <div style={{ fontSize: '0.75rem', color: '#64748B' }}>{currentUser.email || currentUser.phone}</div>
+                        <span className={`badge ${
+                          currentUser.role === 'admin' ? 'badge-warning' : 
+                          currentUser.role === 'agent' ? 'badge-primary' : 
+                          currentUser.role === 'partner' ? 'badge-warning' : 'badge-primary'
+                        }`} style={{ marginTop: '4px', fontSize: '0.65rem' }}>
+                          {currentUser.role === 'admin' ? 'Super Admin' : 
+                           currentUser.role === 'agent' ? 'Field Pickup Agent' : 
+                           currentUser.role === 'partner' ? 'Recycling Partner' : 'Verified Customer'}
+                        </span>
+                      </div>
+
+                      {/* Mini Scrap Wallet Card in dropdown */}
+                      <div 
+                        onClick={() => {
+                          setUserMenuOpen(false);
+                          onNavigate('profile');
+                        }}
+                        style={{
+                          padding: '0.65rem 0.75rem',
+                          background: 'linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%)',
+                          borderRadius: '8px',
+                          border: '1px solid #A7F3D0',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          cursor: 'pointer',
+                          marginBottom: '0.65rem'
+                        }}
+                        title="Click to view scrap earnings & payout details"
+                      >
+                        <div>
+                          <div style={{ fontSize: '0.68rem', fontWeight: 800, color: '#065F46', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                            Scrap Wallet Cash
+                          </div>
+                          <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#065F46', marginTop: '1px' }}>
+                            ₹{displayWallet.toLocaleString()}
+                          </div>
+                        </div>
+                        <div style={{
+                          width: '32px',
+                          height: '32px',
+                          borderRadius: '50%',
+                          background: '#FFFFFF',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.08)'
+                        }}>
+                          <Wallet size={16} color="#059669" />
+                        </div>
+                      </div>
 
                     {/* My Profile Button */}
                     <button
@@ -933,6 +1049,7 @@ export const Navbar = ({
                   </div>
                 )}
               </div>
+            </div>
             )}
 
             {/* Sell Good Product Button (+ Icon and Sell Text) */}
@@ -1138,6 +1255,25 @@ export const Navbar = ({
                     <div style={{ fontWeight: 800, fontSize: '0.875rem' }}>{currentUser.name}</div>
                     <div style={{ fontSize: '0.725rem', color: '#64748B' }}>
                       {currentUser.role === 'admin' ? 'Super Admin' : 'Verified Member'}
+                    </div>
+                    <div 
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        onNavigate('profile');
+                      }}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.3rem',
+                        marginTop: '3px',
+                        color: 'var(--color-primary)',
+                        fontWeight: 800,
+                        fontSize: '0.75rem',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <Wallet size={12} color="#059669" />
+                      <span>Wallet: ₹{displayWallet.toLocaleString()}</span>
                     </div>
                   </div>
                 </div>

@@ -26,7 +26,7 @@ export const LiveOrderTrackerModal = ({
   activeOrder = null,
   onOpenDoorstepVerification = null 
 }) => {
-  const [currentOrder, setCurrentOrder] = useState(activeOrder || INITIAL_ORDERS[0]);
+  const [currentOrder, setCurrentOrder] = useState(activeOrder || null);
   const [searchId, setSearchId] = useState('');
   const [simulatedStage, setSimulatedStage] = useState(() => {
     if (activeOrder?.status === 'completed') return 4;
@@ -34,6 +34,61 @@ export const LiveOrderTrackerModal = ({
     return 2;
   });
   const [showCertificate, setShowCertificate] = useState(false);
+
+  // Dynamic extraction of user's selected items and weights
+  const displayItems = React.useMemo(() => {
+    if (!currentOrder) return [];
+    if (currentOrder.itemsWeighed && currentOrder.itemsWeighed.length > 0) {
+      return currentOrder.itemsWeighed.map(it => {
+        const wtNum = parseFloat(String(it.weight).replace(/[^0-9.]/g, '')) || 10;
+        const rtNum = parseFloat(String(it.rate).replace(/[^0-9.]/g, '')) || 15;
+        const sub = it.subtotal || Math.round(wtNum * rtNum);
+        return {
+          name: it.name,
+          weightStr: typeof it.weight === 'string' && it.weight.includes('kg') ? it.weight : `${wtNum} kg`,
+          rateStr: typeof it.rate === 'string' && it.rate.includes('₹') ? it.rate : `₹${rtNum}/kg`,
+          subtotal: sub
+        };
+      });
+    }
+    if (currentOrder.doorstepVerification?.inspectedItems && currentOrder.doorstepVerification.inspectedItems.length > 0) {
+      return currentOrder.doorstepVerification.inspectedItems.map(it => ({
+        name: it.name,
+        weightStr: `${it.weight} ${it.unit || 'kg'}`,
+        rateStr: `₹${it.rate}/${it.unit || 'kg'}`,
+        subtotal: Math.round((parseFloat(it.weight) || 0) * (parseFloat(it.rate) || 0))
+      }));
+    }
+    if (currentOrder.items && currentOrder.items.length > 0) {
+      return currentOrder.items.map(it => {
+        const wtNum = parseFloat(it.estimatedWeight || it.weight) || 10;
+        const rtNum = parseFloat(it.rate) || 15;
+        return {
+          name: it.name,
+          weightStr: `${wtNum} ${it.unit || 'kg'}`,
+          rateStr: `₹${rtNum}/${it.unit || 'kg'}`,
+          subtotal: Math.round(wtNum * rtNum)
+        };
+      });
+    }
+    if (currentOrder.categories && currentOrder.categories.length > 0) {
+      return currentOrder.categories.map(cat => ({
+        name: String(cat).charAt(0).toUpperCase() + String(cat).slice(1) + ' Scrap',
+        weightStr: '10 kg',
+        rateStr: '₹15/kg',
+        subtotal: 150
+      }));
+    }
+    return [];
+  }, [currentOrder]);
+
+  const displayTotalAmount = currentOrder
+    ? (currentOrder.doorstepVerification?.paidAmount || 
+       currentOrder.totalPaid || 
+       currentOrder.estimatedAmount || 
+       currentOrder.estimatedRupees || 
+       displayItems.reduce((acc, it) => acc + (it.subtotal || 0), 0))
+    : 0;
 
   useEffect(() => {
     if (activeOrder) {
@@ -63,7 +118,7 @@ export const LiveOrderTrackerModal = ({
       setCurrentOrder(found);
       setSimulatedStage(found.status === 'completed' ? 4 : 2);
     } else {
-      alert(`Order "${searchId}" not found. Try search with KC-8842 or KC-8721`);
+      alert(`Booking ID "${searchId}" not found. Please verify your order ID.`);
     }
   };
 
@@ -309,28 +364,17 @@ export const LiveOrderTrackerModal = ({
                   gap: '0.5rem',
                   marginBottom: '1rem'
                 }}>
-                  {(currentOrder.itemsWeighed && currentOrder.itemsWeighed.length > 0) ? (
-                    currentOrder.itemsWeighed.map((it, idx) => (
+                  {displayItems.length > 0 ? (
+                    displayItems.map((it, idx) => (
                       <div key={idx} className="flex-between" style={{ padding: '0.65rem', background: '#FFFFFF', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)', fontSize: '0.85rem' }}>
-                        <span>{it.name} — {it.weight} @ {it.rate}</span>
-                        <strong>₹{it.subtotal || Math.round((parseFloat(it.weight) || 10) * (parseFloat(it.rate) || 14))}</strong>
+                        <span>{it.name} — {it.weightStr} @ {it.rateStr}</span>
+                        <strong>₹{(it.subtotal || 0).toLocaleString()}</strong>
                       </div>
                     ))
                   ) : (
-                    <>
-                      <div className="flex-between" style={{ padding: '0.65rem', background: '#FFFFFF', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)', fontSize: '0.85rem' }}>
-                        <span>Newspaper (Akhbaar) — 22.5 kg @ ₹14/kg</span>
-                        <strong>₹315.00</strong>
-                      </div>
-                      <div className="flex-between" style={{ padding: '0.65rem', background: '#FFFFFF', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)', fontSize: '0.85rem' }}>
-                        <span>Cardboard / Gatta — 14.0 kg @ ₹10/kg</span>
-                        <strong>₹140.00</strong>
-                      </div>
-                      <div className="flex-between" style={{ padding: '0.65rem', background: '#FFFFFF', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)', fontSize: '0.85rem' }}>
-                        <span>Iron Scrap / Loha — 8.5 kg @ ₹32/kg</span>
-                        <strong>₹272.00</strong>
-                      </div>
-                    </>
+                    <div style={{ padding: '0.75rem', background: '#FFFFFF', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)', fontSize: '0.85rem', color: 'var(--color-text-muted)', textAlign: 'center' }}>
+                      Scrap items pending digital scale weighing at doorstep
+                    </div>
                   )}
                 </div>
 
@@ -343,7 +387,7 @@ export const LiveOrderTrackerModal = ({
                 }}>
                   <span style={{ fontWeight: 700, color: 'var(--color-primary)' }}>Verified Final Total:</span>
                   <span style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--color-primary)' }}>
-                    ₹{currentOrder.totalPaid || currentOrder.estimatedAmount || 727}
+                    ₹{displayTotalAmount.toLocaleString()}
                   </span>
                 </div>
 
@@ -500,8 +544,8 @@ export const LiveOrderTrackerModal = ({
               flexWrap: 'wrap',
               gap: '0.5rem'
             }}>
-              <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>
-                TEST SIMULATOR CONTROLS:
+              <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', fontWeight: 700 }}>
+                PICKUP STAGE CONTROLS:
               </div>
               <div style={{ display: 'flex', gap: '0.5rem' }}>
                 <button

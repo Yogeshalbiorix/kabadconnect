@@ -59,15 +59,22 @@ export const DoorstepVerificationModal = ({
       return order.items.map((it, idx) => ({
         id: `item-${idx}`,
         name: it.name,
-        weight: it.estimatedWeight || 10,
-        rate: it.rate || 14,
+        weight: parseFloat(it.estimatedWeight || it.weight) || 10,
+        rate: parseFloat(it.rate) || 15,
         unit: it.unit || 'kg'
       }));
     }
+    if (order.categories && order.categories.length > 0) {
+      return order.categories.map((cat, idx) => ({
+        id: `item-${idx}`,
+        name: String(cat).charAt(0).toUpperCase() + String(cat).slice(1) + ' Scrap',
+        weight: 10,
+        rate: 15,
+        unit: 'kg'
+      }));
+    }
     return [
-      { id: 'item-1', name: 'Newspaper (Akhbaar)', weight: 22.5, rate: 14, unit: 'kg' },
-      { id: 'item-2', name: 'Cardboard (Gatta)', weight: 14.0, rate: 10, unit: 'kg' },
-      { id: 'item-3', name: 'Iron Scrap (Loha)', weight: 8.5, rate: 32, unit: 'kg' }
+      { id: 'item-0', name: 'Household Scrap', weight: parseFloat(order.estimatedWeight) || 10, rate: 15, unit: 'kg' }
     ];
   });
 

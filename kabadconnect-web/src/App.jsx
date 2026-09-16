@@ -476,6 +476,43 @@ export default function App() {
       setDoorstepOrder({ ...doorstepOrder, ...updatedFields });
     }
 
+    // Auto-credit user's wallet and scrap recycling stats upon order payment / completion
+    const isNowPaid = updatedFields.status === 'completed' || 
+      updatedFields.doorstepVerification?.paymentStatus === 'completed' || 
+      updatedFields.doorstepVerification?.paymentStatus === 'paid' ||
+      updatedFields.paymentStatus === 'paid';
+
+    if (currentUser && isNowPaid) {
+      const addedCash = parseFloat(
+        updatedFields.doorstepVerification?.paidAmount || 
+        updatedFields.totalPaid || 
+        updatedFields.paidAmount || 
+        0
+      );
+      const addedKg = parseFloat(
+        updatedFields.doorstepVerification?.verifiedWeight || 
+        (Array.isArray(updatedFields.itemsWeighed) ? updatedFields.itemsWeighed.reduce((acc, it) => acc + (parseFloat(it.weight) || 0), 0) : 0) || 
+        updatedFields.totalWeight || 
+        0
+      );
+
+      if (addedCash > 0 || addedKg > 0) {
+        const curWallet = parseFloat(currentUser.walletBalance ?? currentUser.totalEarned ?? 0);
+        const curKg = parseFloat(currentUser.totalRecycledKg || 0);
+        const newWallet = curWallet + addedCash;
+        const newKg = curKg + addedKg;
+        const updatedUser = {
+          ...currentUser,
+          walletBalance: newWallet,
+          totalEarned: newWallet,
+          totalRecycledKg: newKg,
+          co2SavedKg: (newKg * 1.85).toFixed(1),
+          treesSaved: (newKg / 58).toFixed(1)
+        };
+        handleUpdateUser(updatedUser);
+      }
+    }
+
     // Persist updates to MongoDB Atlas
     apiUpdateOrder(orderId, updatedFields).catch(() => { });
   };
@@ -673,6 +710,23 @@ export default function App() {
     }
   };
 
+  // Calculate dynamic wallet balance from user's completed/paid orders + explicit balance
+  const completedUserPickups = userOrders.filter(o =>
+    o.status === 'completed' ||
+    o.doorstepVerification?.paymentStatus === 'completed' ||
+    o.doorstepVerification?.paymentStatus === 'paid' ||
+    o.paymentStatus === 'paid'
+  );
+
+  const dynamicOrdersCash = completedUserPickups.reduce((sum, o) => {
+    const val = parseFloat(o.paidAmount || o.totalPaid || o.doorstepVerification?.paidAmount || o.doorstepVerification?.finalAmount || o.estimatedAmount || 0);
+    return sum + (isNaN(val) ? 0 : val);
+  }, 0);
+
+  const dynamicWalletBalance = currentUser?.walletBalance !== undefined && currentUser?.walletBalance !== null
+    ? Number(currentUser.walletBalance)
+    : (Number(currentUser?.totalEarned || 0) + dynamicOrdersCash);
+
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       {/* Header & Navigation */}
@@ -699,6 +753,7 @@ export default function App() {
         ordersCount={userOrders.length}
         currentPage={currentRoute}
         onNavigate={navigateTo}
+        walletBalance={dynamicWalletBalance}
       />
 
       {/* Live Scrap Market Rate Marquee Ticker */}

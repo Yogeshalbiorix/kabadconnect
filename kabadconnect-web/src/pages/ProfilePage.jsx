@@ -43,7 +43,8 @@ import {
   LogOut,
   Locate,
   Loader2,
-  Compass
+  Compass,
+  Wallet
 } from 'lucide-react';
 import { DEMO_USERS } from '../utils/auth';
 import { fetchLocationByPincode, detectCurrentLocationWithAddress } from '../utils/geolocation';
@@ -94,6 +95,315 @@ export const ProfilePage = ({
         return false;
       })
     : [];
+
+  // ----------------------------------------------------
+  // Dynamic Calculation of Completed Scrap Orders & Wallet
+  // ----------------------------------------------------
+  const completedOrders = userOrders.filter(o => 
+    o.status === 'completed' || 
+    o.doorstepVerification?.paymentStatus === 'paid' || 
+    o.doorstepVerification?.paymentStatus === 'completed' ||
+    o.paymentStatus === 'paid'
+  );
+
+  const dynamicOrdersEarned = completedOrders.reduce((acc, o) => {
+    const amt = parseFloat(o.paidAmount || o.totalPaid || o.doorstepVerification?.paidAmount || o.doorstepVerification?.finalAmount || o.estimatedAmount || 0);
+    return acc + (isNaN(amt) ? 0 : amt);
+  }, 0);
+
+  const dynamicOrdersRecycledKg = completedOrders.reduce((acc, o) => {
+    const kg = parseFloat(o.doorstepVerification?.verifiedWeight || o.actualWeight || o.totalWeight || o.estimatedWeight || 0);
+    return acc + (isNaN(kg) ? 0 : kg);
+  }, 0);
+
+  // Dynamic wallet amount: if user explicitly configured walletBalance or totalEarned, use that combined with orders
+  const displayWalletEarned = currentUser?.walletBalance !== undefined && currentUser?.walletBalance !== null
+    ? Number(currentUser.walletBalance)
+    : (Number(currentUser?.totalEarned || 0) + dynamicOrdersEarned);
+
+  const displayTotalRecycled = Number(currentUser?.totalRecycledKg || 0) + dynamicOrdersRecycledKg;
+  const displayCo2Avoided = currentUser?.co2SavedKg ? currentUser.co2SavedKg : (displayTotalRecycled * 1.85).toFixed(1);
+  const displayTreesPreserved = currentUser?.treesSaved ? currentUser.treesSaved : (displayTotalRecycled / 58).toFixed(1);
+
+  // Wallet Management / Set Amount Modal State
+  const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
+  const [walletAmountInput, setWalletAmountInput] = useState('');
+  const [walletScrapKgInput, setWalletScrapKgInput] = useState('');
+  const [walletSaveStatus, setWalletSaveStatus] = useState('');
+
+  const handleOpenWalletModal = () => {
+    setWalletAmountInput(String(displayWalletEarned));
+    setWalletScrapKgInput(String(displayTotalRecycled));
+    setWalletSaveStatus('');
+    setIsWalletModalOpen(true);
+  };
+
+  const handleSaveWalletData = async (e) => {
+    if (e) e.preventDefault();
+    const parsedAmount = Math.max(0, parseFloat(walletAmountInput) || 0);
+    const parsedKg = Math.max(0, parseFloat(walletScrapKgInput) || 0);
+    const calculatedCo2 = (parsedKg * 1.85).toFixed(1);
+    const calculatedTrees = (parsedKg / 58).toFixed(1);
+
+    const updatedUser = {
+      ...currentUser,
+      walletBalance: parsedAmount,
+      totalEarned: parsedAmount,
+      totalRecycledKg: parsedKg,
+      co2SavedKg: calculatedCo2,
+      treesSaved: calculatedTrees
+    };
+
+    if (onUpdateUser) {
+      await onUpdateUser(updatedUser);
+    }
+    setWalletSaveStatus('✓ Wallet amount and scrap metrics updated successfully!');
+    setTimeout(() => {
+      setIsWalletModalOpen(false);
+      setWalletSaveStatus('');
+    }, 850);
+  };
+
+  // ----------------------------------------------------
+  // Certificate PDF Download / Print Generator
+  // ----------------------------------------------------
+  const handleDownloadCertificate = () => {
+    const certId = `KC-CERT-${currentUser?.id ? String(currentUser.id).slice(-6).toUpperCase() : '2026-IND'}`;
+    const certName = currentUser?.name || 'Verified Member';
+    const certKg = displayTotalRecycled;
+    const certCo2 = displayCo2Avoided;
+    const certTrees = displayTreesPreserved;
+    const issueDate = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+
+    const printWindow = window.open('', '_blank', 'width=920,height=700');
+    if (!printWindow) {
+      alert('Pop-up blocked! Please allow pop-ups for this browser tab to view and download your PDF certificate.');
+      return;
+    }
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <title>${certName} - Green Landfill Diversion Certificate (${certId})</title>
+        <style>
+          @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&display=swap');
+          * { box-sizing: border-box; margin: 0; padding: 0; }
+          body {
+            font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #F8FAFC;
+            color: #0F172A;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 30px;
+          }
+          .cert-card {
+            width: 860px;
+            background: #FFFFFF;
+            border: 10px solid #0D5C3A;
+            border-radius: 24px;
+            padding: 40px;
+            position: relative;
+            box-shadow: 0 25px 50px -12px rgba(13, 92, 58, 0.15);
+          }
+          .inner-wrapper {
+            border: 2px dashed #10B981;
+            border-radius: 16px;
+            padding: 35px;
+            background: linear-gradient(180deg, #FFFFFF 0%, #F0FDF4 100%);
+          }
+          .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 2px solid #E2E8F0;
+            padding-bottom: 20px;
+            margin-bottom: 25px;
+          }
+          .tag {
+            font-size: 11px;
+            font-weight: 800;
+            color: #059669;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+          }
+          .title {
+            font-size: 30px;
+            font-weight: 900;
+            color: #072E1C;
+            margin-top: 4px;
+          }
+          .meta {
+            font-size: 13px;
+            color: #64748B;
+            margin-top: 4px;
+          }
+          .body-text {
+            font-size: 16px;
+            line-height: 1.85;
+            color: #334155;
+            margin-bottom: 30px;
+          }
+          .body-text strong {
+            color: #0D5C3A;
+            font-weight: 800;
+          }
+          .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-bottom: 30px;
+          }
+          .stat-box {
+            background: #FFFFFF;
+            border: 1.5px solid #A7F3D0;
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(16, 185, 129, 0.08);
+          }
+          .stat-val {
+            font-size: 26px;
+            font-weight: 900;
+            color: #0D5C3A;
+          }
+          .stat-lbl {
+            font-size: 11px;
+            font-weight: 800;
+            color: #059669;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 4px;
+          }
+          .footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            border-top: 1.5px solid #E2E8F0;
+            padding-top: 20px;
+          }
+          .badge {
+            font-size: 12px;
+            font-weight: 800;
+            color: #059669;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+          }
+          .sig-box {
+            text-align: right;
+          }
+          .sig-title {
+            font-size: 11px;
+            font-weight: 700;
+            color: #64748B;
+            margin-top: 2px;
+          }
+          .top-bar {
+            position: fixed;
+            top: 15px;
+            right: 20px;
+            z-index: 1000;
+            display: flex;
+            gap: 10px;
+          }
+          .print-btn {
+            background: #10B981;
+            color: #FFFFFF;
+            border: none;
+            padding: 10px 22px;
+            font-weight: 800;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4);
+            transition: all 0.2s ease;
+          }
+          .print-btn:hover {
+            background: #059669;
+            transform: translateY(-1px);
+          }
+          @media print {
+            body { background: #FFFFFF; padding: 0; }
+            .cert-card { box-shadow: none; width: 100%; border-width: 6px; }
+            .top-bar { display: none !important; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="top-bar">
+          <button class="print-btn" onclick="window.print()">
+            🖨️ Save as PDF / Print Certificate
+          </button>
+        </div>
+
+        <div class="cert-card">
+          <div class="inner-wrapper">
+            <div class="header">
+              <div>
+                <div class="tag">KabadConnect Circular Economy Initiative</div>
+                <div class="title">Green Landfill Diversion Certificate</div>
+                <div class="meta">Certificate ID: <strong>${certId}</strong> • Issued: <strong>${issueDate}</strong></div>
+              </div>
+              <div style="text-align: center; background: #FFFFFF; padding: 10px 14px; border-radius: 10px; border: 1.5px solid #E2E8F0;">
+                <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#0D5C3A" stroke-width="2.2">
+                  <rect x="3" y="3" width="7" height="7" rx="1"/>
+                  <rect x="14" y="3" width="7" height="7" rx="1"/>
+                  <rect x="3" y="14" width="7" height="7" rx="1"/>
+                  <path d="M14 14h3v3h-3zM18 18h3v3h-3z"/>
+                </svg>
+                <div style="font-size: 8px; font-weight: 800; color: #64748B; margin-top: 3px; letter-spacing: 0.5px;">SCAN TO VERIFY</div>
+              </div>
+            </div>
+
+            <div class="body-text">
+              This certifies that <strong>${certName}</strong> has segregated and responsibly recycled <strong>${certKg} kg of household & office scrap</strong> through KabadConnect's verified hyperlocal recycling network, preventing <strong>${certCo2} kg of CO₂ greenhouse emissions</strong> and conserving <strong>${certTrees} mature forest trees</strong>.
+            </div>
+
+            <div class="stats-grid">
+              <div class="stat-box">
+                <div class="stat-val">${certKg} kg</div>
+                <div class="stat-lbl">Scrap Recycled</div>
+              </div>
+              <div class="stat-box">
+                <div class="stat-val">${certCo2} kg</div>
+                <div class="stat-lbl">CO₂ Emissions Avoided</div>
+              </div>
+              <div class="stat-box">
+                <div class="stat-val">${certTrees}</div>
+                <div class="stat-lbl">Trees Preserved</div>
+              </div>
+            </div>
+
+            <div class="footer">
+              <div class="badge">
+                ✓ Ministry of Environment & Climate Benchmarking Compliant
+              </div>
+              <div class="sig-box">
+                <div style="font-size: 15px; font-weight: 900; color: #0D5C3A; text-decoration: underline;">KabadConnect Verification Board</div>
+                <div class="sig-title">Digital Hyperlocal Ecosystem Certificate</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <script>
+          window.onload = function() {
+            setTimeout(function() {
+              window.print();
+            }, 300);
+          };
+        </script>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+  };
 
   const [isDetectingLocation, setIsDetectingLocation] = useState(false);
   const [isFetchingPincode, setIsFetchingPincode] = useState(false);
@@ -778,26 +1088,56 @@ export const ProfilePage = ({
               </div>
             </div>
 
-            {/* 4 Green Impact Metrics */}
+            {/* 4 Green Impact Metrics (Dynamically calculated from pickups & wallet) */}
             <div style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
               gap: '1.25rem'
             }}>
-              <div className="card" style={{ padding: '1.25rem', background: '#FFFFFF', border: '1px solid var(--color-border)' }}>
+              <div className="card" style={{ padding: '1.25rem', background: '#FFFFFF', border: '1px solid var(--color-border)', position: 'relative' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                   <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>
                     Total Cash Earned
                   </span>
-                  <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(16, 185, 129, 0.15)', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <DollarSign size={18} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <button
+                      type="button"
+                      onClick={handleOpenWalletModal}
+                      style={{
+                        padding: '0.22rem 0.6rem',
+                        fontSize: '0.725rem',
+                        fontWeight: 700,
+                        color: '#059669',
+                        background: 'rgba(16, 185, 129, 0.12)',
+                        border: '1px solid rgba(16, 185, 129, 0.35)',
+                        borderRadius: '999px',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.25rem',
+                        transition: 'all 0.2s ease'
+                      }}
+                      title="Set custom wallet cash amount or add balance"
+                    >
+                      <Edit3 size={11} /> Set Amount
+                    </button>
+                    <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(16, 185, 129, 0.15)', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Wallet size={18} />
+                    </div>
                   </div>
                 </div>
                 <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--color-primary)' }}>
-                  ₹{(currentUser?.totalEarned || 0).toLocaleString()}
+                  ₹{displayWalletEarned.toLocaleString()}
                 </div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--color-accent-mint)', fontWeight: 600, marginTop: '4px' }}>
-                  Instant digital UPI settlement
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '4px' }}>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--color-accent-mint)', fontWeight: 600 }}>
+                    Instant digital UPI settlement
+                  </span>
+                  {completedOrders.length > 0 && (
+                    <span style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>
+                      ({completedOrders.length} {completedOrders.length === 1 ? 'pickup' : 'pickups'})
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -811,7 +1151,7 @@ export const ProfilePage = ({
                   </div>
                 </div>
                 <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#1E293B' }}>
-                  {currentUser?.totalRecycledKg || 0} kg
+                  {displayTotalRecycled} kg
                 </div>
                 <div style={{ fontSize: '0.75rem', color: '#64748B', marginTop: '4px' }}>
                   Diverted from city landfills
@@ -828,7 +1168,7 @@ export const ProfilePage = ({
                   </div>
                 </div>
                 <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0D5C3A' }}>
-                  {currentUser?.co2SavedKg || (currentUser?.totalRecycledKg ? (currentUser.totalRecycledKg * 1.85).toFixed(1) : 0)} kg
+                  {displayCo2Avoided} kg
                 </div>
                 <div style={{ fontSize: '0.75rem', color: '#059669', fontWeight: 600, marginTop: '4px' }}>
                   Clean air impact
@@ -845,7 +1185,7 @@ export const ProfilePage = ({
                   </div>
                 </div>
                 <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#B45309' }}>
-                  {currentUser?.treesSaved || (currentUser?.totalRecycledKg ? (currentUser.totalRecycledKg / 58).toFixed(1) : 0)} Trees
+                  {displayTreesPreserved} Trees
                 </div>
                 <div style={{ fontSize: '0.75rem', color: '#64748B', marginTop: '4px' }}>
                   From paper & cardboard recycling
@@ -1201,7 +1541,7 @@ export const ProfilePage = ({
                   </div>
 
                   <p style={{ fontSize: '0.9rem', color: '#334155', lineHeight: 1.6, marginBottom: '1.5rem', maxWidth: '750px' }}>
-                    This certifies that <strong>{currentUser?.name || 'Verified Member'}</strong> has segregated and responsibly recycled <strong>{currentUser?.totalRecycledKg || 0} kg of household & office scrap</strong> through KabadConnect's verified hyperlocal network, preventing <strong>{currentUser?.co2SavedKg || (currentUser?.totalRecycledKg ? (currentUser.totalRecycledKg * 1.85).toFixed(1) : 0)} kg of CO₂ greenhouse emissions</strong> and conserving <strong>{currentUser?.treesSaved || (currentUser?.totalRecycledKg ? (currentUser.totalRecycledKg / 58).toFixed(1) : 0)} mature forest trees</strong>.
+                    This certifies that <strong>{currentUser?.name || 'Verified Member'}</strong> has segregated and responsibly recycled <strong>{displayTotalRecycled} kg of household & office scrap</strong> through KabadConnect's verified hyperlocal network, preventing <strong>{displayCo2Avoided} kg of CO₂ greenhouse emissions</strong> and conserving <strong>{displayTreesPreserved} mature forest trees</strong>.
                   </p>
 
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '1rem', borderTop: '1px dashed #A7F3D0', paddingTop: '1rem' }}>
@@ -1210,9 +1550,9 @@ export const ProfilePage = ({
                     </div>
                     <button
                       type="button"
-                      onClick={() => showFeedback('Downloading Digital PDF Certificate...')}
+                      onClick={handleDownloadCertificate}
                       className="btn btn-primary btn-sm"
-                      style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer' }}
                     >
                       <FileCheck size={14} /> Download Verified Certificate (PDF)
                     </button>
@@ -2170,6 +2510,267 @@ export const ProfilePage = ({
           </div>
         </div>
       </div>
+      )}
+
+      {/* Wallet Management & Impact Adjustment Modal */}
+      {isWalletModalOpen && (
+        <div 
+          className="modal-overlay" 
+          onClick={() => setIsWalletModalOpen(false)}
+          style={{ zIndex: 1300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
+        >
+          <div 
+            className="modal-content" 
+            onClick={(e) => e.stopPropagation()}
+            style={{ 
+              maxWidth: '520px', 
+              width: '100%', 
+              background: '#FFFFFF', 
+              borderRadius: 'var(--radius-xl)', 
+              overflow: 'hidden',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+              border: '1px solid var(--color-border)'
+            }}
+          >
+            {/* Modal Header */}
+            <div style={{
+              background: 'linear-gradient(135deg, #072e1c 0%, #0D5C3A 65%, #10B981 100%)',
+              color: '#FFFFFF',
+              padding: '1.25rem 1.5rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{
+                  width: '38px',
+                  height: '38px',
+                  borderRadius: '10px',
+                  background: 'rgba(255, 255, 255, 0.2)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#FFFFFF'
+                }}>
+                  <Wallet size={20} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#FFFFFF' }}>
+                    Scrap Cash Wallet & Stats
+                  </h3>
+                  <p style={{ margin: '2px 0 0', fontSize: '0.75rem', opacity: 0.85, color: '#E2E8F0' }}>
+                    Set your custom wallet cash balance & recycling impact
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsWalletModalOpen(false)}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.15)',
+                  border: 'none',
+                  color: '#FFFFFF',
+                  width: '30px',
+                  height: '30px',
+                  borderRadius: '50%',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <form onSubmit={handleSaveWalletData} style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              {walletSaveStatus && (
+                <div style={{
+                  background: 'rgba(16, 185, 129, 0.15)',
+                  border: '1px solid rgba(16, 185, 129, 0.4)',
+                  color: '#065F46',
+                  padding: '0.65rem 0.85rem',
+                  borderRadius: 'var(--radius-sm)',
+                  fontSize: '0.825rem',
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}>
+                  <span>{walletSaveStatus}</span>
+                </div>
+              )}
+
+              {/* Wallet Amount Input */}
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                  <label className="form-label" style={{ fontSize: '0.825rem', fontWeight: 700, margin: 0 }}>
+                    Wallet Balance / Total Cash Earned (₹)
+                  </label>
+                  <span style={{ fontSize: '0.75rem', color: '#059669', fontWeight: 700 }}>
+                    Current: ₹{displayWalletEarned.toLocaleString()}
+                  </span>
+                </div>
+                <div style={{ position: 'relative' }}>
+                  <div style={{
+                    position: 'absolute',
+                    left: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    fontWeight: 800,
+                    fontSize: '1.1rem',
+                    color: '#059669'
+                  }}>
+                    ₹
+                  </div>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={walletAmountInput}
+                    onChange={(e) => setWalletAmountInput(e.target.value)}
+                    placeholder="e.g. 1500"
+                    className="form-input"
+                    style={{ paddingLeft: '32px', fontSize: '1.1rem', fontWeight: 700 }}
+                    required
+                  />
+                </div>
+
+                {/* Quick Presets */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>Quick Add:</span>
+                  {[
+                    { label: '+₹250', val: 250 },
+                    { label: '+₹500', val: 500 },
+                    { label: '+₹1,000', val: 1000 },
+                    { label: '+₹2,500', val: 2500 }
+                  ].map((preset) => (
+                    <button
+                      key={preset.label}
+                      type="button"
+                      onClick={() => {
+                        const cur = parseFloat(walletAmountInput) || 0;
+                        setWalletAmountInput(String(cur + preset.val));
+                      }}
+                      style={{
+                        padding: '0.2rem 0.5rem',
+                        fontSize: '0.72rem',
+                        fontWeight: 700,
+                        borderRadius: 'var(--radius-full)',
+                        background: 'rgba(16, 185, 129, 0.1)',
+                        border: '1px solid rgba(16, 185, 129, 0.25)',
+                        color: '#059669',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setWalletAmountInput('0')}
+                    style={{
+                      padding: '0.2rem 0.5rem',
+                      fontSize: '0.72rem',
+                      fontWeight: 600,
+                      borderRadius: 'var(--radius-full)',
+                      background: '#F1F5F9',
+                      border: '1px solid #CBD5E1',
+                      color: '#64748B',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Reset ₹0
+                  </button>
+                </div>
+              </div>
+
+              {/* Scrap Recycled (kg) Input */}
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                  <label className="form-label" style={{ fontSize: '0.825rem', fontWeight: 700, margin: 0 }}>
+                    Total Scrap Recycled (kg)
+                  </label>
+                  <span style={{ fontSize: '0.75rem', color: '#2563EB', fontWeight: 700 }}>
+                    Current: {displayTotalRecycled} kg
+                  </span>
+                </div>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.5"
+                    value={walletScrapKgInput}
+                    onChange={(e) => setWalletScrapKgInput(e.target.value)}
+                    placeholder="e.g. 45"
+                    className="form-input"
+                    style={{ fontWeight: 700 }}
+                    required
+                  />
+                  <span style={{
+                    position: 'absolute',
+                    right: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                    color: 'var(--color-text-muted)'
+                  }}>
+                    kg
+                  </span>
+                </div>
+              </div>
+
+              {/* Real-time Computed Ecological Metrics Preview */}
+              <div style={{
+                background: '#F8FAFC',
+                border: '1px solid var(--color-border)',
+                borderRadius: 'var(--radius-md)',
+                padding: '0.85rem'
+              }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--color-text-muted)', textTransform: 'uppercase', marginBottom: '0.45rem' }}>
+                  Calculated Impact Preview
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                  <div style={{ background: '#FFFFFF', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
+                    <div style={{ fontSize: '0.7rem', color: '#059669', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <Leaf size={12} /> CO₂ Avoided
+                    </div>
+                    <div style={{ fontSize: '1rem', fontWeight: 800, color: '#0D5C3A' }}>
+                      {((parseFloat(walletScrapKgInput) || 0) * 1.85).toFixed(1)} kg
+                    </div>
+                  </div>
+                  <div style={{ background: '#FFFFFF', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
+                    <div style={{ fontSize: '0.7rem', color: '#D97706', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <Sparkles size={12} /> Trees Preserved
+                    </div>
+                    <div style={{ fontSize: '1rem', fontWeight: 800, color: '#B45309' }}>
+                      {((parseFloat(walletScrapKgInput) || 0) / 58).toFixed(1)} Trees
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', paddingTop: '0.5rem', borderTop: '1px solid var(--color-border)' }}>
+                <button
+                  type="button"
+                  onClick={() => setIsWalletModalOpen(false)}
+                  className="btn btn-secondary"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', padding: '0.55rem 1.25rem' }}
+                >
+                  <Save size={16} /> Save & Update Wallet
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );
