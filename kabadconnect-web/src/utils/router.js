@@ -10,6 +10,7 @@ export const parseHashRoute = (hash) => {
   if (clean.includes('kabadwala') || clean.includes('dealer') || clean.includes('radar')) return 'kabadwalas';
   if (clean.includes('store') || clean.includes('shop') || clean.includes('product') || clean.includes('bazaar') || clean.includes('market') || clean.includes('resale') || clean.includes('sell')) return 'store';
   if (clean.includes('how') || clean.includes('work') || clean.includes('faq')) return 'how-it-works';
+  if (clean.includes('contact') || clean.includes('support') || clean.includes('help')) return 'contact';
   if (clean.includes('profile') || clean.includes('account') || clean.includes('agent') || clean.includes('partner-profile')) return 'profile';
   return clean;
 };

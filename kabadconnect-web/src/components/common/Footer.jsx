@@ -122,6 +122,14 @@ export const Footer = ({ onOpenBooking, onOpenPartnerModal, onNavigate = () => {
               </li>
               <li>
                 <button 
+                  onClick={() => onNavigate('contact')} 
+                  style={{ background: 'transparent', border: 'none', color: 'var(--color-accent-mint)', fontWeight: 600, cursor: 'pointer', padding: 0, fontSize: '0.875rem' }}
+                >
+                  Customer Support & Contact Hub 🎧
+                </button>
+              </li>
+              <li>
+                <button 
                   onClick={onOpenPartnerModal}
                   style={{ color: 'var(--color-accent-gold)', fontWeight: 600, fontSize: '0.875rem', background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}
                 >

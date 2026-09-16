@@ -11,6 +11,7 @@ import { CalculatorPage } from './pages/CalculatorPage';
 import { KabadwalasPage } from './pages/KabadwalasPage';
 import { StorePage } from './pages/StorePage';
 import { HowItWorksPage } from './pages/HowItWorksPage';
+import { ContactPage } from './pages/ContactPage';
 import { ProfilePage } from './pages/ProfilePage';
 
 // Modals & Drawers
@@ -24,6 +25,7 @@ import { MyPickupsModal } from './components/orders/MyPickupsModal';
 import { AdminPanelModal } from './components/admin/AdminPanelModal';
 import { SellProductModal } from './components/marketplace/SellProductModal';
 import { DoorstepVerificationModal } from './components/orders/DoorstepVerificationModal';
+import { GeminiChatbot } from './components/common/GeminiChatbot';
 
 // Initial data & utilities
 import { INITIAL_ORDERS } from './data/mockOrders';
@@ -813,6 +815,15 @@ export default function App() {
           />
         )}
 
+        {currentRoute === 'contact' && (
+          <ContactPage
+            onOpenBooking={() => handleOpenBookingProtected()}
+            onOpenPartnerModal={() => setIsPartnerModalOpen(true)}
+            currentUser={currentUser}
+            orders={userOrders}
+          />
+        )}
+
         {currentRoute === 'profile' && (
           <ProfilePage
             currentUser={currentUser}
@@ -830,7 +841,7 @@ export default function App() {
           />
         )}
 
-        {(currentRoute === 'home' || !['rates', 'calculator', 'kabadwalas', 'store', 'how-it-works', 'profile'].includes(currentRoute)) && (
+        {(currentRoute === 'home' || !['rates', 'calculator', 'kabadwalas', 'store', 'how-it-works', 'contact', 'profile'].includes(currentRoute)) && (
           <HomePage
             onOpenBooking={() => handleOpenBookingProtected()}
             activeCity={activeCity}
@@ -972,6 +983,12 @@ export default function App() {
         onClose={() => setIsDoorstepModalOpen(false)}
         order={doorstepOrder}
         onUpdateOrder={handleUpdateOrder}
+        currentUser={currentUser}
+      />
+      {/* Global Google Gemini Real-Time AI Recycling Chatbot */}
+      <GeminiChatbot
+        onOpenBooking={() => handleOpenBookingProtected()}
+        onNavigate={navigateTo}
         currentUser={currentUser}
       />
     </div>

@@ -20,7 +20,8 @@ import {
   Package,
   KeyRound,
   ChevronRight,
-  Wallet
+  Wallet,
+  Headphones
 } from 'lucide-react';
 
 export const Navbar = ({ 
@@ -514,6 +515,7 @@ export const Navbar = ({
               { id: 'kabadwalas', label: 'Find Kabadwalas' },
               { id: 'store', label: 'Pre-Loved Bazaar', badge: 'Sell & Buy' },
               { id: 'how-it-works', label: 'How It Works', isSecondary: true },
+              { id: 'contact', label: 'Support', isSecondary: true },
               { id: 'profile', label: 'Profiles', isSecondary: true }
             ].map((item) => {
               const isActive = currentPage === item.id;
@@ -1172,6 +1174,7 @@ export const Navbar = ({
               { id: 'kabadwalas', label: '📍 Nearby Verified Kabadwalas' },
               { id: 'store', label: '🛋️ Pre-Loved Bazaar & Store' },
               { id: 'how-it-works', label: '❓ How It Works' },
+              { id: 'contact', label: '🎧 Support & Contact' },
               { id: 'profile', label: '👤 My Profile & Account' }
             ].map((link) => {
               const isActive = currentPage === link.id;
