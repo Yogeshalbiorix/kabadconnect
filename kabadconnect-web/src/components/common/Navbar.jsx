@@ -122,6 +122,17 @@ export const Navbar = ({
     return cityName.trim().slice(0, 3).toUpperCase();
   };
 
+  const getUserInitials = (user) => {
+    if (!user) return 'U';
+    const name = (user.name || user.fullName || '').trim();
+    if (!name) return 'U';
+    const parts = name.split(/\s+/).filter(Boolean);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+    return name.slice(0, 2).toUpperCase();
+  };
+
   const activeShortCode = getCityShortCode(userLocation?.city || userLocation?.locality || activeCity);
 
   return (
@@ -734,25 +745,68 @@ export const Navbar = ({
                       setCityDropdownOpen(false);
                     }}
                     style={{
-                      display: 'flex',
+                      display: 'inline-flex',
                       alignItems: 'center',
-                      gap: '0.45rem',
-                      background: 'var(--color-bg)',
-                      border: '1px solid var(--color-border)',
-                      padding: '0.35rem 0.75rem 0.35rem 0.4rem',
+                      gap: '0.3rem',
+                      background: userMenuOpen ? 'var(--color-accent-mint-soft)' : 'var(--color-bg)',
+                      border: `1.5px solid ${userMenuOpen ? 'var(--color-accent-mint)' : 'var(--color-border)'}`,
+                      padding: '2px 5px 2px 2px',
                       borderRadius: 'var(--radius-full)',
-                      cursor: 'pointer'
+                      cursor: 'pointer',
+                      transition: 'all var(--transition-fast)',
+                      boxShadow: userMenuOpen ? '0 0 0 3px rgba(16, 185, 129, 0.15)' : '0 1px 3px rgba(0,0,0,0.05)'
                     }}
+                    title={`Logged in as ${currentUser.name} (Click for profile & options)`}
+                    aria-label={`User profile for ${currentUser.name}`}
                   >
-                    <img
-                      src={currentUser.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80'}
-                      alt={currentUser.name}
-                      style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover' }}
+                    {currentUser.avatar ? (
+                      <img
+                        src={currentUser.avatar}
+                        alt={currentUser.name}
+                        style={{
+                          width: '32px',
+                          height: '32px',
+                          borderRadius: '50%',
+                          objectFit: 'cover',
+                          border: '1.5px solid var(--color-accent-mint)',
+                          display: 'block'
+                        }}
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                          const fallback = e.currentTarget.parentElement?.querySelector('.nav-user-initials-fallback');
+                          if (fallback) fallback.style.display = 'flex';
+                        }}
+                      />
+                    ) : null}
+                    <div
+                      className="nav-user-initials-fallback"
+                      style={{
+                        display: currentUser.avatar ? 'none' : 'flex',
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '50%',
+                        background: 'linear-gradient(135deg, #0D5C3A 0%, #10B981 100%)',
+                        color: '#FFFFFF',
+                        fontSize: '0.78rem',
+                        fontWeight: 800,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        letterSpacing: '0.04em',
+                        boxShadow: '0 2px 4px rgba(13, 92, 58, 0.25)',
+                        border: '1.5px solid rgba(255,255,255,0.8)'
+                      }}
+                    >
+                      {getUserInitials(currentUser)}
+                    </div>
+                    <ChevronDown
+                      size={13}
+                      color="var(--color-text-muted)"
+                      style={{
+                        transform: userMenuOpen ? 'rotate(180deg)' : 'none',
+                        transition: 'transform 0.2s ease',
+                        marginRight: '2px'
+                      }}
                     />
-                    <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-primary)' }}>
-                      {currentUser.name.split(' ')[0]}
-                    </span>
-                    <ChevronDown size={14} color="var(--color-text-muted)" />
                   </button>
 
                   {userMenuOpen && (
@@ -760,7 +814,7 @@ export const Navbar = ({
                       position: 'absolute',
                       top: '115%',
                       right: 0,
-                      width: '240px',
+                      width: '260px',
                       background: '#FFFFFF',
                       borderRadius: 'var(--radius-md)',
                       boxShadow: 'var(--shadow-xl)',
@@ -769,18 +823,83 @@ export const Navbar = ({
                       zIndex: 999,
                       animation: 'scaleUp 0.15s ease'
                     }}>
-                      <div style={{ padding: '0.5rem', borderBottom: '1px solid var(--color-border)', marginBottom: '0.5rem' }}>
-                        <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#0F172A' }}>{currentUser.name}</div>
-                        <div style={{ fontSize: '0.75rem', color: '#64748B' }}>{currentUser.email || currentUser.phone}</div>
-                        <span className={`badge ${
-                          currentUser.role === 'admin' ? 'badge-warning' : 
-                          currentUser.role === 'agent' ? 'badge-primary' : 
-                          currentUser.role === 'partner' ? 'badge-warning' : 'badge-primary'
-                        }`} style={{ marginTop: '4px', fontSize: '0.65rem' }}>
-                          {currentUser.role === 'admin' ? 'Super Admin' : 
-                           currentUser.role === 'agent' ? 'Field Pickup Agent' : 
-                           currentUser.role === 'partner' ? 'Recycling Partner' : 'Verified Customer'}
-                        </span>
+                      <div style={{
+                        padding: '0.6rem',
+                        borderBottom: '1px solid var(--color-border)',
+                        marginBottom: '0.5rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.65rem'
+                      }}>
+                        {currentUser.avatar ? (
+                          <img
+                            src={currentUser.avatar}
+                            alt={currentUser.name}
+                            style={{
+                              width: '42px',
+                              height: '42px',
+                              borderRadius: '50%',
+                              objectFit: 'cover',
+                              border: '2px solid var(--color-accent-mint)',
+                              flexShrink: 0
+                            }}
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                              const fallback = e.currentTarget.parentElement?.querySelector('.dropdown-user-initials-fallback');
+                              if (fallback) fallback.style.display = 'flex';
+                            }}
+                          />
+                        ) : null}
+                        <div
+                          className="dropdown-user-initials-fallback"
+                          style={{
+                            display: currentUser.avatar ? 'none' : 'flex',
+                            width: '42px',
+                            height: '42px',
+                            borderRadius: '50%',
+                            background: 'linear-gradient(135deg, #0D5C3A 0%, #10B981 100%)',
+                            color: '#FFFFFF',
+                            fontSize: '0.95rem',
+                            fontWeight: 800,
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0,
+                            letterSpacing: '0.04em',
+                            boxShadow: '0 2px 6px rgba(13, 92, 58, 0.25)'
+                          }}
+                        >
+                          {getUserInitials(currentUser)}
+                        </div>
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <div style={{
+                            fontWeight: 800,
+                            fontSize: '0.92rem',
+                            color: '#0F172A',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis'
+                          }}>
+                            {currentUser.name}
+                          </div>
+                          <div style={{
+                            fontSize: '0.74rem',
+                            color: '#64748B',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis'
+                          }}>
+                            {currentUser.email || currentUser.phone}
+                          </div>
+                          <span className={`badge ${
+                            currentUser.role === 'admin' ? 'badge-warning' : 
+                            currentUser.role === 'agent' ? 'badge-primary' : 
+                            currentUser.role === 'partner' ? 'badge-warning' : 'badge-primary'
+                          }`} style={{ marginTop: '3px', fontSize: '0.625rem', padding: '0.1rem 0.4rem' }}>
+                            {currentUser.role === 'admin' ? 'Super Admin' : 
+                             currentUser.role === 'agent' ? 'Field Pickup Agent' : 
+                             currentUser.role === 'partner' ? 'Recycling Partner' : 'Verified Customer'}
+                          </span>
+                        </div>
                       </div>
 
                       {/* Mini Scrap Wallet Card in dropdown */}
@@ -1249,11 +1368,44 @@ export const Navbar = ({
                 marginTop: '0.5rem'
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                  <img
-                    src={currentUser.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80'}
-                    alt={currentUser.name}
-                    style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover' }}
-                  />
+                  {currentUser.avatar ? (
+                    <img
+                      src={currentUser.avatar}
+                      alt={currentUser.name}
+                      style={{
+                        width: '38px',
+                        height: '38px',
+                        borderRadius: '50%',
+                        objectFit: 'cover',
+                        border: '1.5px solid var(--color-accent-mint)',
+                        flexShrink: 0
+                      }}
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                        const fallback = e.currentTarget.parentElement?.querySelector('.mobile-user-initials-fallback');
+                        if (fallback) fallback.style.display = 'flex';
+                      }}
+                    />
+                  ) : null}
+                  <div
+                    className="mobile-user-initials-fallback"
+                    style={{
+                      display: currentUser.avatar ? 'none' : 'flex',
+                      width: '38px',
+                      height: '38px',
+                      borderRadius: '50%',
+                      background: 'linear-gradient(135deg, #0D5C3A 0%, #10B981 100%)',
+                      color: '#FFFFFF',
+                      fontSize: '0.85rem',
+                      fontWeight: 800,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                      letterSpacing: '0.04em'
+                    }}
+                  >
+                    {getUserInitials(currentUser)}
+                  </div>
                   <div>
                     <div style={{ fontWeight: 800, fontSize: '0.875rem' }}>{currentUser.name}</div>
                     <div style={{ fontSize: '0.725rem', color: '#64748B' }}>
