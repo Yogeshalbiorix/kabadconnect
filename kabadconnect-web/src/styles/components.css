@@ -347,7 +347,7 @@
 .auth-modal-body,
 .modal-scrollable {
   scrollbar-width: thin;
-  scrollbar-color: #CBD5E1 #F1F5F9;
+  scrollbar-color: #0D5C3A #F1F5F9;
 }
 
 .modal-body::-webkit-scrollbar,
@@ -366,7 +366,7 @@
 .modal-body::-webkit-scrollbar-thumb,
 .auth-modal-body::-webkit-scrollbar-thumb,
 .modal-scrollable::-webkit-scrollbar-thumb {
-  background: #CBD5E1;
+  background: #0D5C3A;
   border-radius: 999px;
   border: 1.5px solid #F1F5F9;
 }
@@ -374,7 +374,7 @@
 .modal-body::-webkit-scrollbar-thumb:hover,
 .auth-modal-body::-webkit-scrollbar-thumb:hover,
 .modal-scrollable::-webkit-scrollbar-thumb:hover {
-  background: #0D5C3A;
+  background: #072E1C;
 }
 
 @media (max-width: 640px) {
