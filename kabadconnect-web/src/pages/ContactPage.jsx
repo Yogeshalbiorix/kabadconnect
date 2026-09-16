@@ -344,22 +344,6 @@ export const ContactPage = ({
                   Reference ID: {submittedTicket.id}
                 </div>
 
-                <div style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  background: submittedTicket.isDatabaseSynced ? '#DCFCE7' : '#F0FDF4',
-                  border: '1px solid #86EFAC',
-                  padding: '4px 12px',
-                  borderRadius: '999px',
-                  fontSize: '0.785rem',
-                  fontWeight: 700,
-                  color: '#166534',
-                  marginBottom: '1rem'
-                }}>
-                  <span>{submittedTicket.isDatabaseSynced ? '☁️ Stored in MongoDB Atlas Database' : '💾 Saved to Database & Local Session'}</span>
-                </div>
-
                 <p style={{ fontSize: '0.9rem', color: '#047857', lineHeight: 1.5, marginBottom: '1.5rem' }}>
                   We have dispatched your request to the regional collection supervisor for <strong>{submittedTicket.category}</strong>. Estimated resolution: <strong>{submittedTicket.estimatedResolution}</strong>.
                 </p>
