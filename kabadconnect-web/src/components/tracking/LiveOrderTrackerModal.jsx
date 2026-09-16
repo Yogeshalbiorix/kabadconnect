@@ -26,11 +26,20 @@ export const LiveOrderTrackerModal = ({
   activeOrder = null,
   onOpenDoorstepVerification = null 
 }) => {
+  const isOrderCompleted = (ord) => {
+    if (!ord) return false;
+    const s = String(ord.status || '').toLowerCase();
+    const p = String(ord.doorstepVerification?.paymentStatus || '').toLowerCase();
+    return s === 'completed' || s === 'paid' || p === 'completed' || p === 'paid';
+  };
+
   const [currentOrder, setCurrentOrder] = useState(activeOrder || null);
   const [searchId, setSearchId] = useState('');
   const [simulatedStage, setSimulatedStage] = useState(() => {
-    if (activeOrder?.status === 'completed') return 4;
+    if (isOrderCompleted(activeOrder)) return 4;
     if (activeOrder?.status === 'weighing') return 3;
+    if (activeOrder?.status === 'assigned') return 1;
+    if (activeOrder?.status === 'pending') return 0;
     return 2;
   });
   const [showCertificate, setShowCertificate] = useState(false);
@@ -91,15 +100,21 @@ export const LiveOrderTrackerModal = ({
     : 0;
 
   useEffect(() => {
-    if (activeOrder) {
+    if (activeOrder && isOpen) {
       setCurrentOrder(activeOrder);
-      if (activeOrder.status === 'completed') setSimulatedStage(4);
-      else if (activeOrder.status === 'weighing') setSimulatedStage(3);
-      else if (activeOrder.status === 'in_transit' || activeOrder.status === 'en_route') setSimulatedStage(2);
-      else if (activeOrder.status === 'assigned') setSimulatedStage(1);
-      else setSimulatedStage(0);
+      if (isOrderCompleted(activeOrder)) {
+        setSimulatedStage(4);
+      } else if (activeOrder.status === 'weighing') {
+        setSimulatedStage(3);
+      } else if (activeOrder.status === 'in_transit' || activeOrder.status === 'en_route') {
+        setSimulatedStage(2);
+      } else if (activeOrder.status === 'assigned') {
+        setSimulatedStage(1);
+      } else {
+        setSimulatedStage(0);
+      }
     }
-  }, [activeOrder]);
+  }, [activeOrder, isOpen]);
 
   if (!isOpen) return null;
 
@@ -391,8 +406,8 @@ export const LiveOrderTrackerModal = ({
                   </span>
                 </div>
 
-                {/* Customer OTP Box if OTP exists */}
-                {currentOrder.doorstepVerification?.otp && (
+                {/* Customer OTP Box if active and NOT completed */}
+                {!isOrderCompleted(currentOrder) && currentOrder.doorstepVerification?.otp && (
                   <div style={{
                     padding: '0.85rem 1rem',
                     background: '#FEF3C7',
@@ -429,8 +444,8 @@ export const LiveOrderTrackerModal = ({
                   </div>
                 )}
 
-                {/* Doorstep Verification Launch Button */}
-                {onOpenDoorstepVerification && (
+                {/* Doorstep Verification Launch Button: ONLY for active in-progress orders */}
+                {!isOrderCompleted(currentOrder) && onOpenDoorstepVerification && (
                   <button
                     onClick={() => {
                       onOpenDoorstepVerification(currentOrder);
@@ -451,6 +466,21 @@ export const LiveOrderTrackerModal = ({
                     <Scale size={18} />
                     <span>Open Doorstep Weighing, OTP & Payment Terminal</span>
                   </button>
+                )}
+
+                {isOrderCompleted(currentOrder) && (
+                  <div style={{
+                    padding: '0.75rem 1rem',
+                    background: '#ECFDF5',
+                    border: '1px solid #A7F3D0',
+                    borderRadius: 'var(--radius-md)',
+                    textAlign: 'center',
+                    color: '#065F46',
+                    fontSize: '0.825rem',
+                    fontWeight: 700
+                  }}>
+                    ✓ Doorstep Item Weighing & Payment Disbursal Completed
+                  </div>
                 )}
               </div>
             )}
@@ -558,79 +588,80 @@ export const LiveOrderTrackerModal = ({
             )}
           </div>
 
-          {/* Interactive Simulation Controls Bar */}
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.65rem',
-            padding: '0.75rem 1rem',
-            background: 'var(--color-bg-alt)',
-            borderRadius: 'var(--radius-md)',
-            border: '1px solid var(--color-border)'
-          }}>
+          {/* Interactive Simulation Controls Bar (Only for active in-progress orders) */}
+          {!isOrderCompleted(currentOrder) && (
             <div style={{
               display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              flexWrap: 'wrap',
-              gap: '0.5rem'
+              flexDirection: 'column',
+              gap: '0.65rem',
+              padding: '0.75rem 1rem',
+              background: 'var(--color-bg-alt)',
+              borderRadius: 'var(--radius-md)',
+              border: '1px solid var(--color-border)'
             }}>
-              <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', fontWeight: 700 }}>
-                PICKUP STAGE CONTROLS:
-              </div>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <button
-                  onClick={handlePrevStage}
-                  disabled={simulatedStage === 0}
-                  className="btn btn-sm btn-secondary"
-                  style={{ opacity: simulatedStage === 0 ? 0.5 : 1 }}
-                >
-                  ◀ Prev Stage
-                </button>
-                <button
-                  onClick={handleNextStage}
-                  disabled={isNextDisabled}
-                  className="btn btn-sm btn-primary"
-                  style={{ 
-                    opacity: isNextDisabled ? 0.55 : 1,
-                    cursor: isNextDisabled ? 'not-allowed' : 'pointer',
-                    background: simulatedStage === 3 && !isOtpVerified ? '#64748B' : undefined,
-                    borderColor: simulatedStage === 3 && !isOtpVerified ? '#64748B' : undefined
-                  }}
-                  title={simulatedStage === 3 && !isOtpVerified ? "Customer confirmation OTP is required before advancing to Payment" : undefined}
-                >
-                  {simulatedStage === 3 && !isOtpVerified ? (
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                      <Lock size={13} />
-                      <span>Next Stage (OTP Required)</span>
-                    </span>
-                  ) : (
-                    <span>Next Stage ▶</span>
-                  )}
-                </button>
-              </div>
-            </div>
-
-            {simulatedStage === 3 && !isOtpVerified && (
               <div style={{
-                fontSize: '0.75rem',
-                color: '#92400E',
-                background: '#FEF3C7',
-                border: '1px solid #F59E0B',
-                borderRadius: '6px',
-                padding: '0.45rem 0.75rem',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '0.45rem',
-                lineHeight: 1.4
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '0.5rem'
               }}>
-                <AlertCircle size={14} color="#D97706" style={{ flexShrink: 0 }} />
-                <span>
-                  <strong>OTP Required:</strong> Without verifying the customer doorstep OTP, the next step (Payment Completed) cannot be reached. Please click <em>"Open Doorstep Weighing, OTP & Payment Terminal"</em> above to confirm scrap items & OTP.
-                </span>
+                <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', fontWeight: 700 }}>
+                  PICKUP STAGE CONTROLS:
+                </div>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button
+                    onClick={handlePrevStage}
+                    disabled={simulatedStage === 0}
+                    className="btn btn-sm btn-secondary"
+                    style={{ opacity: simulatedStage === 0 ? 0.5 : 1 }}
+                  >
+                    ◀ Prev Stage
+                  </button>
+                  <button
+                    onClick={handleNextStage}
+                    disabled={isNextDisabled}
+                    className="btn btn-sm btn-primary"
+                    style={{ 
+                      opacity: isNextDisabled ? 0.55 : 1,
+                      cursor: isNextDisabled ? 'not-allowed' : 'pointer',
+                      background: simulatedStage === 3 && !isOtpVerified ? '#64748B' : undefined,
+                      borderColor: simulatedStage === 3 && !isOtpVerified ? '#64748B' : undefined
+                    }}
+                    title={simulatedStage === 3 && !isOtpVerified ? "Customer confirmation OTP is required before advancing to Payment" : undefined}
+                  >
+                    {simulatedStage === 3 && !isOtpVerified ? (
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                        <Lock size={13} />
+                        <span>Next Stage (OTP Required)</span>
+                      </span>
+                    ) : (
+                      <span>Next Stage ▶</span>
+                    )}
+                  </button>
+                </div>
               </div>
-            )}
-          </div>
+
+              {simulatedStage === 3 && !isOtpVerified && (
+                <div style={{
+                  fontSize: '0.75rem',
+                  color: '#92400E',
+                  background: '#FEF3C7',
+                  border: '1px solid #F59E0B',
+                  borderRadius: '6px',
+                  padding: '0.45rem 0.65rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.4rem'
+                }}>
+                  <ShieldCheck size={14} color="#D97706" />
+                  <span>
+                    <strong>Anti-Fraud Security:</strong> Customer must share the 4-digit OTP during doorstep weighing before the final payment step can be unlocked.
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Modal Footer */}
