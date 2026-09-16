@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { KABADWALA_PARTNERS } from '../../data/kabadwalas';
+import { SCRAP_ITEMS } from '../../data/scrapRates';
 import { getUserCoordinates, reverseGeocodeMapbox, fetchLocationByPincode, detectCurrentLocationWithAddress } from '../../utils/geolocation';
 import { getMapboxToken } from '../../utils/mapboxConfig';
 
@@ -262,6 +263,34 @@ export const BookingWizardModal = ({
   };
 
   const handleFinish = () => {
+    // 1. Build detailed scrap items from initialScrapData or selected categories
+    const calculatedItems = initialScrapData?.items && initialScrapData.items.length > 0
+      ? initialScrapData.items.map((it, idx) => ({
+          id: it.id || `item-${idx}`,
+          name: it.name,
+          weight: parseFloat(it.estimatedWeight || it.weight) || 10,
+          rate: parseFloat(it.rate) || 15,
+          amount: Math.round((parseFloat(it.estimatedWeight || it.weight) || 10) * (parseFloat(it.rate) || 15)),
+          unit: it.unit || 'kg'
+        }))
+      : selectedCategories.map((cat, idx) => {
+          const matchedItem = SCRAP_ITEMS.find(s => s.category === cat) || {
+            name: String(cat).charAt(0).toUpperCase() + String(cat).slice(1) + ' Scrap',
+            rate: 15,
+            unit: 'kg'
+          };
+          return {
+            id: `item-${idx}`,
+            name: matchedItem.name,
+            weight: 10,
+            rate: matchedItem.rate || 15,
+            amount: Math.round(10 * (matchedItem.rate || 15)),
+            unit: matchedItem.unit || 'kg'
+          };
+        });
+
+    const calculatedTotalAmount = initialScrapData?.estimatedRupees || initialScrapData?.totalPayout || calculatedItems.reduce((acc, it) => acc + (it.amount || Math.round(it.weight * it.rate)), 0) || 750;
+
     const newOrder = {
       id: bookingId,
       customerName: formData.name,
@@ -272,8 +301,11 @@ export const BookingWizardModal = ({
       status: 'in_transit',
       createdAt: new Date().toISOString(),
       categories: selectedCategories,
+      items: calculatedItems,
+      itemsWeighed: calculatedItems,
       estimatedWeight: weightBracket,
-      estimatedAmount: initialScrapData?.estimatedRupees || 750,
+      estimatedAmount: calculatedTotalAmount,
+      totalPaid: calculatedTotalAmount,
       kabadwala: assignedPartner,
       userCoords: userLocation?.coords || null
     };

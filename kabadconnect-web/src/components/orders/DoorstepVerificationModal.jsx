@@ -41,42 +41,71 @@ export const DoorstepVerificationModal = ({
   // View mode: 'collector' (Kabadwala) vs 'customer' (User) for interactive simulation
   const [activeRole, setActiveRole] = useState('collector');
 
-  // Inspected items state (defaults from order.itemsWeighed or order.items or initial estimates)
-  const [inspectedItems, setInspectedItems] = useState(() => {
-    if (order.doorstepVerification?.inspectedItems && order.doorstepVerification.inspectedItems.length > 0) {
-      return order.doorstepVerification.inspectedItems;
-    }
-    if (order.itemsWeighed && order.itemsWeighed.length > 0) {
-      return order.itemsWeighed.map((it, idx) => ({
-        id: `item-${idx}`,
+  const getInitialInspectedItems = (ord) => {
+    if (!ord) return [];
+    if (ord.doorstepVerification?.inspectedItems && ord.doorstepVerification.inspectedItems.length > 0) {
+      return ord.doorstepVerification.inspectedItems.map((it, idx) => ({
+        id: it.id || `item-${idx}`,
         name: it.name,
         weight: parseFloat(String(it.weight).replace(/[^0-9.]/g, '')) || 10,
-        rate: parseFloat(String(it.rate).replace(/[^0-9.]/g, '')) || 14,
+        rate: parseFloat(String(it.rate).replace(/[^0-9.]/g, '')) || 15,
         unit: 'kg'
       }));
     }
-    if (order.items && order.items.length > 0) {
-      return order.items.map((it, idx) => ({
-        id: `item-${idx}`,
+    if (ord.items && ord.items.length > 0) {
+      return ord.items.map((it, idx) => ({
+        id: it.id || `item-${idx}`,
         name: it.name,
         weight: parseFloat(it.estimatedWeight || it.weight) || 10,
         rate: parseFloat(it.rate) || 15,
         unit: it.unit || 'kg'
       }));
     }
-    if (order.categories && order.categories.length > 0) {
-      return order.categories.map((cat, idx) => ({
-        id: `item-${idx}`,
-        name: String(cat).charAt(0).toUpperCase() + String(cat).slice(1) + ' Scrap',
-        weight: 10,
-        rate: 15,
+    if (ord.itemsWeighed && ord.itemsWeighed.length > 0) {
+      return ord.itemsWeighed.map((it, idx) => ({
+        id: it.id || `item-${idx}`,
+        name: it.name,
+        weight: parseFloat(String(it.weight).replace(/[^0-9.]/g, '')) || 10,
+        rate: parseFloat(String(it.rate).replace(/[^0-9.]/g, '')) || 15,
         unit: 'kg'
       }));
     }
+    if (ord.estimatedAmount && ord.categories && ord.categories.length > 0) {
+      const estTotal = parseFloat(ord.estimatedAmount);
+      const cats = ord.categories;
+      const matched = cats.map(c => SCRAP_ITEMS.find(s => s.category === c) || { name: `${String(c).charAt(0).toUpperCase() + String(c).slice(1)} Scrap`, rate: 15, unit: 'kg' });
+      const perItemAmount = estTotal / matched.length;
+      return matched.map((m, idx) => {
+        const rate = m.rate || 15;
+        const weight = parseFloat((perItemAmount / rate).toFixed(1)) || 10;
+        return {
+          id: `item-${idx}`,
+          name: m.name,
+          weight: weight,
+          rate: rate,
+          unit: m.unit || 'kg'
+        };
+      });
+    }
+    if (ord.categories && ord.categories.length > 0) {
+      return ord.categories.map((cat, idx) => {
+        const match = SCRAP_ITEMS.find(s => s.category === cat);
+        return {
+          id: `item-${idx}`,
+          name: match?.name || (String(cat).charAt(0).toUpperCase() + String(cat).slice(1) + ' Scrap'),
+          weight: 10,
+          rate: match?.rate || 15,
+          unit: 'kg'
+        };
+      });
+    }
     return [
-      { id: 'item-0', name: 'Household Scrap', weight: parseFloat(order.estimatedWeight) || 10, rate: 15, unit: 'kg' }
+      { id: 'item-0', name: 'Household Scrap', weight: parseFloat(ord.estimatedWeight) || 10, rate: 15, unit: 'kg' }
     ];
-  });
+  };
+
+  // Inspected items state
+  const [inspectedItems, setInspectedItems] = useState(() => getInitialInspectedItems(order));
 
   // OTP State
   const [otpCode, setOtpCode] = useState(() => order.doorstepVerification?.otp || '');
@@ -96,12 +125,34 @@ export const DoorstepVerificationModal = ({
     if (order.status === 'completed' && order.doorstepVerification?.paymentStatus === 'completed') {
       return {
         transactionRef: order.doorstepVerification?.transactionRef || 'UTR-9821882',
-        paidAmount: order.doorstepVerification?.paidAmount || order.totalPaid || 727,
+        paidAmount: order.doorstepVerification?.paidAmount || order.totalPaid || order.estimatedAmount || 727,
         paymentMethod: order.doorstepVerification?.paymentMethod || 'Instant UPI'
       };
     }
     return null;
   });
+
+  // Re-sync on order change or modal open
+  useEffect(() => {
+    if (order && isOpen) {
+      setInspectedItems(getInitialInspectedItems(order));
+      setOtpCode(order.doorstepVerification?.otp || '');
+      setOtpInput('');
+      setIsOtpSent(Boolean(order.doorstepVerification?.otp));
+      setIsOtpVerified(Boolean(order.doorstepVerification?.isVerified));
+      setOtpError('');
+      setUpiId(order.upiId || currentUser?.upiId || '');
+      if (order.status === 'completed' && order.doorstepVerification?.paymentStatus === 'completed') {
+        setPaymentSuccessData({
+          transactionRef: order.doorstepVerification?.transactionRef || 'UTR-9821882',
+          paidAmount: order.doorstepVerification?.paidAmount || order.totalPaid || order.estimatedAmount || 727,
+          paymentMethod: order.doorstepVerification?.paymentMethod || 'Instant UPI'
+        });
+      } else {
+        setPaymentSuccessData(null);
+      }
+    }
+  }, [order?.id, isOpen]);
 
   // Calculate live total weight and total payout
   const totalWeight = inspectedItems.reduce((acc, curr) => acc + (parseFloat(curr.weight) || 0), 0);
