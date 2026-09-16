@@ -344,7 +344,7 @@ export const ProfilePage = ({
           <div class="inner-wrapper">
             <div class="header">
               <div>
-                <div class="tag">KabadConnect Circular Economy Initiative</div>
+                <div class="tag">KabadCollect Circular Economy Initiative</div>
                 <div class="title">Green Landfill Diversion Certificate</div>
                 <div class="meta">Certificate ID: <strong>${certId}</strong> • Issued: <strong>${issueDate}</strong></div>
               </div>
@@ -360,7 +360,7 @@ export const ProfilePage = ({
             </div>
 
             <div class="body-text">
-              This certifies that <strong>${certName}</strong> has segregated and responsibly recycled <strong>${certKg} kg of household & office scrap</strong> through KabadConnect's verified hyperlocal recycling network, preventing <strong>${certCo2} kg of CO₂ greenhouse emissions</strong> and conserving <strong>${certTrees} mature forest trees</strong>.
+              This certifies that <strong>${certName}</strong> has segregated and responsibly recycled <strong>${certKg} kg of household & office scrap</strong> through KabadCollect's verified hyperlocal recycling network, preventing <strong>${certCo2} kg of CO₂ greenhouse emissions</strong> and conserving <strong>${certTrees} mature forest trees</strong>.
             </div>
 
             <div class="stats-grid">
@@ -383,7 +383,7 @@ export const ProfilePage = ({
                 ✓ Ministry of Environment & Climate Benchmarking Compliant
               </div>
               <div class="sig-box">
-                <div style="font-size: 15px; font-weight: 900; color: #0D5C3A; text-decoration: underline;">KabadConnect Verification Board</div>
+                <div style="font-size: 15px; font-weight: 900; color: #0D5C3A; text-decoration: underline;">KabadCollect Verification Board</div>
                 <div class="sig-title">Digital Hyperlocal Ecosystem Certificate</div>
               </div>
             </div>
@@ -1524,7 +1524,7 @@ export const ProfilePage = ({
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
                     <div>
                       <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--color-primary)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-                        KABADCONNECT CIRCULAR ECONOMY INITIATIVE
+                        KABADCOLLECT CIRCULAR ECONOMY INITIATIVE
                       </div>
                       <h3 style={{ fontSize: '1.65rem', fontWeight: 800, color: '#0F172A', marginTop: '4px' }}>
                         Green Landfill Diversion Certificate
@@ -1541,7 +1541,7 @@ export const ProfilePage = ({
                   </div>
 
                   <p style={{ fontSize: '0.9rem', color: '#334155', lineHeight: 1.6, marginBottom: '1.5rem', maxWidth: '750px' }}>
-                    This certifies that <strong>{currentUser?.name || 'Verified Member'}</strong> has segregated and responsibly recycled <strong>{displayTotalRecycled} kg of household & office scrap</strong> through KabadConnect's verified hyperlocal network, preventing <strong>{displayCo2Avoided} kg of CO₂ greenhouse emissions</strong> and conserving <strong>{displayTreesPreserved} mature forest trees</strong>.
+                    This certifies that <strong>{currentUser?.name || 'Verified Member'}</strong> has segregated and responsibly recycled <strong>{displayTotalRecycled} kg of household & office scrap</strong> through KabadCollect's verified hyperlocal network, preventing <strong>{displayCo2Avoided} kg of CO₂ greenhouse emissions</strong> and conserving <strong>{displayTreesPreserved} mature forest trees</strong>.
                   </p>
 
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '1rem', borderTop: '1px dashed #A7F3D0', paddingTop: '1rem' }}>
@@ -2197,7 +2197,7 @@ export const ProfilePage = ({
               <span>Multi-Role Identity Protection</span>
             </div>
             <p style={{ fontSize: '0.825rem', color: 'var(--color-text-muted)', margin: 0, maxWidth: '640px' }}>
-              KabadConnect strictly maintains role-based access control. Field Collection Executives and Scrap Yard Merchant accounts require separate verified login credentials to prevent unauthorized exposure of customer and commercial records.
+              KabadCollect strictly maintains role-based access control. Field Collection Executives and Scrap Yard Merchant accounts require separate verified login credentials to prevent unauthorized exposure of customer and commercial records.
             </p>
           </div>
 

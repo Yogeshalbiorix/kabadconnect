@@ -54,14 +54,14 @@ export default function App() {
   const [currentRoute, navigateTo] = useHashRoute();
   const [activeCity, setActiveCity] = useState(() => {
     try {
-      const saved = localStorage.getItem('kabadconnect_active_city');
+      const saved = localStorage.getItem('kabadcollect_active_city') || localStorage.getItem('kabadconnect_active_city');
       if (saved) return saved;
     } catch (e) { }
     return 'Delhi NCR (Indirapuram / Noida)';
   });
   const [userLocation, setUserLocation] = useState(() => {
     try {
-      const saved = localStorage.getItem('kabadconnect_user_location');
+      const saved = localStorage.getItem('kabadcollect_user_location') || localStorage.getItem('kabadconnect_user_location');
       if (saved) return JSON.parse(saved);
     } catch (e) { }
     return null;
@@ -71,7 +71,7 @@ export default function App() {
   const handleSetActiveCity = (city) => {
     setActiveCity(city);
     try {
-      localStorage.setItem('kabadconnect_active_city', city);
+      localStorage.setItem('kabadcollect_active_city', city);
     } catch (e) { }
   };
 
@@ -88,12 +88,12 @@ export default function App() {
   // Centralized Orders State (initialized from localStorage or fresh empty state)
   const [orders, setOrders] = useState(() => {
     try {
-      const saved = localStorage.getItem('kabadconnect_orders');
+      const saved = localStorage.getItem('kabadcollect_orders') || localStorage.getItem('kabadconnect_orders');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
           const cleaned = parsed.filter(o => !['KC-7729', 'KC-7681', 'KC-DEMO-1', 'KC-DEMO-2', 'KC-8842', 'KC-8721'].includes(o.id));
-          localStorage.setItem('kabadconnect_orders', JSON.stringify(cleaned));
+          localStorage.setItem('kabadcollect_orders', JSON.stringify(cleaned));
           return cleaned;
         }
       }
@@ -119,7 +119,7 @@ export default function App() {
   // Centralized Marketplace State (Almirahs, Tables, AC, Sofa, Bed, Mattress, Cycles, etc.)
   const [marketplaceItems, setMarketplaceItems] = useState(() => {
     try {
-      const saved = localStorage.getItem('kabadconnect_marketplace');
+      const saved = localStorage.getItem('kabadcollect_marketplace') || localStorage.getItem('kabadconnect_marketplace');
       if (saved) return JSON.parse(saved);
     } catch (e) { }
     return INITIAL_MARKETPLACE_ITEMS;
@@ -128,7 +128,7 @@ export default function App() {
   // Centralized Partners State (backed by MongoDB /api/partners)
   const [partners, setPartners] = useState(() => {
     try {
-      const saved = localStorage.getItem('kabadconnect_partners');
+      const saved = localStorage.getItem('kabadcollect_partners') || localStorage.getItem('kabadconnect_partners');
       if (saved) return JSON.parse(saved);
     } catch (e) { }
     return KABADWALA_PARTNERS;
@@ -155,7 +155,7 @@ export default function App() {
   // Shopping cart for recycled products (empty by default)
   const [cartItems, setCartItems] = useState(() => {
     try {
-      const saved = localStorage.getItem('kabadconnect_cart');
+      const saved = localStorage.getItem('kabadcollect_cart') || localStorage.getItem('kabadconnect_cart');
       if (saved) return JSON.parse(saved);
     } catch (e) { }
     return [];
@@ -164,28 +164,28 @@ export default function App() {
   // Sync cart to localStorage
   useEffect(() => {
     try {
-      localStorage.setItem('kabadconnect_cart', JSON.stringify(cartItems));
+      localStorage.setItem('kabadcollect_cart', JSON.stringify(cartItems));
     } catch (e) { }
   }, [cartItems]);
 
   // Sync orders to localStorage
   useEffect(() => {
     try {
-      localStorage.setItem('kabadconnect_orders', JSON.stringify(orders));
+      localStorage.setItem('kabadcollect_orders', JSON.stringify(orders));
     } catch (e) { }
   }, [orders]);
 
   // Sync marketplace items to localStorage
   useEffect(() => {
     try {
-      localStorage.setItem('kabadconnect_marketplace', JSON.stringify(marketplaceItems));
+      localStorage.setItem('kabadcollect_marketplace', JSON.stringify(marketplaceItems));
     } catch (e) { }
   }, [marketplaceItems]);
 
   // Sync partners to localStorage
   useEffect(() => {
     try {
-      localStorage.setItem('kabadconnect_partners', JSON.stringify(partners));
+      localStorage.setItem('kabadcollect_partners', JSON.stringify(partners));
     } catch (e) { }
   }, [partners]);
 
@@ -631,7 +631,7 @@ export default function App() {
   // Auto-detect user current location on startup (GPS if permitted, or instant IP fallback)
   useEffect(() => {
     const autoDetect = async () => {
-      const savedCity = localStorage.getItem('kabadconnect_active_city');
+      const savedCity = localStorage.getItem('kabadcollect_active_city') || localStorage.getItem('kabadconnect_active_city');
       // If user hasn't explicitly chosen a city or if it's the default Delhi, auto-detect actual location!
       if (!savedCity || savedCity === 'Delhi NCR (Indirapuram / Noida)') {
         await handleDetectLocation({ silent: true });
@@ -683,13 +683,13 @@ export default function App() {
       if (geo && geo.city) {
         setUserLocation(geo);
         try {
-          localStorage.setItem('kabadconnect_user_location', JSON.stringify(geo));
+          localStorage.setItem('kabadcollect_user_location', JSON.stringify(geo));
         } catch (e) { }
 
         const hubCity = resolveCityFullName(geo.city, geo.state, geo.locality);
         setActiveCity(hubCity);
         try {
-          localStorage.setItem('kabadconnect_active_city', hubCity);
+          localStorage.setItem('kabadcollect_active_city', hubCity);
         } catch (e) { }
 
         return geo;

@@ -1,4 +1,4 @@
-# 🌿 KabadConnect — Hyperlocal Recycling Marketplace
+# 🌿 KabadCollect — Hyperlocal Recycling Marketplace
 
 > **"Swiggy for Kabad"** — Doorstep scrap pickup & circular economy marketplace platform.
 

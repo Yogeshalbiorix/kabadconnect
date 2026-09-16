@@ -87,7 +87,7 @@ export const AdminPanelModal = ({
 
     const payload = useCustomUri
       ? { uri: customUri.trim() }
-      : { password: dbPassword.trim(), databaseName: 'kabadconnect' };
+      : { password: dbPassword.trim(), databaseName: 'kabadcollect' };
 
     const res = await apiUpdateDbConfig(payload);
     setIsConfiguringDb(false);
@@ -193,7 +193,7 @@ export const AdminPanelModal = ({
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                 <h3 style={{ color: '#FFFFFF', margin: 0, fontSize: 'clamp(1rem, 2.5vw, 1.3rem)' }}>
-                  KabadConnect Admin Portal
+                  KabadCollect Admin Portal
                 </h3>
                 <span style={{
                   background: '#F59E0B',
@@ -1013,7 +1013,7 @@ export const AdminPanelModal = ({
                       </div>
                       <p style={{ fontSize: '0.825rem', color: '#64748B', margin: '3px 0 0 0' }}>
                         {dbStatus?.connected
-                          ? `Active Atlas cluster: cluster0.xzdc97o.mongodb.net • Database: ${dbStatus.dbName || 'kabadconnect'} • Latency: ${dbStatus.pingMs || 35}ms`
+                          ? `Active Atlas cluster: cluster0.xzdc97o.mongodb.net • Database: ${dbStatus.dbName || 'kabadcollect'} • Latency: ${dbStatus.pingMs || 35}ms`
                           : 'Target cluster: cluster0.xzdc97o.mongodb.net • Username: yogeshalbiorix_db_user'}
                       </p>
                     </div>
@@ -1095,7 +1095,7 @@ export const AdminPanelModal = ({
                       <div style={{ flex: '1 1 300px' }}>
                         <input
                           type="text"
-                          placeholder="mongodb+srv://user:password@cluster0.xzdc97o.mongodb.net/kabadconnect"
+                          placeholder="mongodb+srv://user:password@cluster0.xzdc97o.mongodb.net/kabadcollect"
                           value={customUri}
                           onChange={(e) => setCustomUri(e.target.value)}
                           className="form-input"
@@ -1342,7 +1342,7 @@ export const AdminPanelModal = ({
                 }}>
                   <div style={{ color: '#F59E0B', fontWeight: 700, marginBottom: '4px' }}># Sample Vercel Environment Variable:</div>
                   <div style={{ color: '#38BDF8', wordBreak: 'break-all' }}>
-                    MONGODB_URI=mongodb+srv://&lt;username&gt;:&lt;password&gt;@cluster0.mongodb.net/kabadconnect?retryWrites=true&amp;w=majority
+                    MONGODB_URI=mongodb+srv://&lt;username&gt;:&lt;password&gt;@cluster0.mongodb.net/kabadcollect?retryWrites=true&amp;w=majority
                   </div>
                 </div>
               </div>

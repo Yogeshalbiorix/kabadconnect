@@ -40,7 +40,7 @@ export const ProductDetailsModal = ({
   const cleanPhone = product.seller?.whatsapp || formattedPhone.replace(/[^0-9]/g, '');
 
   const whatsappMessage = encodeURIComponent(
-    `Hi ${product.seller?.name || 'there'}, I found your listing for "${product.title}" on KabadConnect Bazaar priced at ₹${product.price}. Is this item still available for inspection and pickup in ${product.locality || product.city}?`
+    `Hi ${product.seller?.name || 'there'}, I found your listing for "${product.title}" on KabadCollect Bazaar priced at ₹${product.price}. Is this item still available for inspection and pickup in ${product.locality || product.city}?`
   );
 
   const whatsappUrl = `https://wa.me/${cleanPhone.startsWith('91') ? cleanPhone : '91' + cleanPhone}?text=${whatsappMessage}`;
@@ -251,7 +251,7 @@ export const ProductDetailsModal = ({
                         {product.seller?.name || 'Local Citizen'}
                       </div>
                       <div style={{ fontSize: '0.8rem', color: '#64748B' }}>
-                        Verified KabadConnect Member
+                        Verified KabadCollect Member
                       </div>
                     </div>
                     <span className="badge badge-primary" style={{ fontSize: '0.7rem' }}>

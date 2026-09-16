@@ -1,6 +1,6 @@
-# 🚀 KabadConnect — MongoDB Atlas & Vercel Deployment Guide
+# 🚀 KabadCollect — MongoDB Atlas & Vercel Deployment Guide
 
-This guide explains how to deploy **KabadConnect** to **Vercel** with **MongoDB Atlas** database in less than 5 minutes.
+This guide explains how to deploy **KabadCollect** to **Vercel** with **MongoDB Atlas** database in less than 5 minutes.
 
 ---
 
@@ -15,7 +15,7 @@ This guide explains how to deploy **KabadConnect** to **Vercel** with **MongoDB 
 
 ## 1. MongoDB Atlas Setup
 
-KabadConnect uses **MongoDB Atlas** for persisting scrap pickup orders, live rate cards, and partner records.
+KabadCollect uses **MongoDB Atlas** for persisting scrap pickup orders, live rate cards, and partner records.
 
 1. Go to [MongoDB Atlas](https://www.mongodb.com/cloud/atlas) and sign up / log in.
 2. Click **Create** and select the **M0 Free Cluster** (free forever, 512 MB storage).
@@ -32,7 +32,7 @@ KabadConnect uses **MongoDB Atlas** for persisting scrap pickup orders, live rat
    - Choose **Drivers** (Node.js).
    - Copy the connection string, for example:
      ```
-     mongodb+srv://<username>:<password>@cluster0.abcde.mongodb.net/kabadconnect?retryWrites=true&w=majority
+     mongodb+srv://<username>:<password>@cluster0.abcde.mongodb.net/kabadcollect?retryWrites=true&w=majority
      ```
    - Replace `<username>` and `<password>` with your database user credentials.
 
@@ -44,13 +44,13 @@ KabadConnect uses **MongoDB Atlas** for persisting scrap pickup orders, live rat
    ```bash
    git init
    git add .
-   git commit -m "feat: KabadConnect with MongoDB & Vercel serverless API"
+   git commit -m "feat: KabadCollect with MongoDB & Vercel serverless API"
    git branch -M main
-   git remote add origin https://github.com/your-username/kabadconnect.git
+   git remote add origin https://github.com/your-username/kabadcollect.git
    git push -u origin main
    ```
 2. Go to [Vercel Dashboard](https://vercel.com/dashboard) and click **Add New Project**.
-3. Import your `kabadconnect` repository.
+3. Import your `kabadcollect` repository.
 4. **Framework Preset**: Vercel will automatically detect `Vite` (configured via `vercel.json`).
 5. In **Environment Variables**, add:
    - `MONGODB_URI`: Your MongoDB Atlas connection string from Step 1.
@@ -68,7 +68,7 @@ If you already deployed without environment variables, you can add them anytime:
 2. Add:
    | Key | Value | Notes |
    |-----|-------|-------|
-   | `MONGODB_URI` | `mongodb+srv://<user>:<password>@cluster.mongodb.net/kabadconnect?retryWrites=true&w=majority` | Required for live MongoDB storage |
+   | `MONGODB_URI` | `mongodb+srv://<user>:<password>@cluster.mongodb.net/kabadcollect?retryWrites=true&w=majority` | Required for live MongoDB storage |
    | `VITE_MAPBOX_TOKEN` | `pk.eyJ...` | For interactive Mapbox scrap collection map |
 3. Go to **Deployments** ➔ Click **Redeploy** on the latest commit.
 

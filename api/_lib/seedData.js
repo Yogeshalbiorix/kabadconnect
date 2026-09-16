@@ -355,13 +355,13 @@ export const DEFAULT_MARKETPLACE_ITEMS = [
     co2Saved: '4.2 kg CO₂',
     badge: 'Bestseller',
     city: 'Delhi NCR',
-    locality: 'KabadConnect Circular Studio',
+    locality: 'KabadCollect Circular Studio',
     seller: {
       id: 'artisan-coop-1',
-      name: 'KabadConnect Eco Crafts',
+      name: 'KabadCollect Eco Crafts',
       phone: '+91 98100 00001',
       whatsapp: '919810000001',
-      email: 'store@kabadconnect.com',
+      email: 'store@kabadcollect.com',
       isVerified: true
     },
     itemType: 'upcycled',
@@ -387,7 +387,7 @@ export const DEFAULT_MARKETPLACE_ITEMS = [
       name: 'Metal Upcycle Collective',
       phone: '+91 98250 00002',
       whatsapp: '919825000002',
-      email: 'store@kabadconnect.com',
+      email: 'store@kabadcollect.com',
       isVerified: true
     },
     itemType: 'upcycled',
@@ -413,7 +413,7 @@ export const DEFAULT_MARKETPLACE_ITEMS = [
       name: 'Ocean Plastic Works',
       phone: '+91 98200 00003',
       whatsapp: '919820000003',
-      email: 'store@kabadconnect.com',
+      email: 'store@kabadcollect.com',
       isVerified: true
     },
     itemType: 'upcycled',
@@ -439,7 +439,7 @@ export const DEFAULT_MARKETPLACE_ITEMS = [
       name: 'Circular Living Co.',
       phone: '+91 98100 00004',
       whatsapp: '919810000004',
-      email: 'store@kabadconnect.com',
+      email: 'store@kabadcollect.com',
       isVerified: true
     },
     itemType: 'upcycled',
@@ -454,7 +454,7 @@ export const DEFAULT_ORDERS = [
     customer: {
       name: 'Aarav Sharma',
       phone: '+91 98100 23456',
-      email: 'aarav@kabadconnect.com',
+      email: 'aarav@kabadcollect.com',
       address: 'Flat 402, Block B, Amrapali Village, Indirapuram, Delhi NCR - 201014',
       city: 'Delhi NCR'
     },
@@ -486,7 +486,7 @@ export const DEFAULT_ORDERS = [
     customer: {
       name: 'Aarav Sharma',
       phone: '+91 98100 23456',
-      email: 'aarav@kabadconnect.com',
+      email: 'aarav@kabadcollect.com',
       address: 'Flat 402, Block B, Amrapali Village, Indirapuram, Delhi NCR - 201014',
       city: 'Delhi NCR'
     },
@@ -517,7 +517,7 @@ export const DEFAULT_USERS = [
   {
     id: 'usr-admin-1',
     name: 'Vikram Singhania',
-    email: 'admin@kabadconnect.com',
+    email: 'admin@kabadcollect.com',
     phone: '+91 98111 22334',
     role: 'admin',
     city: 'Delhi NCR',
@@ -527,7 +527,7 @@ export const DEFAULT_USERS = [
   {
     id: 'usr-customer-1',
     name: 'Aarav Sharma',
-    email: 'aarav@kabadconnect.com',
+    email: 'aarav@kabadcollect.com',
     phone: '+91 98100 23456',
     role: 'user',
     city: 'Delhi NCR',

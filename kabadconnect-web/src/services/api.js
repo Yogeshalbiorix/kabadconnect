@@ -1,5 +1,5 @@
 /**
- * KabadConnect Unified API Service
+ * KabadCollect Unified API Service
  * Interacts with Vercel Serverless Functions (/api/*) and MongoDB Atlas.
  * Provides resilient offline/local state fallback when running offline or without database.
  */

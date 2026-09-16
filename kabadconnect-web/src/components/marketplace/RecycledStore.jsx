@@ -26,7 +26,7 @@ export const RecycledStore = ({ onAddToCart, cartItems = [], onOpenCart }) => {
             Upcycled & Recycled Goods Store
           </h2>
           <p className="section-description">
-            Complete the circle. Beautiful, artisan-crafted lifestyle products made 100% from segregated scrap collected by KabadConnect partners.
+            Complete the circle. Beautiful, artisan-crafted lifestyle products made 100% from segregated scrap collected by KabadCollect partners.
           </p>
         </div>
 

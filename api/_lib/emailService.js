@@ -76,7 +76,7 @@ export async function sendOtpEmail({ to, otp, purpose = 'login', orderId = '', a
     };
   }
 
-  const senderEmail = process.env.GMAIL_USER || process.env.SMTP_USER || 'no-reply@kabadconnect.com';
+  const senderEmail = process.env.GMAIL_USER || process.env.SMTP_USER || 'no-reply@kabadcollect.com';
 
   const htmlContent = `
     <!DOCTYPE html>
@@ -84,7 +84,7 @@ export async function sendOtpEmail({ to, otp, purpose = 'login', orderId = '', a
     <head>
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>KabadConnect OTP</title>
+      <title>KabadCollect OTP</title>
     </head>
     <body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
       <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f1f5f9; padding: 30px 10px;">
@@ -96,7 +96,7 @@ export async function sendOtpEmail({ to, otp, purpose = 'login', orderId = '', a
               <tr>
                 <td style="background: linear-gradient(135deg, #072e1c 0%, #0D5C3A 100%); padding: 30px 24px; text-align: center;">
                   <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 800; letter-spacing: -0.5px;">
-                    ♻️ KabadConnect
+                    ♻️ KabadCollect
                   </h1>
                   <p style="margin: 6px 0 0 0; color: #34D399; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
                     Hyperlocal Recycling Marketplace
@@ -134,7 +134,7 @@ export async function sendOtpEmail({ to, otp, purpose = 'login', orderId = '', a
               <tr>
                 <td style="background-color: #f8fafc; padding: 20px 28px; border-top: 1px solid #e2e8f0; text-align: center;">
                   <p style="margin: 0; color: #94a3b8; font-size: 12px;">
-                    © ${new Date().getFullYear()} KabadConnect. Transparent Doorstep Scrap Collection.
+                    © ${new Date().getFullYear()} KabadCollect. Transparent Doorstep Scrap Collection.
                   </p>
                 </td>
               </tr>
@@ -149,10 +149,10 @@ export async function sendOtpEmail({ to, otp, purpose = 'login', orderId = '', a
 
   try {
     const info = await transporter.sendMail({
-      from: `"KabadConnect Security" <${senderEmail}>`,
+      from: `"KabadCollect Security" <${senderEmail}>`,
       to,
-      subject: `${otp} is your KabadConnect ${actionText} code`,
-      text: `Your KabadConnect verification code is: ${otp}. It is valid for 10 minutes.`,
+      subject: `${otp} is your KabadCollect ${actionText} code`,
+      text: `Your KabadCollect verification code is: ${otp}. It is valid for 10 minutes.`,
       html: htmlContent
     });
 

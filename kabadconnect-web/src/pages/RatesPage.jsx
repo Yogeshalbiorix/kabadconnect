@@ -179,10 +179,10 @@ export const RatesPage = ({
           boxShadow: 'var(--shadow-sm)'
         }}>
           <h3 style={{ fontSize: '1.35rem', fontWeight: 800, marginBottom: '0.75rem', color: '#0F172A' }}>
-            How KabadConnect Fixes Scrap Rates
+            How KabadCollect Fixes Scrap Rates
           </h3>
           <p style={{ color: '#64748B', lineHeight: 1.6, marginBottom: '1.5rem', maxWidth: '850px' }}>
-            Unlike unorganized local kabadwalas who artificially deflate weights by 20–30% with faulty mechanical spring scales, KabadConnect benchmarks daily wholesale recycling commodity prices directly from paper mills, metal smelting plants, and authorized plastic recycling hubs.
+            Unlike unorganized local kabadwalas who artificially deflate weights by 20–30% with faulty mechanical spring scales, KabadCollect benchmarks daily wholesale recycling commodity prices directly from paper mills, metal smelting plants, and authorized plastic recycling hubs.
           </p>
 
           <div style={{

@@ -61,7 +61,7 @@ async function testDoorstepLogic() {
   if (!paymentGateUnlocked) throw new Error('Payment should be unlocked after OTP confirmation');
 
   // Test payment options
-  const methods = ['Instant UPI (aarav@okaxis)', 'Doorstep Cash Handover', 'KabadConnect Eco Wallet', 'Bank IMPS'];
+  const methods = ['Instant UPI (aarav@okaxis)', 'Doorstep Cash Handover', 'KabadCollect Eco Wallet', 'Bank IMPS'];
   methods.forEach(m => {
     const utr = m.includes('Cash') ? `CASH-${Date.now().toString().slice(-6)}` : `UTR-${Date.now().toString().slice(-8)}`;
     console.log(`✓ Method: ${m} -> Generated Transaction Ref: ${utr}`);

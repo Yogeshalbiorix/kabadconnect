@@ -265,13 +265,13 @@ export const INITIAL_MARKETPLACE_ITEMS = [
     co2Saved: '4.2 kg CO₂',
     badge: 'Bestseller',
     city: 'Delhi NCR',
-    locality: 'KabadConnect Circular Studio',
+    locality: 'KabadCollect Circular Studio',
     seller: {
       id: 'artisan-coop-1',
-      name: 'KabadConnect Eco Crafts',
+      name: 'KabadCollect Eco Crafts',
       phone: '+91 98100 00001',
       whatsapp: '919810000001',
-      email: 'store@kabadconnect.com',
+      email: 'store@kabadcollect.com',
       isVerified: true
     },
     itemType: 'upcycled',
@@ -297,7 +297,7 @@ export const INITIAL_MARKETPLACE_ITEMS = [
       name: 'Metal Upcycle Collective',
       phone: '+91 98250 00002',
       whatsapp: '919825000002',
-      email: 'store@kabadconnect.com',
+      email: 'store@kabadcollect.com',
       isVerified: true
     },
     itemType: 'upcycled',
@@ -323,7 +323,7 @@ export const INITIAL_MARKETPLACE_ITEMS = [
       name: 'Ocean Plastic Works',
       phone: '+91 98200 00003',
       whatsapp: '919820000003',
-      email: 'store@kabadconnect.com',
+      email: 'store@kabadcollect.com',
       isVerified: true
     },
     itemType: 'upcycled',
@@ -349,7 +349,7 @@ export const INITIAL_MARKETPLACE_ITEMS = [
       name: 'Circular Living Co.',
       phone: '+91 98100 00004',
       whatsapp: '919810000004',
-      email: 'store@kabadconnect.com',
+      email: 'store@kabadcollect.com',
       isVerified: true
     },
     itemType: 'upcycled',

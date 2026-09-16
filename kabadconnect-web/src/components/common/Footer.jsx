@@ -51,7 +51,7 @@ export const Footer = ({ onOpenBooking, onOpenPartnerModal, onNavigate = () => {
                   cursor: 'pointer'
                 }}
               >
-                Kabad<span style={{ color: 'var(--color-accent-mint)' }}>Connect</span>
+                Kabad<span style={{ color: 'var(--color-accent-mint)' }}>Collect</span>
               </span>
             </div>
 
@@ -173,11 +173,11 @@ export const Footer = ({ onOpenBooking, onOpenPartnerModal, onNavigate = () => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.85rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#FFFFFF' }}>
                 <Phone size={15} color="var(--color-accent-mint)" />
-                <strong>1800-KABAD-CONNECT</strong> (Toll Free)
+                <strong>1800-KABAD-COLLECT</strong> (Toll Free)
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#94A3B8' }}>
                 <Mail size={15} color="var(--color-accent-mint)" />
-                <span>support@kabadconnect.in</span>
+                <span>support@kabadcollect.in</span>
               </div>
             </div>
 
@@ -205,7 +205,7 @@ export const Footer = ({ onOpenBooking, onOpenPartnerModal, onNavigate = () => {
           color: '#64748B'
         }}>
           <div>
-            © {new Date().getFullYear()} KabadConnect Technologies Pvt. Ltd. All rights reserved.
+            © {new Date().getFullYear()} KabadCollect Technologies Pvt. Ltd. All rights reserved.
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#94A3B8' }}>

@@ -94,7 +94,7 @@ export const HowItWorksPage = ({
             lineHeight: 1.6,
             marginBottom: '1.5rem'
           }}>
-            Selling household and office scrap has never been this transparent. See how KabadConnect connects you to certified collectors, eliminates weight cheating, and deposits instant UPI cash into your account.
+            Selling household and office scrap has never been this transparent. See how KabadCollect connects you to certified collectors, eliminates weight cheating, and deposits instant UPI cash into your account.
           </p>
 
           <div style={{

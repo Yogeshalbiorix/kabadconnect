@@ -82,7 +82,7 @@ export const ScrapImpactCalculator = ({ onBookCalculatedScrap }) => {
             Scrap Value & Environmental Impact Calculator
           </h2>
           <p className="section-description">
-            Drag the sliders to estimate how much cash you will earn and the exact ecological footprint you'll prevent by recycling with KabadConnect.
+            Drag the sliders to estimate how much cash you will earn and the exact ecological footprint you'll prevent by recycling with KabadCollect.
           </p>
         </div>
 

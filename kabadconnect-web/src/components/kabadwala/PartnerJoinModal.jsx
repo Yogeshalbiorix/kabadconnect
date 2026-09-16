@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { 
-  X, 
-  UserPlus, 
-  CheckCircle2, 
-  Truck, 
-  Scale, 
-  ShieldCheck, 
-  Wallet, 
+import {
+  X,
+  UserPlus,
+  CheckCircle2,
+  Truck,
+  Scale,
+  ShieldCheck,
+  Wallet,
   ArrowRight,
   Sparkles
 } from 'lucide-react';
@@ -44,14 +44,14 @@ export const PartnerJoinModal = ({ isOpen, onClose, activeCity }) => {
         spread: 70,
         origin: { y: 0.6 }
       });
-    } catch (err) {}
+    } catch (err) { }
   };
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div 
-        className="modal-content" 
-        style={{ maxWidth: '600px' }} 
+      <div
+        className="modal-content"
+        style={{ maxWidth: '600px' }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
@@ -112,7 +112,7 @@ export const PartnerJoinModal = ({ isOpen, onClose, activeCity }) => {
                 <div><strong>What happens next?</strong></div>
                 <ul style={{ marginTop: '0.5rem', paddingLeft: '1.25rem', color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>
                   <li>Free KYC verification & Digital Scale stamp check.</li>
-                  <li>Receive official KabadConnect digital weight bag & ID badge.</li>
+                  <li>Receive official KabadCollect digital weight bag & ID badge.</li>
                   <li>Start receiving high-paying household pickup orders on your smartphone.</li>
                 </ul>
               </div>
@@ -248,7 +248,7 @@ export const PartnerJoinModal = ({ isOpen, onClose, activeCity }) => {
                     style={{ width: '18px', height: '18px', accentColor: 'var(--color-primary)' }}
                   />
                   <label htmlFor="scaleCheck" style={{ fontSize: '0.825rem', color: 'var(--color-text-secondary)', cursor: 'pointer' }}>
-                    I have a working <strong>Digital Weighing Scale</strong> (or need KabadConnect assistance to acquire one).
+                    I have a working <strong>Digital Weighing Scale</strong> (or need KabadCollect assistance to acquire one).
                   </label>
                 </div>
 

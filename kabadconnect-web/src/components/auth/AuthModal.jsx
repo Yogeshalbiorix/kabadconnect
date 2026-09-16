@@ -306,7 +306,7 @@ export const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
                 {authMode === 'register' ? 'Create New Account' : 'Account Sign In'}
               </h3>
               <p style={{ fontSize: '0.785rem', color: 'var(--color-text-muted)', margin: 0 }}>
-                {authMode === 'register' ? 'Join KabadConnect recycling network' : 'Access your pickups & scrap earnings'}
+                {authMode === 'register' ? 'Join KabadCollect recycling network' : 'Access your pickups & scrap earnings'}
               </p>
             </div>
           </div>

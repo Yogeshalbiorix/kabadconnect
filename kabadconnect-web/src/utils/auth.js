@@ -12,8 +12,10 @@ import {
   apiVerifyOtpRegister
 } from '../services/api';
 
-const AUTH_STORAGE_KEY = 'kabadconnect_auth_user';
-const AUTH_IS_LOGGED_IN_KEY = 'kabadconnect_is_authenticated';
+const AUTH_STORAGE_KEY = 'kabadcollect_auth_user';
+const AUTH_IS_LOGGED_IN_KEY = 'kabadcollect_is_authenticated';
+const LEGACY_STORAGE_KEY = 'kabadconnect_auth_user';
+const LEGACY_LOGGED_IN_KEY = 'kabadconnect_is_authenticated';
 
 /**
  * Retrieve current logged-in user from localStorage.
@@ -21,14 +23,15 @@ const AUTH_IS_LOGGED_IN_KEY = 'kabadconnect_is_authenticated';
  */
 export const getCurrentUser = () => {
   try {
-    const isAuthenticated = localStorage.getItem(AUTH_IS_LOGGED_IN_KEY);
-    const raw = localStorage.getItem(AUTH_STORAGE_KEY);
+    const isAuthenticated = localStorage.getItem(AUTH_IS_LOGGED_IN_KEY) || localStorage.getItem(LEGACY_LOGGED_IN_KEY);
+    const raw = localStorage.getItem(AUTH_STORAGE_KEY) || localStorage.getItem(LEGACY_STORAGE_KEY);
     if (isAuthenticated === 'true' && raw) {
       return JSON.parse(raw);
     }
     // If not explicitly authenticated, clear any legacy session
     if (raw && isAuthenticated !== 'true') {
       localStorage.removeItem(AUTH_STORAGE_KEY);
+      localStorage.removeItem(LEGACY_STORAGE_KEY);
     }
   } catch (err) {
     console.warn('Error reading auth user from storage:', err);
@@ -164,7 +167,7 @@ export const logoutUser = () => {
 export const DEMO_USERS = {
   customer: {
     name: 'Guest User',
-    email: 'guest@kabadconnect.com',
+    email: 'guest@kabadcollect.com',
     phone: '',
     role: 'user',
     avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
@@ -200,7 +203,7 @@ export const DEMO_USERS = {
   },
   admin: {
     name: 'System Admin',
-    email: 'admin@kabadconnect.com',
+    email: 'admin@kabadcollect.com',
     role: 'admin'
   }
 };

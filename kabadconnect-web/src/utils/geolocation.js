@@ -1,7 +1,7 @@
 /**
  * Geolocation & Mapbox Reverse Geocoding Utility
  * Provides HTML5 GPS location, Mapbox geocoding resolution,
- * and Haversine distance calculations for KabadConnect.
+ * and Haversine distance calculations for KabadCollect.
  */
 
 /**
@@ -378,7 +378,7 @@ export const detectCurrentLocationWithAddress = async (token = '') => {
     const nomRes = await fetch(
       `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`,
       {
-        headers: { 'User-Agent': 'KabadConnect/1.0' },
+        headers: { 'User-Agent': 'KabadCollect/1.0' },
         signal: controller.signal
       }
     );

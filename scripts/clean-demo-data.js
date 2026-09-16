@@ -18,7 +18,7 @@ async function cleanDemoData() {
   // 1. Remove mock demo users
   const deleteUsersResult = await User.deleteMany({
     $or: [
-      { email: { $regex: /kabadconnect\.com$/i } },
+      { email: { $regex: /kabad(connect|collect)\.com$/i } },
       { id: { $in: ['usr-customer-1', 'usr-agent-842', 'usr-partner-104', 'usr-admin-1', 'usr-1', 'usr-2'] } },
       { name: { $in: ['Aarav Sharma', 'Vikram Singhania', 'Priya Verma', 'Rajesh Kumar Verma', 'Rameshwar Dayal Gupta'] } }
     ]
@@ -29,7 +29,7 @@ async function cleanDemoData() {
   const deleteOrdersResult = await Order.deleteMany({
     $or: [
       { id: { $in: ['KC-7729', 'KC-7681', 'KC-DEMO-1', 'KC-DEMO-2'] } },
-      { 'customer.email': { $regex: /kabadconnect\.com$/i } }
+      { 'customer.email': { $regex: /kabad(connect|collect)\.com$/i } }
     ]
   });
   console.log(`✓ Removed ${deleteOrdersResult.deletedCount} demo orders from MongoDB Atlas.`);

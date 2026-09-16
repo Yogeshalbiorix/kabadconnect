@@ -104,7 +104,7 @@ export const LiveOrderTrackerModal = ({
   if (!isOpen) return null;
 
   const stages = [
-    { title: 'Booking Confirmed', desc: 'Order verified by KabadConnect' },
+    { title: 'Booking Confirmed', desc: 'Order verified by KabadCollect' },
     { title: 'Partner Assigned', desc: 'Nearest dealer accepted your pickup' },
     { title: 'Agent En Route', desc: 'Collector is traveling to your location' },
     { title: 'Digital Weighing', desc: 'Live weight verification & calculation' },
@@ -519,7 +519,7 @@ export const LiveOrderTrackerModal = ({
                       Awarded to <strong>{currentOrder.customerName}</strong> for diverting <strong>45 kg</strong> of municipal solid waste from landfills.
                     </p>
                     <div style={{ fontSize: '0.75rem', color: 'var(--color-accent-mint)', fontWeight: 700, marginTop: '0.5rem' }}>
-                      Verified by KabadConnect Hyperlocal Recycling Network 🌿
+                      Verified by KabadCollect Hyperlocal Recycling Network 🌿
                     </div>
                   </div>
                 )}

@@ -77,7 +77,7 @@ export const HowItWorks = ({ onOpenBooking }) => {
             <span>Simple & Hassle-Free</span>
           </div>
           <h2 className="section-title">
-            How KabadConnect Works
+            How KabadCollect Works
           </h2>
           <p className="section-description">
             Selling household scrap shouldn't involve shouting on the street or haggling over arbitrary weights.
@@ -147,11 +147,11 @@ export const HowItWorks = ({ onOpenBooking }) => {
           ))}
         </div>
 
-        {/* Comparison Section: Traditional Kabadwala vs KabadConnect */}
+        {/* Comparison Section: Traditional Kabadwala vs KabadCollect */}
         <div className="card" style={{ padding: 'clamp(1.15rem, 2.8vw, 2.25rem)', width: '100%', boxSizing: 'border-box' }}>
           <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
             <h3 style={{ fontSize: 'clamp(1.15rem, 2.5vw, 1.45rem)', marginBottom: '0.4rem', wordBreak: 'break-word' }}>
-              Why Thousands of Households Choose KabadConnect
+              Why Thousands of Households Choose KabadCollect
             </h3>
             <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
               A guaranteed fair, transparent, and eco-friendly doorstep experience
@@ -230,7 +230,7 @@ export const HowItWorks = ({ onOpenBooking }) => {
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  {/* KabadConnect Advantage */}
+                  {/* KabadCollect Advantage */}
                   <div style={{
                     background: 'rgba(236, 253, 245, 0.85)',
                     borderRadius: 'var(--radius-sm)',
@@ -240,7 +240,7 @@ export const HowItWorks = ({ onOpenBooking }) => {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginBottom: '0.2rem' }}>
                       <Check size={15} color="var(--color-accent-mint)" />
                       <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--color-primary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                        🌿 KabadConnect
+                        🌿 KabadCollect
                       </span>
                     </div>
                     <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-primary)', paddingLeft: '1.25rem', lineHeight: 1.45 }}>
@@ -305,7 +305,7 @@ export const HowItWorks = ({ onOpenBooking }) => {
                   <tr style={{ background: 'var(--color-bg)', borderBottom: '2px solid var(--color-border)', textAlign: 'left' }}>
                     <th style={{ padding: '0.85rem 1rem', color: 'var(--color-text-secondary)', width: '28%' }}>Feature</th>
                     <th style={{ padding: '0.85rem 1rem', color: 'var(--color-primary)', background: 'var(--color-accent-mint-soft)', width: '38%' }}>
-                      🌿 KabadConnect
+                      🌿 KabadCollect
                     </th>
                     <th style={{ padding: '0.85rem 1rem', color: 'var(--color-text-muted)', width: '34%' }}>Traditional Kabadwala</th>
                   </tr>

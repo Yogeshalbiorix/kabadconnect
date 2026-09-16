@@ -152,7 +152,7 @@ export default async function handler(req, res) {
         locality: itemData.locality || '',
         seller: {
           id: itemData.seller?.id || 'usr-customer-1',
-          name: itemData.seller?.name || 'KabadConnect User',
+          name: itemData.seller?.name || 'KabadCollect User',
           phone: itemData.seller?.phone || '+91 98100 00000',
           whatsapp: itemData.seller?.whatsapp || itemData.seller?.phone || '919810000000',
           email: itemData.seller?.email || '',
@@ -179,7 +179,7 @@ export default async function handler(req, res) {
       return res.status(201).json({
         success: true,
         source: 'mongodb',
-        message: 'Product listed successfully in KabadConnect Bazaar!',
+        message: 'Product listed successfully in KabadCollect Bazaar!',
         data: savedDoc
       });
     } catch (err) {

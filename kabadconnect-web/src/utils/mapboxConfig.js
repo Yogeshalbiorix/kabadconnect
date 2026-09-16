@@ -11,7 +11,7 @@ export const getMapboxToken = () => {
   }
 
   try {
-    const saved = localStorage.getItem('kabadconnect_mapbox_token');
+    const saved = localStorage.getItem('kabadcollect_mapbox_token') || localStorage.getItem('kabadconnect_mapbox_token');
     if (saved && saved.trim().length > 0) {
       return saved.trim();
     }
@@ -23,8 +23,9 @@ export const getMapboxToken = () => {
 export const saveMapboxToken = (token) => {
   try {
     if (token) {
-      localStorage.setItem('kabadconnect_mapbox_token', token.trim());
+      localStorage.setItem('kabadcollect_mapbox_token', token.trim());
     } else {
+      localStorage.removeItem('kabadcollect_mapbox_token');
       localStorage.removeItem('kabadconnect_mapbox_token');
     }
   } catch (err) {}

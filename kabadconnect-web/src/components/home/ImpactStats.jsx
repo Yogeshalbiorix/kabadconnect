@@ -48,14 +48,14 @@ export const ImpactStats = () => {
     {
       name: 'Vikram Sethi',
       location: 'Sector 62, Noida',
-      text: 'Our IT office cleared 3 cartons of obsolete cables and 4 old monitors. KabadConnect provided an official green disposal invoice and GST certificate. Super professional service.',
+      text: 'Our IT office cleared 3 cartons of obsolete cables and 4 old monitors. KabadCollect provided an official green disposal invoice and GST certificate. Super professional service.',
       rating: 5,
       avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&q=80'
     },
     {
       name: 'Meenakshi Iyer',
       location: 'Dwarka, South Delhi',
-      text: 'Earlier we had to haggle with street collectors who shaved off 5 kg with deceptive spring balances. KabadConnect has completely revolutionized waste disposal. Transparent and courteous.',
+      text: 'Earlier we had to haggle with street collectors who shaved off 5 kg with deceptive spring balances. KabadCollect has completely revolutionized waste disposal. Transparent and courteous.',
       rating: 5,
       avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&q=80'
     }
@@ -87,7 +87,7 @@ export const ImpactStats = () => {
             Transforming Waste into Wealth & Sustainability
           </h2>
           <p style={{ color: '#E2E8F0', fontSize: '1.1rem' }}>
-            Every kilogram of segregated scrap collected through KabadConnect creates verifiable environmental preservation and fair livelihoods.
+            Every kilogram of segregated scrap collected through KabadCollect creates verifiable environmental preservation and fair livelihoods.
           </p>
         </div>
 

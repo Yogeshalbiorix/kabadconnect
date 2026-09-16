@@ -489,7 +489,7 @@ export const Navbar = ({
                   whiteSpace: 'nowrap'
                 }}>
                   <span style={{ color: 'var(--color-primary)' }}>Kabad</span>
-                  <span style={{ color: 'var(--color-accent-mint)' }}>Connect</span>
+                  <span style={{ color: 'var(--color-accent-mint)' }}>Collect</span>
                 </div>
                 <div className="hide-on-small" style={{
                   fontSize: '0.68rem',

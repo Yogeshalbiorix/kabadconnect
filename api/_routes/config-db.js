@@ -63,7 +63,7 @@ export default async function handler(req, res) {
   // POST: Update connection credentials and verify live connection
   if (req.method === 'POST') {
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
-    const { password, uri, databaseName = 'kabadconnect' } = body;
+    const { password, uri, databaseName = 'kabadcollect' } = body;
 
     let targetUri = '';
 

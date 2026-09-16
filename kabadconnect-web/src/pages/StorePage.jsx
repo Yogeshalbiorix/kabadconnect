@@ -729,7 +729,7 @@ export const StorePage = ({
                       </button>
 
                       <a
-                        href={`https://wa.me/${product.seller?.whatsapp || '919810023456'}?text=${encodeURIComponent(`Hi, I am interested in buying "${product.title}" listed on KabadConnect for ₹${product.price}.`)}`}
+                        href={`https://wa.me/${product.seller?.whatsapp || '919810023456'}?text=${encodeURIComponent(`Hi, I am interested in buying "${product.title}" listed on KabadCollect for ₹${product.price}.`)}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={(e) => e.stopPropagation()}

@@ -262,7 +262,7 @@ export const DoorstepVerificationModal = ({
         paidAmount: totalAmount,
         paymentMethod: paymentMethod === 'upi' ? `Instant UPI (${upiId})` : 
                        paymentMethod === 'cash' ? 'Doorstep Cash Handover' : 
-                       paymentMethod === 'wallet' ? 'KabadConnect Eco Wallet' : 'Bank IMPS Transfer',
+                       paymentMethod === 'wallet' ? 'KabadCollect Eco Wallet' : 'Bank IMPS Transfer',
         paidAt: new Date().toISOString()
       };
 
@@ -464,7 +464,7 @@ export const DoorstepVerificationModal = ({
                   Live Simulated SMS to {order.phone || order.customer?.phone || '+91 98100 23456'}
                 </div>
                 <div style={{ fontSize: '0.86rem', color: '#FFFFFF', fontWeight: 500 }}>
-                  KabadConnect: Your doorstep pickup OTP for #{order.id} is <strong style={{ color: '#FDE047', fontSize: '1.05rem', letterSpacing: '2px', background: 'rgba(253, 224, 71, 0.2)', padding: '1px 6px', borderRadius: '4px' }}>{otpCode}</strong>. Total inspected payout: ₹{totalAmount}. Share this OTP with collector after verifying scrap weight.
+                  KabadCollect: Your doorstep pickup OTP for #{order.id} is <strong style={{ color: '#FDE047', fontSize: '1.05rem', letterSpacing: '2px', background: 'rgba(253, 224, 71, 0.2)', padding: '1px 6px', borderRadius: '4px' }}>{otpCode}</strong>. Total inspected payout: ₹{totalAmount}. Share this OTP with collector after verifying scrap weight.
                 </div>
               </div>
             </div>
@@ -1073,7 +1073,7 @@ export const DoorstepVerificationModal = ({
                         fontSize: '0.82rem',
                         color: '#065F46'
                       }}>
-                        🌿 Instant transfer of <strong>₹{totalAmount}</strong> + <strong>₹{Math.round(totalAmount * 0.05)} Bonus Green Coins</strong> credited to customer's KabadConnect Wallet.
+                        🌿 Instant transfer of <strong>₹{totalAmount}</strong> + <strong>₹{Math.round(totalAmount * 0.05)} Bonus Green Coins</strong> credited to customer's KabadCollect Wallet.
                       </div>
                     )}
 
@@ -1135,7 +1135,7 @@ export const DoorstepVerificationModal = ({
           gap: '0.5rem'
         }}>
           <div style={{ fontSize: '0.75rem', color: '#64748B' }}>
-            🔒 Verified Doorstep Recycling Protocol • KabadConnect Anti-Fraud Engine
+            🔒 Verified Doorstep Recycling Protocol • KabadCollect Anti-Fraud Engine
           </div>
 
           <button onClick={onClose} className="btn btn-secondary btn-sm">
