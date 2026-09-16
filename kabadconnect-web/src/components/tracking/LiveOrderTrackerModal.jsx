@@ -237,16 +237,16 @@ export const LiveOrderTrackerModal = ({
                 Active Tracking ID
               </div>
               <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--color-primary)' }}>
-                {currentOrder.id}
+                {currentOrder?.id || activeOrder?.id || 'KC-5315'}
               </div>
             </div>
 
             <div style={{ textAlign: 'right' }}>
-              <span className={`badge ${simulatedStage === 4 ? 'badge-success' : 'badge-warning'}`}>
-                {simulatedStage === 4 ? '✓ Completed' : '● In Progress'}
+              <span className={`badge ${simulatedStage === 4 || isOrderCompleted(currentOrder || activeOrder) ? 'badge-success' : 'badge-warning'}`}>
+                {simulatedStage === 4 || isOrderCompleted(currentOrder || activeOrder) ? '✓ Completed' : '● In Progress'}
               </span>
               <div style={{ fontSize: '0.775rem', color: 'var(--color-text-secondary)', marginTop: '0.2rem' }}>
-                Slot: {currentOrder.scheduledSlot}
+                Slot: {currentOrder?.scheduledSlot || activeOrder?.scheduledSlot || 'Today Express'}
               </div>
             </div>
           </div>
@@ -329,16 +329,16 @@ export const LiveOrderTrackerModal = ({
 
                 <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
                   <img
-                    src={currentOrder.kabadwala?.photo || 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=120&q=80'}
+                    src={currentOrder?.kabadwala?.photo || 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=120&q=80'}
                     alt="Collector"
                     style={{ width: '56px', height: '56px', borderRadius: '14px', objectFit: 'cover' }}
                   />
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 800, fontSize: '1.05rem' }}>
-                      {currentOrder.kabadwala?.name || 'Ramesh Kumar'}
+                      {currentOrder?.kabadwala?.name || 'Ramesh Kumar'}
                     </div>
                     <div style={{ fontSize: '0.825rem', color: 'var(--color-text-muted)' }}>
-                      Vehicle: {currentOrder.kabadwala?.vehicle || 'E-Rickshaw (DL-5ER-8921)'}
+                      Vehicle: {currentOrder?.kabadwala?.vehicle || 'E-Rickshaw (DL-5ER-8921)'}
                     </div>
                     <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.2rem', alignItems: 'center' }}>
                       <span style={{ color: '#F59E0B', fontWeight: 700, fontSize: '0.8rem' }}>★ 4.9</span>
@@ -347,7 +347,7 @@ export const LiveOrderTrackerModal = ({
                   </div>
 
                   <a
-                    href={`tel:${currentOrder.kabadwala?.phone || '9811234567'}`}
+                    href={`tel:${currentOrder?.kabadwala?.phone || '9811234567'}`}
                     className="btn btn-sm btn-outline"
                     style={{ borderRadius: 'var(--radius-full)' }}
                   >
@@ -356,7 +356,7 @@ export const LiveOrderTrackerModal = ({
                 </div>
 
                 {/* Interactive Leaflet Route Map */}
-                <OrderRouteMap order={currentOrder} />
+                <OrderRouteMap order={currentOrder || activeOrder} />
               </div>
             )}
 
