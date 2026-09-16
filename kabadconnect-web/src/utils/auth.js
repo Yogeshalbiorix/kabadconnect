@@ -17,39 +17,58 @@ const AUTH_IS_LOGGED_IN_KEY = 'kabadcollect_is_authenticated';
 const LEGACY_STORAGE_KEY = 'kabadconnect_auth_user';
 const LEGACY_LOGGED_IN_KEY = 'kabadconnect_is_authenticated';
 
+const ALL_AUTH_STORAGE_KEYS = [
+  'kabadcollect_auth_user',
+  'kabadcollect_is_authenticated',
+  'kabadconnect_auth_user',
+  'kabadconnect_is_authenticated',
+  'kabadcollect_user',
+  'kabadconnect_user',
+  'auth_user',
+  'currentUser'
+];
+
 /**
  * Retrieve current logged-in user from localStorage.
  * Defaults to null (logged out) so guest users browse as guests until they explicitly sign in.
  */
 export const getCurrentUser = () => {
   try {
-    const isAuthenticated = localStorage.getItem(AUTH_IS_LOGGED_IN_KEY) || localStorage.getItem(LEGACY_LOGGED_IN_KEY);
-    const raw = localStorage.getItem(AUTH_STORAGE_KEY) || localStorage.getItem(LEGACY_STORAGE_KEY);
+    const isAuthenticated = localStorage.getItem(AUTH_IS_LOGGED_IN_KEY);
+    const raw = localStorage.getItem(AUTH_STORAGE_KEY);
+
     if (isAuthenticated === 'true' && raw) {
-      return JSON.parse(raw);
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object' && (parsed.id || parsed.email || parsed.phone || parsed.name)) {
+        return parsed;
+      }
     }
-    // If not explicitly authenticated, clear any legacy session
-    if (raw && isAuthenticated !== 'true') {
-      localStorage.removeItem(AUTH_STORAGE_KEY);
-      localStorage.removeItem(LEGACY_STORAGE_KEY);
-    }
+
+    // Clean up any stale or unauthenticated keys to prevent ghost auto-login on refresh
+    logoutUser();
   } catch (err) {
     console.warn('Error reading auth user from storage:', err);
+    logoutUser();
   }
   return null;
 };
 
 /**
- * Save user to localStorage
+ * Save user to localStorage and clean up any legacy keys
  */
 export const saveAuthUser = (user) => {
   try {
-    if (user) {
+    if (user && typeof user === 'object') {
       localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
       localStorage.setItem(AUTH_IS_LOGGED_IN_KEY, 'true');
+      
+      // Clean up legacy keys
+      localStorage.removeItem(LEGACY_STORAGE_KEY);
+      localStorage.removeItem(LEGACY_LOGGED_IN_KEY);
+      localStorage.removeItem('kabadcollect_user');
+      localStorage.removeItem('kabadconnect_user');
     } else {
-      localStorage.removeItem(AUTH_STORAGE_KEY);
-      localStorage.removeItem(AUTH_IS_LOGGED_IN_KEY);
+      logoutUser();
     }
   } catch (err) {
     console.warn('Error saving auth user:', err);
@@ -152,13 +171,21 @@ export const registerUser = async (userData) => {
 };
 
 /**
- * Logout current user
+ * Logout current user - purges all auth session keys from storage
  */
 export const logoutUser = () => {
   try {
-    localStorage.removeItem(AUTH_STORAGE_KEY);
-    localStorage.removeItem(AUTH_IS_LOGGED_IN_KEY);
-  } catch (err) {}
+    ALL_AUTH_STORAGE_KEYS.forEach((key) => {
+      try {
+        localStorage.removeItem(key);
+      } catch (e) { }
+      try {
+        sessionStorage.removeItem(key);
+      } catch (e) { }
+    });
+  } catch (err) {
+    console.warn('Error during logoutUser cleanup:', err);
+  }
 };
 
 /**
