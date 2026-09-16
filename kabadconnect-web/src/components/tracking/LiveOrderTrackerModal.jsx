@@ -470,8 +470,35 @@ export const LiveOrderTrackerModal = ({
                   }}>
                     <CheckCircle2 size={20} /> Pickup Completed & Paid
                   </div>
-                  <div style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>
-                    ₹727.00 transferred via PhonePe UPI (Ref: UTR-9821882)
+                  <div style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', fontWeight: 600 }}>
+                    {(() => {
+                      const amt = parseFloat(
+                        currentOrder?.doorstepVerification?.paidAmount || 
+                        currentOrder?.totalPaid || 
+                        currentOrder?.paidAmount || 
+                        currentOrder?.estimatedAmount || 
+                        displayTotalAmount || 
+                        0
+                      );
+                      const formattedAmt = `₹${amt > 0 ? amt.toLocaleString('en-IN') : '0'}`;
+                      const method = currentOrder?.doorstepVerification?.paymentMethod || 
+                                     currentOrder?.paymentMethod || 
+                                     'Doorstep Cash Handover';
+                      const txRef = currentOrder?.doorstepVerification?.transactionRef || 
+                                    currentOrder?.transactionRef || 
+                                    (currentOrder?.id ? `REF-${currentOrder.id}` : 'CONFIRMED');
+
+                      if (method.toLowerCase().includes('cash')) {
+                        return `${formattedAmt} collected via Doorstep Cash Handover`;
+                      }
+                      if (method.toLowerCase().includes('wallet')) {
+                        return `${formattedAmt} credited to KabadCollect Eco Wallet (Tx: ${txRef})`;
+                      }
+                      if (method.toLowerCase().includes('bank') || method.toLowerCase().includes('imps')) {
+                        return `${formattedAmt} disbursed via Bank IMPS Transfer (Ref: ${txRef})`;
+                      }
+                      return `${formattedAmt} transferred via ${method} (Ref: ${txRef})`;
+                    })()}
                   </div>
                 </div>
 
@@ -483,11 +510,15 @@ export const LiveOrderTrackerModal = ({
                 }}>
                   <div style={{ padding: '0.85rem', background: '#FFFFFF', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', textAlign: 'center' }}>
                     <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>CO₂ Avoided</div>
-                    <div style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--color-accent-mint)' }}>64.5 kg</div>
+                    <div style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--color-accent-mint)' }}>
+                      {currentOrder?.carbonOffsetKg ? `${currentOrder.carbonOffsetKg} kg` : '64.5 kg'}
+                    </div>
                   </div>
                   <div style={{ padding: '0.85rem', background: '#FFFFFF', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', textAlign: 'center' }}>
                     <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>Green Credits</div>
-                    <div style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--color-accent-gold-dark)' }}>+72 Pts</div>
+                    <div style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--color-accent-gold-dark)' }}>
+                      +{Math.round(parseFloat(currentOrder?.carbonOffsetKg || 64.5) * 1.2)} Pts
+                    </div>
                   </div>
                 </div>
 
@@ -516,7 +547,7 @@ export const LiveOrderTrackerModal = ({
                       Certificate of Environmental Contribution
                     </h4>
                     <p style={{ fontSize: '0.825rem', color: 'var(--color-text-secondary)' }}>
-                      Awarded to <strong>{currentOrder.customerName}</strong> for diverting <strong>45 kg</strong> of municipal solid waste from landfills.
+                      Awarded to <strong>{currentOrder?.customerName || currentOrder?.customer?.name || 'Customer'}</strong> for diverting <strong>{currentOrder?.estimatedWeight || `${currentOrder?.carbonOffsetKg || 45} kg`}</strong> of recyclable waste from landfills.
                     </p>
                     <div style={{ fontSize: '0.75rem', color: 'var(--color-accent-mint)', fontWeight: 700, marginTop: '0.5rem' }}>
                       Verified by KabadCollect Hyperlocal Recycling Network 🌿
