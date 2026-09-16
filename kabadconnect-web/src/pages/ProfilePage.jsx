@@ -44,8 +44,7 @@ import {
   Locate,
   Loader2,
   Compass,
-  Wallet,
-  Copy
+  Wallet
 } from 'lucide-react';
 import { DEMO_USERS } from '../utils/auth';
 import { fetchLocationByPincode, detectCurrentLocationWithAddress } from '../utils/geolocation';
@@ -1022,42 +1021,6 @@ export const ProfilePage = ({
                       <span className="badge badge-neutral" style={{ background: '#FEF3C7', color: '#92400E', fontWeight: 700 }}>
                         {currentUser?.totalRecycledKg > 100 ? '🌱 Platinum Green Guardian' : currentUser?.totalRecycledKg > 25 ? '🌿 Silver Green Guardian' : '🌱 New Eco Contributor'}
                       </span>
-                    </div>
-
-                    {/* Permanent User ID Pill */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', margin: '0.35rem 0 0.55rem 0' }}>
-                      <div style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '0.4rem',
-                        background: '#F1F5F9',
-                        border: '1.5px solid #CBD5E1',
-                        padding: '0.3rem 0.65rem',
-                        borderRadius: '8px',
-                        fontSize: '0.825rem',
-                        fontWeight: 700,
-                        color: '#0F172A'
-                      }}>
-                        <ShieldCheck size={14} style={{ color: '#10B981' }} />
-                        <span style={{ color: '#475569', fontWeight: 600 }}>User ID:</span>
-                        <code style={{ background: '#E2E8F0', padding: '0.15rem 0.45rem', borderRadius: '4px', fontSize: '0.875rem', fontFamily: 'monospace', color: '#0D5C3A', fontWeight: 800 }}>
-                          {currentUser?.userId || currentUser?.id || 'KC-USER-1001'}
-                        </code>
-                        <span style={{ fontSize: '0.725rem', color: '#64748B', display: 'inline-flex', alignItems: 'center', gap: '3px', marginLeft: '4px', background: '#FFFFFF', padding: '2px 6px', borderRadius: '4px', border: '1px solid #E2E8F0' }}>
-                          <Lock size={11} color="#059669" /> Permanent
-                        </span>
-                        <button 
-                          type="button" 
-                          onClick={() => {
-                            navigator.clipboard.writeText(currentUser?.userId || currentUser?.id || 'KC-USER-1001');
-                            showFeedback('✓ User ID copied to clipboard!');
-                          }}
-                          title="Copy Permanent User ID"
-                          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', color: '#475569', display: 'flex', alignItems: 'center', marginLeft: '2px' }}
-                        >
-                          <Copy size={14} />
-                        </button>
-                      </div>
                     </div>
 
                     <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap', fontSize: '0.85rem', color: 'var(--color-text-muted)', marginBottom: '0.5rem' }}>
@@ -2285,36 +2248,6 @@ export const ProfilePage = ({
 
             <div className="modal-body" style={{ flex: 1, overflowY: 'auto', minHeight: 0, padding: '1.5rem 1.75rem' }}>
               <form onSubmit={handleSaveProfile} style={{ display: 'flex', flexDirection: 'column', gap: '1.15rem' }}>
-                {/* Permanent User ID Read-only Field */}
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
-                    <label className="form-label" style={{ fontSize: '0.825rem', fontWeight: 700, margin: 0 }}>
-                      Permanent User ID
-                    </label>
-                    <span style={{ fontSize: '0.725rem', color: '#059669', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '3px', background: '#ECFDF5', padding: '2px 8px', borderRadius: '999px', border: '1px solid #A7F3D0' }}>
-                      <Lock size={11} /> Permanent & Cannot be changed
-                    </span>
-                  </div>
-                  <input
-                    type="text"
-                    value={currentUser?.userId || currentUser?.id || 'KC-USER-1001'}
-                    disabled
-                    readOnly
-                    style={{
-                      width: '100%',
-                      padding: '0.65rem 0.85rem',
-                      borderRadius: '8px',
-                      border: '1px solid #CBD5E1',
-                      background: '#F1F5F9',
-                      color: '#475569',
-                      fontSize: '0.9rem',
-                      fontWeight: 800,
-                      fontFamily: 'monospace',
-                      cursor: 'not-allowed'
-                    }}
-                  />
-                </div>
-
                 <div>
                   <label className="form-label" style={{ fontSize: '0.825rem', fontWeight: 700 }}>Full Name</label>
                 <input

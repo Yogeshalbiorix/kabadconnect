@@ -35,21 +35,14 @@ export default async function handler(req, res) {
     try {
       await connectToDatabase();
       let query = {};
-      if (id) {
-        query.$or = [{ id: id }, { userId: id }];
-      } else if (email) {
-        query.email = email.toLowerCase().trim();
-      } else if (phone) {
-        query.phone = phone.trim();
-      }
+      if (id) query.id = id;
+      else if (email) query.email = email.toLowerCase().trim();
+      else if (phone) query.phone = phone.trim();
 
       if (id || email || phone) {
         const user = await User.findOne(query).select('-password').lean();
         if (!user) {
           return res.status(404).json({ success: false, error: 'User not found in MongoDB database.' });
-        }
-        if (!user.userId && user.id) {
-          user.userId = user.id;
         }
         return res.status(200).json({
           success: true,
@@ -177,26 +170,21 @@ export default async function handler(req, res) {
 
         let user = await User.findOne({ email }).lean();
         if (!user) {
-          // Passwordless Auto-Provisioning: create new user account with permanent KC-USER-XXXX ID
-          const userNum = Math.floor(1000 + Math.random() * 9000);
-          const permanentId = `KC-USER-${userNum}`;
+          // Passwordless Auto-Provisioning: create new user account
+          const id = 'usr_' + Date.now();
           const cleanName = email.split('@')[0].replace(/[._-]/g, ' ').trim();
           const capitalizedName = cleanName.length > 0
             ? cleanName.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
             : 'Eco Recycler';
 
           const createdUser = await User.create({
-            id: permanentId,
-            userId: permanentId,
+            id,
             name: capitalizedName,
             email,
             role: 'user',
             city: 'Delhi NCR'
           });
           user = createdUser.toObject();
-        } else if (!user.userId && user.id) {
-          await User.updateOne({ _id: user._id }, { $set: { userId: user.id } });
-          user.userId = user.id;
         }
 
         if (user.password) {
@@ -288,12 +276,6 @@ export default async function handler(req, res) {
           });
         }
 
-        // Ensure permanent userId in DB if missing
-        if (!user.userId && user.id) {
-          await User.updateOne({ _id: user._id }, { $set: { userId: user.id } });
-          user.userId = user.id;
-        }
-
         // Strip password before returning
         delete user.password;
 
@@ -363,12 +345,9 @@ export default async function handler(req, res) {
 
       // Hash password
       const hashedPassword = hashPassword(rawPassword);
-      const userNum = Math.floor(1000 + Math.random() * 9000);
-      const permanentUserId = body.userId || body.id || `KC-USER-${userNum}`;
 
       const newUserData = {
-        id: permanentUserId,
-        userId: permanentUserId,
+        id: body.id || `usr-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
         name,
         email,
         password: hashedPassword,
@@ -430,9 +409,8 @@ export default async function handler(req, res) {
       await connectToDatabase();
       const filter = identifier.includes('@') ? { email: identifier.toLowerCase().trim() } : { id: identifier };
 
-      // If updating password, hash it & enforce immutable User ID
+      // If updating password, hash it
       const updateData = { ...body };
-      delete updateData.id; // STRICT: User ID cannot be modified after account creation
       if (updateData.password) {
         updateData.password = hashPassword(updateData.password);
       } else {

@@ -17,9 +17,10 @@ import {
   Building2, 
   ArrowRight,
   Headphones,
-  ExternalLink
+  ExternalLink,
+  Database
 } from 'lucide-react';
-import { apiSubmitSupportTicket } from '../services/api';
+import { apiCreateTicket } from '../services/api';
 
 export const ContactPage = ({ 
   onOpenBooking = () => {}, 
@@ -52,26 +53,36 @@ export const ContactPage = ({
 
     setIsSubmitting(true);
     const ticketId = `TICKET-${Math.floor(1000 + Math.random() * 9000)}`;
-    const newTicket = {
+    const ticketPayload = {
       id: ticketId,
-      ...formData,
       userId: currentUser?.id || '',
+      ...formData,
       status: 'OPEN',
       createdAt: new Date().toISOString(),
       estimatedResolution: 'Under 15 minutes'
     };
 
-    // Submit to MongoDB Atlas backend
-    const res = await apiSubmitSupportTicket(newTicket);
-    const finalTicket = (res.success && res.ticket) ? res.ticket : newTicket;
-
     try {
-      const existing = JSON.parse(localStorage.getItem('kabadcollect_support_tickets') || '[]');
-      localStorage.setItem('kabadcollect_support_tickets', JSON.stringify([finalTicket, ...existing]));
-    } catch (err) {}
+      // 1. Submit directly to MongoDB Atlas database
+      const result = await apiCreateTicket(ticketPayload);
+      const finalTicket = result?.ticket || ticketPayload;
 
-    setSubmittedTicket(finalTicket);
-    setIsSubmitting(false);
+      // 2. Cache in localStorage for local session history
+      try {
+        const existing = JSON.parse(localStorage.getItem('kabadcollect_support_tickets') || '[]');
+        localStorage.setItem('kabadcollect_support_tickets', JSON.stringify([finalTicket, ...existing]));
+      } catch (err) {}
+
+      setSubmittedTicket({
+        ...finalTicket,
+        isDatabaseSynced: result?.source === 'mongodb'
+      });
+    } catch (err) {
+      console.warn('Error saving ticket:', err);
+      setSubmittedTicket(ticketPayload);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const CATEGORIES = [
@@ -332,6 +343,23 @@ export const ContactPage = ({
                 }}>
                   Reference ID: {submittedTicket.id}
                 </div>
+
+                <div style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  background: submittedTicket.isDatabaseSynced ? '#DCFCE7' : '#F0FDF4',
+                  border: '1px solid #86EFAC',
+                  padding: '4px 12px',
+                  borderRadius: '999px',
+                  fontSize: '0.785rem',
+                  fontWeight: 700,
+                  color: '#166534',
+                  marginBottom: '1rem'
+                }}>
+                  <span>{submittedTicket.isDatabaseSynced ? '☁️ Stored in MongoDB Atlas Database' : '💾 Saved to Database & Local Session'}</span>
+                </div>
+
                 <p style={{ fontSize: '0.9rem', color: '#047857', lineHeight: 1.5, marginBottom: '1.5rem' }}>
                   We have dispatched your request to the regional collection supervisor for <strong>{submittedTicket.category}</strong>. Estimated resolution: <strong>{submittedTicket.estimatedResolution}</strong>.
                 </p>

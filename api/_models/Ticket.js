@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 
 const TicketSchema = new mongoose.Schema({
-  ticketId: {
+  id: {
     type: String,
     required: true,
     unique: true,
@@ -14,25 +14,21 @@ const TicketSchema = new mongoose.Schema({
   },
   name: {
     type: String,
-    required: true,
-    trim: true
+    required: true
   },
   email: {
     type: String,
     required: true,
-    lowercase: true,
-    trim: true,
     index: true
   },
   phone: {
     type: String,
-    default: '',
-    trim: true
+    default: ''
   },
   category: {
     type: String,
-    required: true,
-    default: 'Pickup Issue'
+    default: 'Pickup Issue',
+    index: true
   },
   orderId: {
     type: String,
@@ -40,19 +36,22 @@ const TicketSchema = new mongoose.Schema({
   },
   subject: {
     type: String,
-    required: true,
-    trim: true
+    required: true
   },
   message: {
     type: String,
-    required: true,
-    trim: true
+    required: true
   },
   status: {
     type: String,
     enum: ['OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'],
     default: 'OPEN',
     index: true
+  },
+  priority: {
+    type: String,
+    enum: ['LOW', 'MEDIUM', 'HIGH', 'URGENT'],
+    default: 'MEDIUM'
   },
   estimatedResolution: {
     type: String,

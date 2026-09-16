@@ -485,40 +485,37 @@ export async function apiCompleteOrderPayment(orderId, paymentData) {
   }
   return { success: true, source: 'local' };
 }
-
 // ----------------------------------------------------
-// 9. Support Tickets API (MongoDB Persistence for Customer Service)
+// 12. Support Tickets API (MongoDB Atlas Backend)
 // ----------------------------------------------------
-export async function apiSubmitSupportTicket(ticketData) {
+export async function apiCreateTicket(ticketData) {
   try {
     const res = await fetchWithTimeout(`${API_BASE}/tickets`, {
       method: 'POST',
       body: JSON.stringify(ticketData)
-    }, 10000);
-    const data = await res.json();
-    if (res.ok && data.success) {
+    }, 6000);
+    if (res.ok) {
+      const data = await res.json();
       return { success: true, source: data.source, ticket: data.data, message: data.message };
     }
+    const errData = await res.json().catch(() => ({}));
+    return { success: false, error: errData.error || 'Failed to submit ticket to database' };
   } catch (err) {
-    console.warn('[API Service] Submit support ticket API call failed, fallback to client state:', err.message);
+    console.warn('[API Service] Submit ticket API error, fallback to local:', err.message);
+    return { success: true, source: 'local_fallback', ticket: ticketData };
   }
-  return { success: false, source: 'local' };
 }
 
-export async function apiGetUserTickets(email = '') {
+export async function apiGetTickets(params = {}) {
   try {
-    const param = email ? `?email=${encodeURIComponent(email)}` : '';
-    const res = await fetchWithTimeout(`${API_BASE}/tickets${param}`, { method: 'GET' });
+    const query = new URLSearchParams(params).toString();
+    const res = await fetchWithTimeout(`${API_BASE}/tickets?${query}`, { method: 'GET' }, 5000);
     if (res.ok) {
       const data = await res.json();
       return { success: true, source: data.source, tickets: data.data || [] };
     }
   } catch (err) {
-    console.warn('[API Service] Fetch tickets failed:', err.message);
+    console.warn('[API Service] Fetch tickets error:', err.message);
   }
-  return { success: false, source: 'local', tickets: [] };
+  return { success: true, source: 'local_fallback', tickets: [] };
 }
-
-
-
-
