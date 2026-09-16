@@ -1041,7 +1041,7 @@ export const ProfilePage = ({
                         <ShieldCheck size={14} style={{ color: '#10B981' }} />
                         <span style={{ color: '#475569', fontWeight: 600 }}>User ID:</span>
                         <code style={{ background: '#E2E8F0', padding: '0.15rem 0.45rem', borderRadius: '4px', fontSize: '0.875rem', fontFamily: 'monospace', color: '#0D5C3A', fontWeight: 800 }}>
-                          {currentUser?.id || 'KC-USER-1001'}
+                          {currentUser?.userId || currentUser?.id || 'KC-USER-1001'}
                         </code>
                         <span style={{ fontSize: '0.725rem', color: '#64748B', display: 'inline-flex', alignItems: 'center', gap: '3px', marginLeft: '4px', background: '#FFFFFF', padding: '2px 6px', borderRadius: '4px', border: '1px solid #E2E8F0' }}>
                           <Lock size={11} color="#059669" /> Permanent
@@ -1049,7 +1049,7 @@ export const ProfilePage = ({
                         <button 
                           type="button" 
                           onClick={() => {
-                            navigator.clipboard.writeText(currentUser?.id || 'KC-USER-1001');
+                            navigator.clipboard.writeText(currentUser?.userId || currentUser?.id || 'KC-USER-1001');
                             showFeedback('✓ User ID copied to clipboard!');
                           }}
                           title="Copy Permanent User ID"
@@ -2297,7 +2297,7 @@ export const ProfilePage = ({
                   </div>
                   <input
                     type="text"
-                    value={currentUser?.id || 'KC-USER-1001'}
+                    value={currentUser?.userId || currentUser?.id || 'KC-USER-1001'}
                     disabled
                     readOnly
                     style={{

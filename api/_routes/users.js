@@ -35,14 +35,21 @@ export default async function handler(req, res) {
     try {
       await connectToDatabase();
       let query = {};
-      if (id) query.id = id;
-      else if (email) query.email = email.toLowerCase().trim();
-      else if (phone) query.phone = phone.trim();
+      if (id) {
+        query.$or = [{ id: id }, { userId: id }];
+      } else if (email) {
+        query.email = email.toLowerCase().trim();
+      } else if (phone) {
+        query.phone = phone.trim();
+      }
 
       if (id || email || phone) {
         const user = await User.findOne(query).select('-password').lean();
         if (!user) {
           return res.status(404).json({ success: false, error: 'User not found in MongoDB database.' });
+        }
+        if (!user.userId && user.id) {
+          user.userId = user.id;
         }
         return res.status(200).json({
           success: true,
@@ -172,20 +179,24 @@ export default async function handler(req, res) {
         if (!user) {
           // Passwordless Auto-Provisioning: create new user account with permanent KC-USER-XXXX ID
           const userNum = Math.floor(1000 + Math.random() * 9000);
-          const id = `KC-USER-${userNum}`;
+          const permanentId = `KC-USER-${userNum}`;
           const cleanName = email.split('@')[0].replace(/[._-]/g, ' ').trim();
           const capitalizedName = cleanName.length > 0
             ? cleanName.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
             : 'Eco Recycler';
 
           const createdUser = await User.create({
-            id,
+            id: permanentId,
+            userId: permanentId,
             name: capitalizedName,
             email,
             role: 'user',
             city: 'Delhi NCR'
           });
           user = createdUser.toObject();
+        } else if (!user.userId && user.id) {
+          await User.updateOne({ _id: user._id }, { $set: { userId: user.id } });
+          user.userId = user.id;
         }
 
         if (user.password) {
@@ -277,6 +288,12 @@ export default async function handler(req, res) {
           });
         }
 
+        // Ensure permanent userId in DB if missing
+        if (!user.userId && user.id) {
+          await User.updateOne({ _id: user._id }, { $set: { userId: user.id } });
+          user.userId = user.id;
+        }
+
         // Strip password before returning
         delete user.password;
 
@@ -347,9 +364,11 @@ export default async function handler(req, res) {
       // Hash password
       const hashedPassword = hashPassword(rawPassword);
       const userNum = Math.floor(1000 + Math.random() * 9000);
+      const permanentUserId = body.userId || body.id || `KC-USER-${userNum}`;
 
       const newUserData = {
-        id: body.id || `KC-USER-${userNum}`,
+        id: permanentUserId,
+        userId: permanentUserId,
         name,
         email,
         password: hashedPassword,
