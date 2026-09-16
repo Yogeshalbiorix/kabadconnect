@@ -145,56 +145,60 @@ export const BookingWizardModal = ({
     }
   };
 
+  // Reset step to 1 and initialize whenever modal opens
   useEffect(() => {
-    if (initialScrapData) {
-      const cats = [];
-      if (initialScrapData.categories && Array.isArray(initialScrapData.categories)) {
-        cats.push(...initialScrapData.categories);
-      }
-      if (initialScrapData.items && Array.isArray(initialScrapData.items)) {
-        initialScrapData.items.forEach(it => {
-          if (it.category && !cats.includes(it.category)) {
-            cats.push(it.category);
-          }
-        });
-      }
-      if (initialScrapData.paperWeight > 0 && !cats.includes('paper')) cats.push('paper');
-      if (initialScrapData.plasticWeight > 0 && !cats.includes('plastic')) cats.push('plastic');
-      if (initialScrapData.metalWeight > 0 && !cats.includes('metal')) cats.push('metal');
-      if (initialScrapData.ewasteUnits > 0 && !cats.includes('ewaste')) cats.push('ewaste');
-      if (cats.length > 0) setSelectedCategories([...new Set(cats)]);
-
-      if (initialScrapData.address || initialScrapData.pincode) {
-        setFormData(prev => ({
-          ...prev,
-          name: initialScrapData.customerName || prev.name,
-          phone: initialScrapData.phone || prev.phone,
-          address: initialScrapData.address || prev.address,
-          pincode: initialScrapData.pincode || prev.pincode
-        }));
-      }
-
-      if (initialScrapData.estimatedWeight) {
-        const ew = initialScrapData.estimatedWeight;
-        if (typeof ew === 'string' && (ew.includes('20') || ew.includes('50') || ew.includes('100') || ew.includes('<'))) {
-          setWeightBracket(ew);
-        }
-      } else if (initialScrapData.totalWeight) {
-        const tw = initialScrapData.totalWeight;
-        if (tw < 20) setWeightBracket('< 20 kg');
-        else if (tw <= 50) setWeightBracket('20-50 kg');
-        else if (tw <= 100) setWeightBracket('50-100 kg');
-        else setWeightBracket('100+ kg Bulk');
-      }
-    } else if (isOpen) {
-      // Fresh pickup booking: start with 0 products selected
-      setSelectedCategories([]);
+    if (isOpen) {
       setStep(1);
+      setBookingId('');
       setCategoryError('');
+
+      if (initialScrapData) {
+        const cats = [];
+        if (initialScrapData.categories && Array.isArray(initialScrapData.categories)) {
+          cats.push(...initialScrapData.categories);
+        }
+        if (initialScrapData.items && Array.isArray(initialScrapData.items)) {
+          initialScrapData.items.forEach(it => {
+            if (it.category && !cats.includes(it.category)) {
+              cats.push(it.category);
+            }
+          });
+        }
+        if (initialScrapData.paperWeight > 0 && !cats.includes('paper')) cats.push('paper');
+        if (initialScrapData.plasticWeight > 0 && !cats.includes('plastic')) cats.push('plastic');
+        if (initialScrapData.metalWeight > 0 && !cats.includes('metal')) cats.push('metal');
+        if (initialScrapData.ewasteUnits > 0 && !cats.includes('ewaste')) cats.push('ewaste');
+        if (cats.length > 0) setSelectedCategories([...new Set(cats)]);
+        else setSelectedCategories(['paper', 'plastic']);
+
+        if (initialScrapData.address || initialScrapData.pincode) {
+          setFormData(prev => ({
+            ...prev,
+            name: initialScrapData.customerName || prev.name,
+            phone: initialScrapData.phone || prev.phone,
+            address: initialScrapData.address || prev.address,
+            pincode: initialScrapData.pincode || prev.pincode
+          }));
+        }
+
+        if (initialScrapData.estimatedWeight) {
+          const ew = initialScrapData.estimatedWeight;
+          if (typeof ew === 'string' && (ew.includes('20') || ew.includes('50') || ew.includes('100') || ew.includes('<'))) {
+            setWeightBracket(ew);
+          }
+        } else if (initialScrapData.totalWeight) {
+          const tw = initialScrapData.totalWeight;
+          if (tw < 20) setWeightBracket('< 20 kg');
+          else if (tw <= 50) setWeightBracket('20-50 kg');
+          else if (tw <= 100) setWeightBracket('50-100 kg');
+          else setWeightBracket('100+ kg Bulk');
+        }
+      } else {
+        // Fresh pickup booking: default to empty or user pre-select
+        setSelectedCategories([]);
+      }
     }
   }, [initialScrapData, isOpen]);
-
-  if (!isOpen) return null;
 
   const toggleCategory = (catId) => {
     setCategoryError('');
@@ -208,7 +212,7 @@ export const BookingWizardModal = ({
   const handleNext = () => {
     if (step === 1) {
       if (selectedCategories.length === 0) {
-        setCategoryError('Please select at least one scrap product/category before proceeding to the address step.');
+        setCategoryError('Please select at least one scrap product category before proceeding to the address step.');
         return;
       }
       setCategoryError('');
@@ -216,12 +220,22 @@ export const BookingWizardModal = ({
       return;
     }
     if (step === 2) {
-      if (!formData.address?.trim()) {
-        alert('Please enter your pickup address.');
+      if (!formData.name?.trim()) {
+        alert('Please enter your full name for contact.');
         return;
       }
-      if (!formData.phone?.trim()) {
-        alert('Please enter your contact mobile number.');
+      const cleanPhone = (formData.phone || '').replace(/\D/g, '');
+      if (!cleanPhone || cleanPhone.length < 10) {
+        alert('Please enter a valid 10-digit mobile number for pickup coordination.');
+        return;
+      }
+      if (!formData.address?.trim()) {
+        alert('Please enter your pickup doorstep address (House/Flat No., Society/Building).');
+        return;
+      }
+      const cleanPincode = (formData.pincode || '').replace(/\D/g, '');
+      if (!cleanPincode || cleanPincode.length !== 6) {
+        alert('Please enter a valid 6-digit postal pincode.');
         return;
       }
       setStep(3);
@@ -399,6 +413,28 @@ export const BookingWizardModal = ({
                   </span>
                 </div>
               )}
+              {initialScrapData?.items && initialScrapData.items.length > 0 && (
+                <div style={{
+                  background: '#F0FDF4',
+                  border: '1.5px solid #86EFAC',
+                  borderRadius: 'var(--radius-md)',
+                  padding: '0.75rem 0.95rem',
+                  marginBottom: '1.15rem'
+                }}>
+                  <div style={{ fontSize: '0.825rem', fontWeight: 700, color: '#166534', marginBottom: '0.4rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>📦 Scrap Items from Pickup List ({initialScrapData.items.length}):</span>
+                    <span style={{ color: '#0D5C3A', fontWeight: 800 }}>Est. ₹{initialScrapData.estimatedRupees || initialScrapData.totalPayout || 0}</span>
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
+                    {initialScrapData.items.map((it, idx) => (
+                      <span key={idx} style={{ background: '#FFFFFF', border: '1px solid #BBF7D0', padding: '2px 8px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 600, color: '#14532D' }}>
+                        {it.name} ({it.estimatedWeight || 5} kg)
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <h3 style={{ fontSize: '1.15rem', marginBottom: '0.45rem' }}>
                 What type of scrap do you want to sell?
               </h3>

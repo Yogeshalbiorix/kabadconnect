@@ -372,6 +372,7 @@ export default function App() {
     setOrders(updated);
     setActiveOrder(enrichedOrder);
     setSelectedScrapItems([]); // clear pickup list once scheduled
+    setCalculatedScrapData(null); // clear scrap calculation
     setIsBookingOpen(false);
     setIsTrackerOpen(true);
 
@@ -878,7 +879,10 @@ export default function App() {
       {/* Modals & Drawers */}
       <BookingWizardModal
         isOpen={isBookingOpen}
-        onClose={() => setIsBookingOpen(false)}
+        onClose={() => {
+          setIsBookingOpen(false);
+          setCalculatedScrapData(null);
+        }}
         initialScrapData={calculatedScrapData}
         onBookingSuccess={handleBookingSuccess}
         activeCity={activeCity}
