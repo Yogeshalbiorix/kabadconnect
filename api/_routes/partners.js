@@ -34,14 +34,19 @@ export default async function handler(req, res) {
       // 1. Fetch real registered agents & partners from MongoDB Atlas Users collection
       const userFilter = { role: { $in: ['agent', 'partner'] } };
       if (city && city !== 'all') {
-        userFilter.city = new RegExp(city, 'i');
+        const cityRegex = new RegExp(city.trim(), 'i');
+        userFilter.$or = [
+          { city: cityRegex },
+          { address: cityRegex },
+          { operatingZone: cityRegex }
+        ];
       }
 
       const realAgentUsers = await User.find(userFilter).lean();
 
       // Convert real registered users into rich collector/partner objects
       const dynamicAgentPartners = (realAgentUsers || []).map((u, idx) => {
-        const isAhmd = String(u.city || '').toLowerCase().includes('ahmedabad');
+        const isAhmd = String(u.city || u.address || '').toLowerCase().includes('ahmedabad');
         const defaultCoords = isAhmd 
           ? [23.0135 + (idx * 0.004), 72.5125 + (idx * 0.003)] 
           : [28.6385 + (idx * 0.004), 77.3710 + (idx * 0.003)];
@@ -86,7 +91,11 @@ export default async function handler(req, res) {
       // 2. Query any explicitly created Partner collection documents
       const partnerFilter = {};
       if (city && city !== 'all') {
-        partnerFilter.city = new RegExp(city, 'i');
+        const cityRegex = new RegExp(city.trim(), 'i');
+        partnerFilter.$or = [
+          { city: cityRegex },
+          { locality: cityRegex }
+        ];
       }
       const rawPartners = await Partner.find(partnerFilter).lean();
 

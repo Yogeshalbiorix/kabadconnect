@@ -201,8 +201,9 @@ export default async function handler(req, res) {
       // If a review was submitted, also synchronize it to the assigned agent's MongoDB profile
       if (body.review && updated && (updated.assignedAgentId || updated.agentName)) {
         try {
+          const isHexId = typeof updated.assignedAgentId === 'string' && /^[0-9a-fA-F]{24}$/.test(updated.assignedAgentId);
           const agentQuery = updated.assignedAgentId 
-            ? { $or: [{ id: updated.assignedAgentId }, { _id: updated.assignedAgentId }] }
+            ? (isHexId ? { $or: [{ id: updated.assignedAgentId }, { _id: updated.assignedAgentId }] } : { id: updated.assignedAgentId })
             : { name: new RegExp(`^${updated.agentName}$`, 'i'), role: 'agent' };
           const agentUser = await User.findOne(agentQuery);
           if (agentUser) {
