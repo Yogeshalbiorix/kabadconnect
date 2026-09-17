@@ -370,90 +370,157 @@ export const PRODUCT_SUBCATEGORY_PRESETS = [
     id: 'almirah',
     label: 'Almirah / Wardrobe',
     category: 'furniture',
-    defaultTitle: 'Solid Wood 3-Door Almirah',
-    defaultPrice: 4500,
+    defaultTitle: 'Solid Wood 3-Door Almirah with Locker & Mirror',
+    defaultPrice: 4800,
     defaultImage: 'https://images.unsplash.com/photo-1595428774223-ef52624120d2?auto=format&fit=crop&w=600&q=80',
-    description: 'Spacious wardrobe with shelves, hanging rod, and lockable safety drawer. Great condition.'
+    defaultImages: [
+      'https://images.unsplash.com/photo-1595428774223-ef52624120d2?auto=format&fit=crop&w=600&q=80',
+      'https://images.unsplash.com/photo-1558997519-83ea9252def8?auto=format&fit=crop&w=600&q=80',
+      'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=600&q=80'
+    ],
+    description: 'Heavy solid teak wood wardrobe in rich walnut polish. Features internal hanger space, 4 deep shelves, lockable jewelry drawer, and full-length dressing mirror. Flawless hinges and keys included.'
   },
   {
     id: 'table',
     label: 'Table (Center / Coffee Table)',
     category: 'furniture',
-    defaultTitle: 'Solid Wood Coffee & Center Table',
+    defaultTitle: 'Rustic Teak Wood Center Coffee Table with Shelf',
     defaultPrice: 1500,
     defaultImage: 'https://images.unsplash.com/photo-1533090161767-e6ffed986b88?auto=format&fit=crop&w=600&q=80',
-    description: 'Polished wooden table with bottom shelf, sturdy legs, and smooth edges.'
+    defaultImages: [
+      'https://images.unsplash.com/photo-1533090161767-e6ffed986b88?auto=format&fit=crop&w=600&q=80',
+      'https://images.unsplash.com/photo-1530018607912-eff2daa1bac4?auto=format&fit=crop&w=600&q=80'
+    ],
+    description: 'Solid teakwood coffee table with dark honey grain polish and lower tier slatted magazine shelf. Rounded child-safe edges.'
   },
   {
     id: 'ac',
     label: 'Air Conditioner (AC)',
     category: 'appliances',
-    defaultTitle: '1.5 Ton Split Inverter AC',
-    defaultPrice: 12000,
+    defaultTitle: 'Voltas 1.5 Ton 5-Star Inverter Split AC (100% Copper)',
+    defaultPrice: 12500,
     defaultImage: 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&w=600&q=80',
-    description: 'Chilling 5-star inverter AC with remote, copper piping, and outdoor condenser unit.'
+    defaultImages: [
+      'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&w=600&q=80',
+      'https://images.unsplash.com/photo-1585771724684-38269d6639fd?auto=format&fit=crop&w=600&q=80'
+    ],
+    description: 'Dual inverter compressor with super chill mode. Complete set with indoor wall unit, outdoor condenser, remote control, and copper pipes.'
   },
   {
     id: 'dining-table',
     label: 'Dining Table',
     category: 'furniture',
-    defaultTitle: '6-Seater Solid Wood Dining Table',
-    defaultPrice: 6500,
+    defaultTitle: '6-Seater Solid Sheesham Wood Dining Table with Cushioned Chairs',
+    defaultPrice: 6900,
     defaultImage: 'https://images.unsplash.com/photo-1617806118233-18e1de247200?auto=format&fit=crop&w=600&q=80',
-    description: 'Comfortable dining table with matching cushioned chairs in solid Sheesham wood finish.'
+    defaultImages: [
+      'https://images.unsplash.com/photo-1617806118233-18e1de247200?auto=format&fit=crop&w=600&q=80',
+      'https://images.unsplash.com/photo-1615066390971-03e4e1c36ddf?auto=format&fit=crop&w=600&q=80'
+    ],
+    description: 'Rich honey-finish pure Sheesham wood dining set with tempered 8mm protective glass top. Comes with 6 sturdy matching cushioned chairs.'
   },
   {
     id: 'study-table',
     label: 'Study Table / Desk',
     category: 'furniture',
-    defaultTitle: 'Ergonomic Study Table with Book Racks',
-    defaultPrice: 1800,
+    defaultTitle: 'Ergonomic Wooden Study Table with Multi-Shelf Bookshelf & Drawers',
+    defaultPrice: 1850,
     defaultImage: 'https://images.unsplash.com/photo-1518455027359-f3f8164ba6bd?auto=format&fit=crop&w=600&q=80',
-    description: 'Spacious desk with drawers, cable organizer, and vertical book shelf.'
+    defaultImages: [
+      'https://images.unsplash.com/photo-1518455027359-f3f8164ba6bd?auto=format&fit=crop&w=600&q=80',
+      'https://images.unsplash.com/photo-1524758631624-e2822e304c36?auto=format&fit=crop&w=600&q=80'
+    ],
+    description: 'Spacious study/work desk with wire management grommet, 2 smooth gliding lockable stationery drawers, and built-in vertical book racks.'
   },
   {
     id: 'sofa',
     label: 'Sofa / Couch',
     category: 'furniture',
-    defaultTitle: 'L-Shaped 5-Seater Living Room Sofa',
-    defaultPrice: 7000,
+    defaultTitle: 'L-Shaped 5-Seater Modern Fabric Sofa with 4 Throw Pillows',
+    defaultPrice: 7500,
     defaultImage: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=600&q=80',
-    description: 'Comfortable high-density foam couch with stain-resistant fabric and cushions.'
+    defaultImages: [
+      'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=600&q=80',
+      'https://images.unsplash.com/photo-1493663284031-b7e3aefcae8e?auto=format&fit=crop&w=600&q=80'
+    ],
+    description: 'Charcoal grey water-resistant linen fabric sofa. High resilience 40-density foam base for supreme back support.'
   },
   {
     id: 'bed',
     label: 'Bed / Double Bed',
     category: 'furniture',
-    defaultTitle: 'King Size Bed with Box Storage',
-    defaultPrice: 8000,
+    defaultTitle: 'King Size Engineered Wood Bed with Hydraulic Box Storage (78x72)',
+    defaultPrice: 8200,
     defaultImage: 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=600&q=80',
-    description: 'Spacious double bed with hydraulic/box storage compartment in rich walnut wood.'
+    defaultImages: [
+      'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=600&q=80',
+      'https://images.unsplash.com/photo-1540518614846-7eded433c457?auto=format&fit=crop&w=600&q=80'
+    ],
+    description: 'Sturdy king size bed in dark walnut finish with easy-lift hydraulic storage mechanism. Headboard has built-in night reading shelves.'
   },
   {
     id: 'mattress',
     label: 'Mattress',
     category: 'furniture',
-    defaultTitle: 'Orthopedic Queen Size Mattress (6-inch)',
-    defaultPrice: 3000,
+    defaultTitle: 'Orthopedic Memory Foam & Coir Queen Size Mattress (6-Inch Thick)',
+    defaultPrice: 3200,
     defaultImage: 'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?auto=format&fit=crop&w=600&q=80',
-    description: 'Clean sanitized dual-sided memory foam and coir mattress with washable cover.'
+    defaultImages: [
+      'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?auto=format&fit=crop&w=600&q=80',
+      'https://images.unsplash.com/photo-1584132967334-10e028bd69f7?auto=format&fit=crop&w=600&q=80'
+    ],
+    description: 'Dual-comfort queen bed mattress (78x60 inches). One side firm for orthopedic spine support, other side soft breathable memory foam.'
   },
   {
     id: 'cycle',
     label: 'Bicycle / Cycle',
     category: 'cycles',
-    defaultTitle: 'Mountain Gear Bicycle (21-Speed)',
-    defaultPrice: 3500,
+    defaultTitle: 'Hero Sprint Pro 21-Speed Mountain Gear Bicycle (Dual Disc Brakes)',
+    defaultPrice: 3600,
     defaultImage: 'https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&w=600&q=80',
-    description: 'Smooth gear cycle with suspension fork, disc brakes, and brand new tires.'
+    defaultImages: [
+      'https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&w=600&q=80',
+      'https://images.unsplash.com/photo-1576435728678-68d0fbf94e91?auto=format&fit=crop&w=600&q=80'
+    ],
+    description: 'Lightweight alloy hardtail MTB with Shimano Tourney 21-speed gears, front suspension lock-out fork, and front/rear mechanical disc brakes.'
   },
   {
     id: 'old-cycle',
     label: 'Old Classic Bicycle',
     category: 'cycles',
-    defaultTitle: 'Classic Roadster Bicycle with Carrier',
-    defaultPrice: 1300,
+    defaultTitle: 'Atlas Heavy Duty Classic Road Bicycle with Carrier & Stand',
+    defaultPrice: 1400,
     defaultImage: 'https://images.unsplash.com/photo-1532298229144-0ec0c57515c7?auto=format&fit=crop&w=600&q=80',
-    description: 'Heavy duty classic road cycle with parcel carrier, stand, bell, and good chain.'
+    defaultImages: [
+      'https://images.unsplash.com/photo-1532298229144-0ec0c57515c7?auto=format&fit=crop&w=600&q=80',
+      'https://images.unsplash.com/photo-1507035895480-2b3156c31fc8?auto=format&fit=crop&w=600&q=80'
+    ],
+    description: 'Traditional solid steel frame roadster cycle with rear reinforced parcel carrier, full chain cover, Dynamo headlamp, and bell.'
+  },
+  {
+    id: 'refrigerator',
+    label: 'Refrigerator / Fridge',
+    category: 'appliances',
+    defaultTitle: 'Samsung 253L 3-Star Inverter Double Door Refrigerator',
+    defaultPrice: 8500,
+    defaultImage: 'https://images.unsplash.com/photo-1571175443880-49e1d25b2bc5?auto=format&fit=crop&w=600&q=80',
+    defaultImages: [
+      'https://images.unsplash.com/photo-1571175443880-49e1d25b2bc5?auto=format&fit=crop&w=600&q=80',
+      'https://images.unsplash.com/photo-1584992236310-6edddc08acff?auto=format&fit=crop&w=600&q=80'
+    ],
+    description: 'Frost-free double door fridge with digital inverter compressor, toughened glass shelves, deodorizing filter, and stabilizer-free operation.'
+  },
+  {
+    id: 'washing-machine',
+    label: 'Washing Machine',
+    category: 'appliances',
+    defaultTitle: 'LG 7.0 Kg Smart Inverter Fully-Automatic Front Load Washing Machine',
+    defaultPrice: 9200,
+    defaultImage: 'https://images.unsplash.com/photo-1626806787461-102c1bfaaea1?auto=format&fit=crop&w=600&q=80',
+    defaultImages: [
+      'https://images.unsplash.com/photo-1626806787461-102c1bfaaea1?auto=format&fit=crop&w=600&q=80',
+      'https://images.unsplash.com/photo-1610557892470-55d9e80c0bce?auto=format&fit=crop&w=600&q=80'
+    ],
+    description: 'Stainless steel drum with 6 motion direct drive, heater function for sanitizing clothes, and smart diagnosis.'
   }
 ];
