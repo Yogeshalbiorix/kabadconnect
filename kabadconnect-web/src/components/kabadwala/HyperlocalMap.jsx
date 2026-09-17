@@ -90,7 +90,7 @@ export const HyperlocalMap = ({
         ];
       }
 
-      const dist = calculateDistanceKm(userLat, userLng, coords[0], coords[1]);
+      const dist = calculateDistanceKm([userLat, userLng], coords);
 
       return {
         ...p,
@@ -100,7 +100,7 @@ export const HyperlocalMap = ({
       };
     });
 
-    return rankPartnersByProximity(mapped, currentCoords);
+    return rankPartnersByProximity(mapped, [userLat, userLng]);
   }, [incomingPartners, currentCoords, isAhmd]);
 
   const nearestPartner = cityPartners[0] || incomingPartners[0];

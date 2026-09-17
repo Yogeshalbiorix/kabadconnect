@@ -151,13 +151,36 @@ export const reverseGeocodeMapbox = async (lng, lat, token) => {
  * @param {[number, number]} coords2 - [lat, lng]
  * @returns {number} Distance in kilometers (rounded to 1 decimal place)
  */
-export const calculateDistanceKm = (coords1, coords2) => {
-  if (!coords1 || !coords2 || coords1.length < 2 || coords2.length < 2) {
+export const calculateDistanceKm = (arg1, arg2, arg3, arg4) => {
+  let lat1, lon1, lat2, lon2;
+
+  // Support calculateDistanceKm(lat1, lon1, lat2, lon2)
+  if (typeof arg1 === 'number' && typeof arg2 === 'number' && typeof arg3 === 'number' && typeof arg4 === 'number') {
+    lat1 = arg1;
+    lon1 = arg2;
+    lat2 = arg3;
+    lon2 = arg4;
+  } 
+  // Support calculateDistanceKm([lat1, lon1], [lat2, lon2])
+  else if (Array.isArray(arg1) && Array.isArray(arg2)) {
+    lat1 = Number(arg1[0]);
+    lon1 = Number(arg1[1]);
+    lat2 = Number(arg2[0]);
+    lon2 = Number(arg2[1]);
+  }
+  // Support calculateDistanceKm({ lat, lng }, { lat, lng })
+  else if (arg1 && typeof arg1 === 'object' && arg2 && typeof arg2 === 'object') {
+    lat1 = Number(arg1.lat ?? arg1.latitude ?? (Array.isArray(arg1) ? arg1[0] : NaN));
+    lon1 = Number(arg1.lng ?? arg1.longitude ?? (Array.isArray(arg1) ? arg1[1] : NaN));
+    lat2 = Number(arg2.lat ?? arg2.latitude ?? (Array.isArray(arg2) ? arg2[0] : NaN));
+    lon2 = Number(arg2.lng ?? arg2.longitude ?? (Array.isArray(arg2) ? arg2[1] : NaN));
+  } else {
     return 1.2;
   }
 
-  const [lat1, lon1] = coords1;
-  const [lat2, lon2] = coords2;
+  if (isNaN(lat1) || isNaN(lon1) || isNaN(lat2) || isNaN(lon2)) {
+    return 1.2;
+  }
 
   const R = 6371; // Earth radius in km
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
