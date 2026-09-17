@@ -1,5 +1,6 @@
 import { connectToDatabase, isDbConfigured } from '../_lib/dbConnect.js';
 import Order from '../_models/Order.js';
+import User from '../_models/User.js';
 import { sendOtpEmail } from '../_lib/emailService.js';
 
 export default async function handler(req, res) {
@@ -196,6 +197,42 @@ export default async function handler(req, res) {
         { $set: { ...body, updatedAt: new Date() } },
         { new: true, upsert: true }
       );
+
+      // If a review was submitted, also synchronize it to the assigned agent's MongoDB profile
+      if (body.review && updated && (updated.assignedAgentId || updated.agentName)) {
+        try {
+          const agentQuery = updated.assignedAgentId 
+            ? { $or: [{ id: updated.assignedAgentId }, { _id: updated.assignedAgentId }] }
+            : { name: new RegExp(`^${updated.agentName}$`, 'i'), role: 'agent' };
+          const agentUser = await User.findOne(agentQuery);
+          if (agentUser) {
+            const existingReviews = Array.isArray(agentUser.reviews) ? agentUser.reviews : [];
+            const newRev = {
+              orderId: orderId,
+              rating: Number(body.review.rating) || 5,
+              comment: body.review.comment || '',
+              tags: Array.isArray(body.review.tags) ? body.review.tags : [],
+              reviewerName: body.review.reviewerName || updated.customerName || updated.customer?.name || 'Verified Customer',
+              createdAt: new Date().toISOString()
+            };
+            const updatedReviews = [newRev, ...existingReviews.filter(r => r.orderId !== orderId)];
+            const totalScore = updatedReviews.reduce((sum, r) => sum + (Number(r.rating) || 5), 0);
+            const avgRating = (totalScore / updatedReviews.length).toFixed(1);
+            await User.updateOne(
+              { _id: agentUser._id },
+              { 
+                $set: { 
+                  reviews: updatedReviews, 
+                  rating: Number(avgRating),
+                  reviewCount: updatedReviews.length 
+                } 
+              }
+            );
+          }
+        } catch (revErr) {
+          console.warn('[Orders API] Review agent sync error:', revErr.message);
+        }
+      }
 
       return res.status(200).json({
         success: true,

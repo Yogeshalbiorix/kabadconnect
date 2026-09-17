@@ -1002,6 +1002,7 @@ export default function App() {
         onClose={() => setIsTrackerOpen(false)}
         activeOrder={activeOrder}
         onOpenDoorstepVerification={handleOpenDoorstepVerification}
+        onUpdateOrder={handleUpdateOrder}
       />
 
       <PartnerJoinModal

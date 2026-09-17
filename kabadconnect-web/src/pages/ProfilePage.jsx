@@ -44,7 +44,11 @@ import {
   Locate,
   Loader2,
   Compass,
-  Wallet
+  Wallet,
+  Camera,
+  Upload,
+  ThumbsUp,
+  MessageSquareQuote
 } from 'lucide-react';
 import { DEMO_USERS } from '../utils/auth';
 import { fetchLocationByPincode, detectCurrentLocationWithAddress } from '../utils/geolocation';
@@ -182,6 +186,70 @@ export const ProfilePage = ({
   const displayPartnerStock = currentUser?.currentStockTons !== undefined && currentUser?.currentStockTons !== null
     ? Number(currentUser.currentStockTons)
     : 0;
+
+  // ----------------------------------------------------
+  // Dynamic Calculation of Agent Reviews & 8-Order Badges
+  // ----------------------------------------------------
+  const isAgent8OrdersVerified = displayAgentCompletedPickups >= 8;
+  const isUser8OrdersVerified = completedOrders.length >= 8;
+
+  const agentCustomerReviews = React.useMemo(() => {
+    const directReviews = Array.isArray(currentUser?.reviews) ? currentUser.reviews : [];
+    const orderReviews = (orders || [])
+      .filter((o) => {
+        const isThisAgent =
+          (currentUser?.id && (o.assignedAgentId === currentUser.id || o.agentId === currentUser.id)) ||
+          (currentUser?.name && o.agentName && o.agentName.toLowerCase() === currentUser.name.toLowerCase());
+        return isThisAgent && o.review;
+      })
+      .map((o) => ({
+        orderId: o.id,
+        rating: Number(o.review.rating) || 5,
+        comment: o.review.comment || '',
+        tags: Array.isArray(o.review.tags) ? o.review.tags : [],
+        reviewerName: o.review.reviewerName || o.customerName || o.customer?.name || 'Verified Customer',
+        createdAt: o.review.createdAt || o.updatedAt || o.createdAt
+      }));
+
+    const combined = [...directReviews];
+    orderReviews.forEach((or) => {
+      if (!combined.some((cr) => cr.orderId === or.orderId)) {
+        combined.push(or);
+      }
+    });
+    return combined;
+  }, [currentUser?.reviews, orders, currentUser?.id, currentUser?.name]);
+
+  const agentAvgRating = agentCustomerReviews.length > 0
+    ? (agentCustomerReviews.reduce((sum, r) => sum + (Number(r.rating) || 5), 0) / agentCustomerReviews.length).toFixed(1)
+    : (currentUser?.rating || '5.0');
+
+  // Avatar Upload Handler with Base64 Conversion
+  const handleAvatarUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Avatar image size must be under 5MB.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const base64Data = event.target.result;
+      if (base64Data && currentUser) {
+        const updatedUser = {
+          ...currentUser,
+          avatar: base64Data
+        };
+        if (onUpdateUser) {
+          await onUpdateUser(updatedUser);
+        }
+        showFeedback('✓ Profile picture updated and saved to database!');
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   // Wallet Management / Set Amount Modal State
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
@@ -1108,19 +1176,59 @@ export const ProfilePage = ({
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1.5rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flexWrap: 'wrap' }}>
-                  <img
-                    src={currentUser?.role === 'user' ? (currentUser?.avatar || DEMO_USERS.customer.avatar) : DEMO_USERS.customer.avatar}
-                    alt="Customer Avatar"
-                    style={{ width: '84px', height: '84px', borderRadius: '50%', objectFit: 'cover', border: '3px solid var(--color-accent-mint)' }}
-                  />
+                  {/* Customer Avatar with Quick Upload Button */}
+                  <div style={{ position: 'relative', width: '84px', height: '84px', flexShrink: 0 }}>
+                    <img
+                      src={currentUser?.role === 'user' ? (currentUser?.avatar || DEMO_USERS.customer.avatar) : DEMO_USERS.customer.avatar}
+                      alt="Customer Avatar"
+                      style={{ width: '84px', height: '84px', borderRadius: '50%', objectFit: 'cover', border: '3px solid var(--color-accent-mint)' }}
+                    />
+                    <label
+                      htmlFor="user-avatar-upload-hero"
+                      style={{
+                        position: 'absolute',
+                        bottom: '-2px',
+                        right: '-2px',
+                        background: 'var(--color-primary)',
+                        color: '#FFFFFF',
+                        borderRadius: '50%',
+                        width: '28px',
+                        height: '28px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        boxShadow: '0 2px 6px rgba(0,0,0,0.25)',
+                        border: '2px solid #FFFFFF',
+                        transition: 'transform 0.15s ease'
+                      }}
+                      title="Upload profile photo"
+                    >
+                      <Camera size={13} />
+                    </label>
+                    <input
+                      type="file"
+                      id="user-avatar-upload-hero"
+                      accept="image/*"
+                      style={{ display: 'none' }}
+                      onChange={handleAvatarUpload}
+                    />
+                  </div>
+
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.25rem' }}>
                       <h2 style={{ fontSize: '1.65rem', fontWeight: 800, margin: 0, color: '#0F172A' }}>
                         {currentUser?.name || 'Member'}
                       </h2>
-                      <span className="badge badge-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
-                        <CheckCircle2 size={13} /> Verified Resident
-                      </span>
+                      {isUser8OrdersVerified ? (
+                        <span className="badge badge-primary" style={{ background: 'linear-gradient(135deg, #059669 0%, #10B981 100%)', color: '#FFFFFF', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '0.3rem', boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)' }}>
+                          <ShieldCheck size={14} /> ⭐ Verified Pro Citizen (8+ Orders Completed)
+                        </span>
+                      ) : (
+                        <span className="badge badge-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                          <CheckCircle2 size={13} /> Verified Resident ({completedOrders.length}/8 Completed)
+                        </span>
+                      )}
                       <span className="badge badge-neutral" style={{ background: '#FEF3C7', color: '#92400E', fontWeight: 700 }}>
                         {currentUser?.totalRecycledKg > 100 ? '🌱 Platinum Green Guardian' : currentUser?.totalRecycledKg > 25 ? '🌿 Silver Green Guardian' : '🌱 New Eco Contributor'}
                       </span>
@@ -1685,11 +1793,45 @@ export const ProfilePage = ({
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1.5rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flexWrap: 'wrap' }}>
-                  <img
-                    src={currentUser?.role === 'agent' ? (currentUser?.avatar || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80') : (DEMO_USERS.agent?.avatar || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80')}
-                    alt="Agent Avatar"
-                    style={{ width: '84px', height: '84px', borderRadius: '50%', objectFit: 'cover', border: '3px solid #2563EB' }}
-                  />
+                  {/* Agent Avatar with Quick Upload Button */}
+                  <div style={{ position: 'relative', width: '84px', height: '84px', flexShrink: 0 }}>
+                    <img
+                      src={currentUser?.role === 'agent' ? (currentUser?.avatar || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80') : (DEMO_USERS.agent?.avatar || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80')}
+                      alt="Agent Avatar"
+                      style={{ width: '84px', height: '84px', borderRadius: '50%', objectFit: 'cover', border: '3px solid #2563EB' }}
+                    />
+                    <label
+                      htmlFor="agent-avatar-upload-hero"
+                      style={{
+                        position: 'absolute',
+                        bottom: '-2px',
+                        right: '-2px',
+                        background: '#2563EB',
+                        color: '#FFFFFF',
+                        borderRadius: '50%',
+                        width: '28px',
+                        height: '28px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        boxShadow: '0 2px 6px rgba(0,0,0,0.25)',
+                        border: '2px solid #FFFFFF',
+                        transition: 'transform 0.15s ease'
+                      }}
+                      title="Upload profile picture"
+                    >
+                      <Camera size={13} />
+                    </label>
+                    <input
+                      type="file"
+                      id="agent-avatar-upload-hero"
+                      accept="image/*"
+                      style={{ display: 'none' }}
+                      onChange={handleAvatarUpload}
+                    />
+                  </div>
+
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.25rem' }}>
                       <h2 style={{ fontSize: '1.65rem', fontWeight: 800, margin: 0, color: '#0F172A' }}>
@@ -1698,9 +1840,15 @@ export const ProfilePage = ({
                       <span className="badge badge-primary" style={{ background: '#DBEAFE', color: '#1E40AF', fontWeight: 800 }}>
                         Badge #{currentUser?.role === 'agent' ? (currentUser?.agentCode || ('AG-' + (currentUser?.id ? String(currentUser.id).slice(-4).toUpperCase() : 'ONLINE'))) : DEMO_USERS.agent?.agentCode}
                       </span>
-                      <span className="badge badge-primary" style={{ background: '#DCFCE7', color: '#166534', fontWeight: 700 }}>
-                        <ShieldCheck size={13} style={{ display: 'inline', marginRight: '3px' }} /> Police Verified
-                      </span>
+                      {isAgent8OrdersVerified ? (
+                        <span className="badge badge-primary" style={{ background: 'linear-gradient(135deg, #059669 0%, #10B981 100%)', color: '#FFFFFF', fontWeight: 800, boxShadow: '0 2px 8px rgba(16, 185, 129, 0.35)', border: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                          <ShieldCheck size={14} /> ⭐ Verified Pro Collector (8+ Orders Completed)
+                        </span>
+                      ) : (
+                        <span className="badge badge-neutral" style={{ background: '#FEF3C7', color: '#92400E', fontWeight: 700, border: '1px solid #FDE68A', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                          <Award size={13} /> {displayAgentCompletedPickups}/8 Pickups to Verified Pro Badge
+                        </span>
+                      )}
                     </div>
 
                     <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap', fontSize: '0.85rem', color: 'var(--color-text-muted)', marginBottom: '0.5rem' }}>
@@ -1711,7 +1859,7 @@ export const ProfilePage = ({
                         <MapPin size={14} /> {currentUser?.city || 'Delhi NCR'}{currentUser?.state ? ` • ${currentUser.state}` : ''}
                       </span>
                       <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#D97706', fontWeight: 700 }}>
-                        <Star size={14} fill="#D97706" /> {currentUser?.rating || '5.0'} ({displayAgentCompletedPickups} Pickups)
+                        <Star size={14} fill="#D97706" /> {agentAvgRating} ({displayAgentCompletedPickups} Pickups • {agentCustomerReviews.length} Reviews)
                       </span>
                     </div>
 
@@ -1986,6 +2134,189 @@ export const ProfilePage = ({
                       </div>
                     );
                   })}
+                </div>
+              )}
+            </div>
+
+            {/* 8-Order Verified Pro Badge Milestone Card (When under 8 orders) */}
+            {!isAgent8OrdersVerified && (
+              <div style={{
+                background: 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)',
+                borderRadius: 'var(--radius-xl)',
+                padding: '1.5rem 1.75rem',
+                border: '1.5px solid #BFDBFE',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '1rem'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  <div style={{
+                    width: '48px',
+                    height: '48px',
+                    borderRadius: '12px',
+                    background: '#2563EB',
+                    color: '#FFFFFF',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0
+                  }}>
+                    <Award size={24} />
+                  </div>
+                  <div>
+                    <h4 style={{ margin: '0 0 0.25rem', fontSize: '1.05rem', fontWeight: 800, color: '#1E3A8A' }}>
+                      Verified Pro Badge Unlock Milestone ({displayAgentCompletedPickups} / 8 Completed)
+                    </h4>
+                    <p style={{ margin: 0, fontSize: '0.825rem', color: '#1E40AF' }}>
+                      Complete <strong>{Math.max(0, 8 - displayAgentCompletedPickups)} more doorstep pickups</strong> to unlock the official <strong>⭐ Verified Pro Badge</strong> and high-priority dispatch broadcasts!
+                    </p>
+                  </div>
+                </div>
+
+                <div style={{ minWidth: '180px', flex: 1, maxWidth: '280px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontWeight: 800, color: '#1E40AF', marginBottom: '0.35rem' }}>
+                    <span>Progress</span>
+                    <span>{Math.min(100, Math.round((displayAgentCompletedPickups / 8) * 100))}%</span>
+                  </div>
+                  <div style={{ height: '8px', background: '#FFFFFF', borderRadius: '999px', overflow: 'hidden' }}>
+                    <div style={{
+                      width: `${Math.min(100, Math.round((displayAgentCompletedPickups / 8) * 100))}%`,
+                      height: '100%',
+                      background: 'linear-gradient(90deg, #2563EB 0%, #10B981 100%)',
+                      borderRadius: '999px',
+                      transition: 'width 0.4s ease'
+                    }} />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Customer Ratings & Feedback Feed Section */}
+            <div style={{
+              background: '#FFFFFF',
+              borderRadius: 'var(--radius-xl)',
+              padding: '2rem',
+              border: '1px solid var(--color-border)',
+              boxShadow: 'var(--shadow-sm)'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+                <div>
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <Star size={20} color="#F59E0B" fill="#F59E0B" /> Customer Reviews & Quality Ratings
+                  </h3>
+                  <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', margin: '0.2rem 0 0' }}>
+                    Direct feedback and verified scale inspection ratings from doorstep households.
+                  </p>
+                </div>
+
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.65rem',
+                  background: '#FEF3C7',
+                  border: '1px solid #FDE68A',
+                  padding: '0.45rem 0.85rem',
+                  borderRadius: 'var(--radius-md)'
+                }}>
+                  <span style={{ fontSize: '1.35rem', fontWeight: 800, color: '#92400E' }}>★ {agentAvgRating}</span>
+                  <span style={{ fontSize: '0.8rem', color: '#78350F', fontWeight: 600 }}>({agentCustomerReviews.length} Verified Reviews)</span>
+                </div>
+              </div>
+
+              {agentCustomerReviews.length === 0 ? (
+                <div style={{
+                  padding: '2.5rem 1.5rem',
+                  textAlign: 'center',
+                  background: '#F8FAFC',
+                  borderRadius: 'var(--radius-lg)',
+                  border: '1px dashed var(--color-border)'
+                }}>
+                  <div style={{
+                    width: '44px',
+                    height: '44px',
+                    borderRadius: '12px',
+                    background: 'rgba(245, 158, 11, 0.1)',
+                    color: '#D97706',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    margin: '0 auto 0.75rem'
+                  }}>
+                    <Star size={22} />
+                  </div>
+                  <h4 style={{ margin: '0 0 0.35rem', fontSize: '1.05rem', fontWeight: 800, color: '#0F172A' }}>
+                    No Customer Reviews Received Yet
+                  </h4>
+                  <p style={{ margin: 0, fontSize: '0.825rem', color: '#64748B', maxWidth: '420px', marginLeft: 'auto', marginRight: 'auto' }}>
+                    Complete verified doorstep scrap pickups with prompt arrival and accurate digital weighing to collect high-rated reviews from households!
+                  </p>
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem' }}>
+                  {agentCustomerReviews.map((rev, idx) => (
+                    <div
+                      key={idx}
+                      style={{
+                        padding: '1.15rem',
+                        background: '#FAFAFA',
+                        borderRadius: 'var(--radius-md)',
+                        border: '1px solid #E2E8F0',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '0.5rem'
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <strong style={{ fontSize: '0.9rem', color: '#0F172A' }}>
+                          {rev.reviewerName || 'Verified Household'}
+                        </strong>
+                        <div style={{ display: 'flex', gap: '2px' }}>
+                          {[1, 2, 3, 4, 5].map((s) => (
+                            <Star
+                              key={s}
+                              size={13}
+                              color={s <= (rev.rating || 5) ? '#F59E0B' : '#CBD5E1'}
+                              fill={s <= (rev.rating || 5) ? '#F59E0B' : 'transparent'}
+                            />
+                          ))}
+                        </div>
+                      </div>
+
+                      {rev.tags && rev.tags.length > 0 && (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem' }}>
+                          {rev.tags.map((tag, tIdx) => (
+                            <span
+                              key={tIdx}
+                              style={{
+                                background: '#ECFDF5',
+                                color: '#065F46',
+                                border: '1px solid #A7F3D0',
+                                padding: '2px 7px',
+                                borderRadius: '4px',
+                                fontSize: '0.72rem',
+                                fontWeight: 700
+                              }}
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      {rev.comment && (
+                        <p style={{ margin: 0, fontSize: '0.825rem', color: '#334155', fontStyle: 'italic', lineHeight: 1.4 }}>
+                          "{rev.comment}"
+                        </p>
+                      )}
+
+                      <div style={{ fontSize: '0.72rem', color: '#94A3B8', marginTop: 'auto', paddingTop: '0.35rem', borderTop: '1px solid #F1F5F9', display: 'flex', justifyContent: 'space-between' }}>
+                        <span>Order #{rev.orderId || 'KC-VERIFIED'}</span>
+                        <span>{new Date(rev.createdAt || Date.now()).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })}</span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
@@ -2422,16 +2753,62 @@ export const ProfilePage = ({
 
             <div className="modal-body" style={{ flex: 1, overflowY: 'auto', minHeight: 0, padding: '1.5rem 1.75rem' }}>
               <form onSubmit={handleSaveProfile} style={{ display: 'flex', flexDirection: 'column', gap: '1.15rem' }}>
+                {/* Avatar Preview & Upload in Modal */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '1rem',
+                  padding: '0.85rem',
+                  background: '#F8FAFC',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid var(--color-border)'
+                }}>
+                  <img
+                    src={editFormData.avatar || currentUser?.avatar || DEMO_USERS.customer.avatar}
+                    alt="Preview"
+                    style={{ width: '56px', height: '56px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--color-primary)' }}
+                  />
+                  <div>
+                    <div style={{ fontSize: '0.825rem', fontWeight: 700, color: '#0F172A', marginBottom: '0.25rem' }}>
+                      Profile Photo
+                    </div>
+                    <label
+                      htmlFor="modal-avatar-upload"
+                      className="btn btn-outline btn-sm"
+                      style={{ padding: '0.3rem 0.75rem', fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer' }}
+                    >
+                      <Upload size={12} /> Change Photo
+                    </label>
+                    <input
+                      type="file"
+                      id="modal-avatar-upload"
+                      accept="image/*"
+                      style={{ display: 'none' }}
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (!f) return;
+                        const r = new FileReader();
+                        r.onload = (ev) => {
+                          if (ev.target.result) {
+                            setEditFormData(prev => ({ ...prev, avatar: ev.target.result }));
+                          }
+                        };
+                        r.readAsDataURL(f);
+                      }}
+                    />
+                  </div>
+                </div>
+
                 <div>
                   <label className="form-label" style={{ fontSize: '0.825rem', fontWeight: 700 }}>Full Name</label>
-                <input
-                  type="text"
-                  value={editFormData.name}
-                  onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
-                  className="form-input"
-                  required
-                />
-              </div>
+                  <input
+                    type="text"
+                    value={editFormData.name}
+                    onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                    className="form-input"
+                    required
+                  />
+                </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <div>

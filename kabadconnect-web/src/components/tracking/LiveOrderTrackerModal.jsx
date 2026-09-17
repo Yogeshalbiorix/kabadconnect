@@ -15,7 +15,10 @@ import {
   RotateCcw,
   ShieldCheck,
   FileCheck,
-  Lock
+  Lock,
+  Star,
+  ThumbsUp,
+  MessageSquareQuote
 } from 'lucide-react';
 import { INITIAL_ORDERS } from '../../data/mockOrders';
 import { OrderRouteMap } from './OrderRouteMap';
@@ -24,7 +27,8 @@ export const LiveOrderTrackerModal = ({
   isOpen, 
   onClose, 
   activeOrder = null,
-  onOpenDoorstepVerification = null 
+  onOpenDoorstepVerification = null,
+  onUpdateOrder = null
 }) => {
   const isOrderCompleted = (ord) => {
     if (!ord) return false;
@@ -43,6 +47,62 @@ export const LiveOrderTrackerModal = ({
     return 2;
   });
   const [showCertificate, setShowCertificate] = useState(false);
+
+  // Customer Agent Review Form State
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState('');
+  const [reviewTags, setReviewTags] = useState([]);
+  const [reviewSubmitted, setReviewSubmitted] = useState(false);
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+
+  useEffect(() => {
+    if (currentOrder?.review) {
+      setReviewRating(currentOrder.review.rating || 5);
+      setReviewComment(currentOrder.review.comment || '');
+      setReviewTags(currentOrder.review.tags || []);
+      setReviewSubmitted(true);
+    } else {
+      setReviewRating(5);
+      setReviewComment('');
+      setReviewTags([]);
+      setReviewSubmitted(false);
+    }
+  }, [currentOrder?.id, currentOrder?.review]);
+
+  const COMPLIMENT_TAGS = [
+    '⚡ Fast & On-Time',
+    '⚖️ Accurate Scale Weighing',
+    '🤝 Polite & Professional',
+    '💳 Instant Cash/UPI Payout',
+    '🛺 Clean Vehicle',
+    '🛡️ Verified Badge Executive'
+  ];
+
+  const toggleReviewTag = (tag) => {
+    setReviewTags(prev => 
+      prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+    );
+  };
+
+  const handleSubmitAgentReview = async (e) => {
+    if (e) e.preventDefault();
+    if (!currentOrder) return;
+    setIsSubmittingReview(true);
+    const reviewPayload = {
+      rating: reviewRating,
+      comment: reviewComment.trim(),
+      tags: reviewTags,
+      reviewerName: currentOrder?.customerName || currentOrder?.customer?.name || 'Verified Customer',
+      createdAt: new Date().toISOString()
+    };
+
+    if (onUpdateOrder) {
+      await onUpdateOrder(currentOrder.id, { review: reviewPayload });
+    }
+    setCurrentOrder(prev => ({ ...prev, review: reviewPayload }));
+    setReviewSubmitted(true);
+    setIsSubmittingReview(false);
+  };
 
   // Dynamic extraction of user's selected items and weights
   const displayItems = React.useMemo(() => {
@@ -618,6 +678,165 @@ export const LiveOrderTrackerModal = ({
                     </div>
                   </div>
                 )}
+
+                {/* Customer Agent Review & Experience Feedback Card */}
+                <div style={{
+                  marginTop: '1.25rem',
+                  padding: '1.25rem',
+                  background: '#FFFFFF',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid #E2E8F0',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                      <Star size={18} color="#F59E0B" fill="#F59E0B" />
+                      <span style={{ fontWeight: 800, fontSize: '0.95rem', color: '#0F172A' }}>
+                        Rate Your Pickup Executive ({currentOrder?.agentName || currentOrder?.assignedAgent?.name || currentOrder?.kabadwala?.name || 'Field Agent'})
+                      </span>
+                    </div>
+                    {reviewSubmitted && (
+                      <span className="badge badge-success" style={{ fontSize: '0.7rem' }}>
+                        ✓ Feedback Saved
+                      </span>
+                    )}
+                  </div>
+
+                  {reviewSubmitted ? (
+                    <div style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: 'var(--radius-sm)', padding: '0.85rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginBottom: '0.4rem' }}>
+                        {[1, 2, 3, 4, 5].map((starVal) => (
+                          <Star
+                            key={starVal}
+                            size={16}
+                            color={starVal <= reviewRating ? '#F59E0B' : '#D1D5DB'}
+                            fill={starVal <= reviewRating ? '#F59E0B' : 'transparent'}
+                          />
+                        ))}
+                        <span style={{ fontWeight: 800, fontSize: '0.85rem', color: '#166534', marginLeft: '0.25rem' }}>
+                          {reviewRating}.0 / 5.0 Rating Given
+                        </span>
+                      </div>
+                      {reviewTags.length > 0 && (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginBottom: '0.4rem' }}>
+                          {reviewTags.map((t, idx) => (
+                            <span key={idx} style={{ background: '#DCFCE7', color: '#14532D', padding: '2px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600 }}>
+                              {t}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      {reviewComment && (
+                        <p style={{ fontSize: '0.825rem', color: '#1F2937', margin: 0, fontStyle: 'italic' }}>
+                          "{reviewComment}"
+                        </p>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setReviewSubmitted(false)}
+                        className="btn btn-sm btn-outline"
+                        style={{ marginTop: '0.65rem', padding: '0.25rem 0.65rem', fontSize: '0.75rem' }}
+                      >
+                        Edit Rating & Review
+                      </button>
+                    </div>
+                  ) : (
+                    <form onSubmit={handleSubmitAgentReview}>
+                      <p style={{ fontSize: '0.825rem', color: 'var(--color-text-muted)', marginBottom: '0.75rem' }}>
+                        How was your doorstep weighing and payout experience with this collector?
+                      </p>
+
+                      {/* Interactive Star Rating Selector */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.85rem' }}>
+                        {[1, 2, 3, 4, 5].map((s) => (
+                          <button
+                            key={s}
+                            type="button"
+                            onClick={() => setReviewRating(s)}
+                            style={{
+                              background: 'transparent',
+                              border: 'none',
+                              cursor: 'pointer',
+                              padding: '2px',
+                              transform: s <= reviewRating ? 'scale(1.15)' : 'scale(1)',
+                              transition: 'transform 0.15s ease'
+                            }}
+                          >
+                            <Star
+                              size={26}
+                              color={s <= reviewRating ? '#F59E0B' : '#CBD5E1'}
+                              fill={s <= reviewRating ? '#F59E0B' : 'transparent'}
+                            />
+                          </button>
+                        ))}
+                        <span style={{ fontWeight: 800, fontSize: '0.9rem', color: '#D97706', marginLeft: '0.35rem' }}>
+                          {reviewRating === 5 ? '★ Excellent Service' : reviewRating === 4 ? '★ Very Good' : reviewRating === 3 ? '★ Average' : '★ Needs Improvement'}
+                        </span>
+                      </div>
+
+                      {/* Quick Compliment Tags */}
+                      <div style={{ marginBottom: '0.85rem' }}>
+                        <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-muted)', marginBottom: '0.4rem' }}>
+                          Quick Feedback Tags:
+                        </div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                          {COMPLIMENT_TAGS.map((tag) => {
+                            const isSelected = reviewTags.includes(tag);
+                            return (
+                              <button
+                                key={tag}
+                                type="button"
+                                onClick={() => toggleReviewTag(tag)}
+                                style={{
+                                  padding: '4px 10px',
+                                  borderRadius: '999px',
+                                  fontSize: '0.75rem',
+                                  fontWeight: 600,
+                                  border: isSelected ? '1.5px solid #10B981' : '1px solid #E2E8F0',
+                                  background: isSelected ? '#ECFDF5' : '#F8FAFC',
+                                  color: isSelected ? '#065F46' : '#475569',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.15s ease'
+                                }}
+                              >
+                                {tag}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Written Feedback Textarea */}
+                      <div style={{ marginBottom: '0.85rem' }}>
+                        <textarea
+                          rows={2}
+                          value={reviewComment}
+                          onChange={(e) => setReviewComment(e.target.value)}
+                          placeholder="Share feedback on scale accuracy, prompt arrival, or collector behavior..."
+                          style={{
+                            width: '100%',
+                            padding: '0.65rem 0.85rem',
+                            borderRadius: 'var(--radius-sm)',
+                            border: '1px solid #CBD5E1',
+                            fontSize: '0.85rem',
+                            resize: 'none',
+                            fontFamily: 'inherit'
+                          }}
+                        />
+                      </div>
+
+                      <button
+                        type="submit"
+                        disabled={isSubmittingReview}
+                        className="btn btn-primary btn-sm"
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', padding: '0.5rem 1.25rem' }}
+                      >
+                        <Star size={14} />
+                        <span>{isSubmittingReview ? 'Submitting...' : 'Submit Agent Review'}</span>
+                      </button>
+                    </form>
+                  )}
+                </div>
               </div>
             )}
           </div>
