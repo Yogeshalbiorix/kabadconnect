@@ -45,7 +45,7 @@ export const HomePage = ({
 
   return (
     <div>
-      {/* 1. Hero Section */}
+      {/* 1. Hero Section (Banner) */}
       <HeroSection
         onOpenBooking={onOpenBooking}
         onOpenCalculator={() => onNavigate('calculator')}
@@ -55,7 +55,17 @@ export const HomePage = ({
         isDetectingLocation={isDetectingLocation}
       />
 
-      {/* 2. Today's Scrap Rate Card Catalog */}
+      {/* 2. Live Radar & Verified Kabadwalas Near You */}
+      <KabadwalaDirectory
+        onSelectPartnerForBooking={onSelectPartnerForBooking}
+        onOpenPartnerModal={onOpenPartnerModal}
+        activeCity={activeCity}
+        userLocation={userLocation}
+        onLocationDetected={onLocationDetected}
+        partners={partners}
+      />
+
+      {/* 3. Today's Scrap Rate Card Catalog */}
       <RateCardCatalog
         onAddScrapItem={onAddScrapItem}
         selectedItems={selectedScrapItems}
@@ -66,7 +76,7 @@ export const HomePage = ({
         isHomePage={true}
       />
 
-      {/* 3. Value & Environmental Impact Teaser */}
+      {/* 4. Value & Environmental Impact Teaser */}
       <section style={{ padding: '3.5rem 0', background: '#FFFFFF' }}>
         <div className="container" style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '1rem' }}>
           <div>
@@ -97,7 +107,7 @@ export const HomePage = ({
         />
       </section>
 
-      {/* 4. Pre-Loved Goods Bazaar Feature (Sell Almirah, Sofa, AC, Dining Table, Bed, Cycles) */}
+      {/* 5. Pre-Loved Goods Bazaar Feature (Sell Almirah, Sofa, AC, Dining Table, Bed, Cycles) */}
       <section style={{
         padding: '3.5rem 0',
         background: 'linear-gradient(180deg, #F8FAFC 0%, #ECFDF5 100%)',
@@ -216,43 +226,8 @@ export const HomePage = ({
         </div>
       </section>
 
-      {/* 5. How It Works Step-by-Step */}
+      {/* 6. How It Works Step-by-Step */}
       <HowItWorks onOpenBooking={onOpenBooking} />
-
-      {/* 6. Hyperlocal Kabadwala Directory */}
-      <section style={{ padding: '3.5rem 0', background: '#FFFFFF' }}>
-        <div className="container" style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '1rem' }}>
-          <div>
-            <div className="section-subtitle">
-              <MapPin size={14} /> Local Presence
-            </div>
-            <h2 className="section-title" style={{ marginBottom: '0.35rem' }}>
-              Nearby Verified Kabadwalas
-            </h2>
-            <p className="section-desc" style={{ margin: 0, maxWidth: '600px' }}>
-              Police-verified collectors with digital scales active in {activeCity}.
-            </p>
-          </div>
-
-          <button
-            onClick={() => onNavigate('kabadwalas')}
-            className="btn btn-outline"
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.85rem' }}
-          >
-            <span>Explore Map & Network</span>
-            <ArrowRight size={15} />
-          </button>
-        </div>
-
-        <KabadwalaDirectory
-          onSelectPartnerForBooking={onSelectPartnerForBooking}
-          onOpenPartnerModal={onOpenPartnerModal}
-          activeCity={activeCity}
-          userLocation={userLocation}
-          onLocationDetected={onLocationDetected}
-          partners={partners}
-        />
-      </section>
 
       {/* 7. Recycled Goods Store Teaser */}
       <section style={{ padding: '3.5rem 0', background: 'var(--color-bg)' }}>
