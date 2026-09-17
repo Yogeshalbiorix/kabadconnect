@@ -91,14 +91,19 @@ export const ProfilePage = ({
     : []);
 
   // ----------------------------------------------------
-  // Dynamic Calculation of Completed Scrap Orders & Wallet (User Role)
+  // Dynamic Calculation of Completed & Recent Scrap Orders & Wallet (User Role)
   // ----------------------------------------------------
-  const completedOrders = userOrders.filter(o => 
-    o.status === 'completed' || 
-    o.doorstepVerification?.paymentStatus === 'paid' || 
-    o.doorstepVerification?.paymentStatus === 'completed' ||
-    o.paymentStatus === 'paid'
-  );
+  const isOrderCompleted = (o) => {
+    if (!o) return false;
+    const s = String(o.status || '').toLowerCase();
+    const ps = String(o.paymentStatus || '').toLowerCase();
+    const dvs = String(o.doorstepVerification?.paymentStatus || '').toLowerCase();
+    return s === 'completed' || s === 'paid' || ps === 'paid' || ps === 'completed' || dvs === 'paid' || dvs === 'completed';
+  };
+
+  const completedOrders = userOrders.filter(o => isOrderCompleted(o));
+  const activeOrders = userOrders.filter(o => !isOrderCompleted(o) && String(o?.status || '').toLowerCase() !== 'cancelled');
+  const cancelledOrders = userOrders.filter(o => String(o?.status || '').toLowerCase() === 'cancelled');
 
   const dynamicOrdersEarned = completedOrders.reduce((acc, o) => {
     const amt = parseFloat(o.paidAmount || o.totalPaid || o.doorstepVerification?.paidAmount || o.doorstepVerification?.finalAmount || o.estimatedAmount || 0);
@@ -656,8 +661,58 @@ export const ProfilePage = ({
     }
   };
 
-  // Customer sub-tab state
-  const [customerTab, setCustomerTab] = useState('pickups'); // 'pickups' | 'addresses' | 'payments' | 'certificate'
+  // Customer sub-tab state ('recent' | 'completed' | 'addresses' | 'payments' | 'certificate')
+  const [customerTab, setCustomerTab] = useState(() => (activeOrders.length > 0 ? 'recent' : 'completed'));
+
+  // Customer Agent Review Modal State
+  const [reviewModalOrder, setReviewModalOrder] = useState(null);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewHoverRating, setReviewHoverRating] = useState(0);
+  const [reviewComment, setReviewComment] = useState('');
+  const [reviewTags, setReviewTags] = useState([]);
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+
+  const handleOpenReviewModal = (order) => {
+    setReviewModalOrder(order);
+    if (order.review) {
+      setReviewRating(Number(order.review.rating) || 5);
+      setReviewComment(order.review.comment || '');
+      setReviewTags(Array.isArray(order.review.tags) ? order.review.tags : []);
+    } else {
+      setReviewRating(5);
+      setReviewComment('');
+      setReviewTags([]);
+    }
+  };
+
+  const handleToggleReviewTag = (tag) => {
+    setReviewTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+    );
+  };
+
+  const handleSubmitAgentReview = async (e) => {
+    if (e) e.preventDefault();
+    if (!reviewModalOrder) return;
+    setIsSubmittingReview(true);
+
+    const reviewPayload = {
+      orderId: reviewModalOrder.id,
+      rating: Number(reviewRating) || 5,
+      comment: reviewComment.trim(),
+      tags: reviewTags,
+      reviewerName: currentUser?.name || 'Verified Customer',
+      createdAt: new Date().toISOString()
+    };
+
+    if (onUpdateOrder) {
+      await onUpdateOrder(reviewModalOrder.id, { review: reviewPayload });
+    }
+
+    showFeedback(`✓ Thank you! Review submitted for ${reviewModalOrder.agentName || reviewModalOrder.assignedAgent?.name || 'your pickup executive'}.`);
+    setIsSubmittingReview(false);
+    setReviewModalOrder(null);
+  };
 
   // Agent State (Duty Status Toggle & Route status)
   const [agentDutyStatus, setAgentDutyStatus] = useState(currentUser?.dutyStatus || 'Online');
@@ -1392,83 +1447,147 @@ export const ProfilePage = ({
             {/* Customer Sub Tabs Navigation */}
             <div style={{
               display: 'flex',
-              gap: '0.5rem',
+              gap: '0.4rem',
               borderBottom: '2px solid var(--color-border)',
-              paddingBottom: '0.25rem'
+              paddingBottom: '0.25rem',
+              overflowX: 'auto',
+              flexWrap: 'nowrap'
             }}>
               <button
                 type="button"
-                onClick={() => setCustomerTab('pickups')}
+                onClick={() => setCustomerTab('recent')}
                 style={{
-                  padding: '0.65rem 1.25rem',
+                  padding: '0.65rem 1.15rem',
                   border: 'none',
                   background: 'transparent',
                   fontWeight: 700,
-                  fontSize: '0.9rem',
-                  color: customerTab === 'pickups' ? 'var(--color-primary)' : 'var(--color-text-secondary)',
-                  borderBottom: customerTab === 'pickups' ? '3px solid var(--color-primary)' : '3px solid transparent',
-                  cursor: 'pointer'
+                  fontSize: '0.875rem',
+                  color: (customerTab === 'recent' || customerTab === 'pickups') ? 'var(--color-primary)' : 'var(--color-text-secondary)',
+                  borderBottom: (customerTab === 'recent' || customerTab === 'pickups') ? '3px solid var(--color-primary)' : '3px solid transparent',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.45rem',
+                  whiteSpace: 'nowrap'
                 }}
               >
-                My Pickup Requests ({userOrders.length})
+                <Clock size={15} />
+                <span>Recent Orders</span>
+                <span className="badge" style={{
+                  background: (customerTab === 'recent' || customerTab === 'pickups') ? 'rgba(13, 92, 58, 0.12)' : '#F1F5F9',
+                  color: (customerTab === 'recent' || customerTab === 'pickups') ? '#0D5C3A' : '#64748B',
+                  fontSize: '0.72rem',
+                  fontWeight: 800,
+                  padding: '0.15rem 0.5rem',
+                  borderRadius: '999px'
+                }}>
+                  {activeOrders.length}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setCustomerTab('completed')}
+                style={{
+                  padding: '0.65rem 1.15rem',
+                  border: 'none',
+                  background: 'transparent',
+                  fontWeight: 700,
+                  fontSize: '0.875rem',
+                  color: customerTab === 'completed' ? '#059669' : 'var(--color-text-secondary)',
+                  borderBottom: customerTab === 'completed' ? '3px solid #059669' : '3px solid transparent',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.45rem',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                <CheckCircle2 size={15} color={customerTab === 'completed' ? '#059669' : undefined} />
+                <span>Completed Orders</span>
+                <span className="badge" style={{
+                  background: customerTab === 'completed' ? 'rgba(16, 185, 129, 0.15)' : '#F1F5F9',
+                  color: customerTab === 'completed' ? '#059669' : '#64748B',
+                  fontSize: '0.72rem',
+                  fontWeight: 800,
+                  padding: '0.15rem 0.5rem',
+                  borderRadius: '999px'
+                }}>
+                  {completedOrders.length}
+                </span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setCustomerTab('payments')}
                 style={{
-                  padding: '0.65rem 1.25rem',
+                  padding: '0.65rem 1.15rem',
                   border: 'none',
                   background: 'transparent',
                   fontWeight: 700,
-                  fontSize: '0.9rem',
+                  fontSize: '0.875rem',
                   color: customerTab === 'payments' ? 'var(--color-primary)' : 'var(--color-text-secondary)',
                   borderBottom: customerTab === 'payments' ? '3px solid var(--color-primary)' : '3px solid transparent',
-                  cursor: 'pointer'
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.45rem',
+                  whiteSpace: 'nowrap'
                 }}
               >
-                Instant UPI & Bank Settlement
+                <Wallet size={15} />
+                <span>Instant Settlement</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setCustomerTab('addresses')}
                 style={{
-                  padding: '0.65rem 1.25rem',
+                  padding: '0.65rem 1.15rem',
                   border: 'none',
                   background: 'transparent',
                   fontWeight: 700,
-                  fontSize: '0.9rem',
+                  fontSize: '0.875rem',
                   color: customerTab === 'addresses' ? 'var(--color-primary)' : 'var(--color-text-secondary)',
                   borderBottom: customerTab === 'addresses' ? '3px solid var(--color-primary)' : '3px solid transparent',
-                  cursor: 'pointer'
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.45rem',
+                  whiteSpace: 'nowrap'
                 }}
               >
-                Saved Addresses
+                <MapPin size={15} />
+                <span>Saved Addresses</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setCustomerTab('certificate')}
                 style={{
-                  padding: '0.65rem 1.25rem',
+                  padding: '0.65rem 1.15rem',
                   border: 'none',
                   background: 'transparent',
                   fontWeight: 700,
-                  fontSize: '0.9rem',
+                  fontSize: '0.875rem',
                   color: customerTab === 'certificate' ? 'var(--color-primary)' : 'var(--color-text-secondary)',
                   borderBottom: customerTab === 'certificate' ? '3px solid var(--color-primary)' : '3px solid transparent',
-                  cursor: 'pointer'
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.45rem',
+                  whiteSpace: 'nowrap'
                 }}
               >
-                Eco Certificates
+                <Award size={15} />
+                <span>Eco Certificates</span>
               </button>
             </div>
 
-            {/* SubTab 1: Pickups List */}
-            {customerTab === 'pickups' && (
+            {/* SubTab 1: Recent / Active Orders List */}
+            {(customerTab === 'recent' || customerTab === 'pickups') && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                {userOrders.length === 0 ? (
+                {activeOrders.length === 0 ? (
                   <div style={{
                     padding: '3rem 1.5rem',
                     textAlign: 'center',
@@ -1477,17 +1596,27 @@ export const ProfilePage = ({
                     border: '1px dashed var(--color-border)'
                   }}>
                     <Truck size={40} color="var(--color-text-muted)" style={{ margin: '0 auto 0.75rem auto' }} />
-                    <h4 style={{ fontSize: '1.15rem', marginBottom: '0.25rem' }}>No Pickup Requests Yet</h4>
-                    <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', marginBottom: '1.25rem' }}>
-                      Schedule your first doorstep scrap pickup and earn instant payout with certified digital weighing.
+                    <h4 style={{ fontSize: '1.15rem', marginBottom: '0.25rem', color: '#0F172A', fontWeight: 800 }}>No Active Pickup Requests</h4>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', marginBottom: '1.25rem', maxWidth: '480px', margin: '0 auto 1.25rem auto' }}>
+                      {completedOrders.length > 0 
+                        ? `You have ${completedOrders.length} completed pickup(s) in your history. Schedule a new pickup anytime for instant doorstep cash!`
+                        : 'Schedule your first doorstep scrap pickup and earn instant payout with certified digital weighing.'}
                     </p>
-                    <button onClick={onOpenBooking} className="btn btn-primary btn-sm">
-                      Schedule a Pickup Now
-                    </button>
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                      <button onClick={onOpenBooking} className="btn btn-primary btn-sm">
+                        <Plus size={14} /> Schedule a Pickup Now
+                      </button>
+                      {completedOrders.length > 0 && (
+                        <button onClick={() => setCustomerTab('completed')} className="btn btn-outline btn-sm">
+                          <CheckCircle2 size={14} /> View Completed Orders ({completedOrders.length})
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ) : (
-                  userOrders.map((order) => {
-                    const isCancelled = order.status === 'Cancelled';
+                  activeOrders.map((order) => {
+                    const isAssigned = Boolean(order.assignedAgentId || order.agentName);
+                    const statusStr = String(order.status || 'scheduled').toLowerCase();
                     return (
                       <div
                         key={order.id}
@@ -1504,16 +1633,20 @@ export const ProfilePage = ({
                       >
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.75rem' }}>
                           <div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem', flexWrap: 'wrap' }}>
                               <span style={{ fontWeight: 800, fontSize: '1.05rem', color: '#0F172A' }}>
                                 Pickup #{order.id}
                               </span>
-                              <span className={`badge ${
-                                order.status === 'Completed' ? 'badge-primary' : 
-                                order.status === 'Cancelled' ? 'badge-danger' : 
-                                'badge-warning'
-                              }`}>
-                                {order.status}
+                              <span className="badge" style={{
+                                background: statusStr === 'weighing' ? '#FEF3C7' : (statusStr === 'assigned' || statusStr === 'in_transit') ? '#DBEAFE' : '#F1F5F9',
+                                color: statusStr === 'weighing' ? '#92400E' : (statusStr === 'assigned' || statusStr === 'in_transit') ? '#1E40AF' : '#475569',
+                                fontWeight: 800,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}>
+                                {statusStr === 'weighing' ? <Scale size={13} /> : statusStr === 'assigned' || statusStr === 'in_transit' ? <Truck size={13} /> : <Clock size={13} />}
+                                {statusStr === 'weighing' ? 'Doorstep Weighing' : statusStr === 'assigned' || statusStr === 'in_transit' ? 'Agent En Route' : 'Scheduled'}
                               </span>
                               <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
                                 Booked on {order.date || 'Recent'}
@@ -1523,16 +1656,34 @@ export const ProfilePage = ({
                               <MapPin size={13} style={{ display: 'inline', marginRight: '4px' }} />
                               {order.address}, {order.city} ({order.pincode}) • Time Slot: <strong>{order.slot || '10:00 AM - 12:00 PM'}</strong>
                             </div>
+
+                            {/* Assigned Agent Banner */}
+                            {isAssigned && (
+                              <div style={{
+                                marginTop: '0.5rem',
+                                padding: '0.45rem 0.75rem',
+                                background: 'rgba(37, 99, 235, 0.08)',
+                                border: '1px solid rgba(191, 219, 254, 0.8)',
+                                borderRadius: '8px',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.5rem',
+                                fontSize: '0.785rem',
+                                color: '#1E40AF'
+                              }}>
+                                <ShieldCheck size={14} color="#2563EB" />
+                                <span>Assigned Executive: <strong>{order.agentName || order.assignedAgent?.name || 'Field Pickup Executive'}</strong></span>
+                                {order.agentPhone && <span>• 📞 {order.agentPhone}</span>}
+                              </div>
+                            )}
                           </div>
 
                           <div style={{ textAlign: 'right' }}>
                             <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>
-                              {order.status === 'completed' ? 'FINAL PAID' : 'ESTIMATED PAYOUT'}
+                              ESTIMATED PAYOUT
                             </div>
-                            <div style={{ fontSize: '1.35rem', fontWeight: 800, color: order.status === 'completed' ? '#059669' : 'var(--color-primary)' }}>
-                              ₹{order.status === 'completed' 
-                                ? (order.totalPaid || order.doorstepVerification?.paidAmount || order.paidAmount || order.estimatedPayout || order.estimatedAmount || 350)
-                                : (order.estimatedPayout || order.estimatedAmount || order.totalEstimated || 350)}
+                            <div style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--color-primary)' }}>
+                              ₹{order.estimatedPayout || order.estimatedAmount || order.totalEstimated || 350}
                             </div>
                           </div>
                         </div>
@@ -1578,21 +1729,257 @@ export const ProfilePage = ({
                             <span>1-Click Reorder</span>
                           </button>
 
-                          {!isCancelled && order.status !== 'Completed' && (
-                            <>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  onCancelOrder(order.id);
-                                  showFeedback(`Pickup #${order.id} has been cancelled.`);
-                                }}
-                                className="btn btn-secondary btn-sm"
-                                style={{ color: '#DC2626', borderColor: '#FCA5A5' }}
-                              >
-                                Cancel Request
-                              </button>
-                            </>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              onCancelOrder(order.id);
+                              showFeedback(`Pickup #${order.id} has been cancelled.`);
+                            }}
+                            className="btn btn-secondary btn-sm"
+                            style={{ color: '#DC2626', borderColor: '#FCA5A5' }}
+                          >
+                            Cancel Request
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            )}
+
+            {/* SubTab 1B: Completed Orders List with Rate & Review Option */}
+            {customerTab === 'completed' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {completedOrders.length === 0 ? (
+                  <div style={{
+                    padding: '3rem 1.5rem',
+                    textAlign: 'center',
+                    background: '#FFFFFF',
+                    borderRadius: 'var(--radius-xl)',
+                    border: '1px dashed var(--color-border)'
+                  }}>
+                    <CheckCircle2 size={40} color="#10B981" style={{ margin: '0 auto 0.75rem auto' }} />
+                    <h4 style={{ fontSize: '1.15rem', marginBottom: '0.25rem', color: '#0F172A', fontWeight: 800 }}>No Completed Orders Yet</h4>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', marginBottom: '1.25rem', maxWidth: '480px', margin: '0 auto 1.25rem auto' }}>
+                      Once your doorstep pickups are weighed and payment is received, your completed order receipts and verified agent review options will appear here.
+                    </p>
+                    <button onClick={onOpenBooking} className="btn btn-primary btn-sm">
+                      <Plus size={14} /> Schedule a Pickup
+                    </button>
+                  </div>
+                ) : (
+                  completedOrders.map((order) => {
+                    const finalAmount = order.totalPaid || order.doorstepVerification?.paidAmount || order.doorstepVerification?.finalAmount || order.paidAmount || order.estimatedPayout || 350;
+                    const verifiedKg = order.doorstepVerification?.verifiedWeight || order.actualWeight || order.totalWeight || order.estimatedWeight || 15;
+                    const hasReview = Boolean(order.review);
+                    const agentName = order.agentName || order.assignedAgent?.name || 'Field Pickup Executive';
+
+                    return (
+                      <div
+                        key={order.id}
+                        style={{
+                          background: '#FFFFFF',
+                          borderRadius: 'var(--radius-lg)',
+                          padding: '1.5rem',
+                          border: '1.5px solid #E2E8F0',
+                          boxShadow: 'var(--shadow-xs)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '1rem'
+                        }}
+                      >
+                        {/* Card Header */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.75rem' }}>
+                          <div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem', flexWrap: 'wrap' }}>
+                              <span style={{ fontWeight: 800, fontSize: '1.05rem', color: '#0F172A' }}>
+                                Pickup #{order.id}
+                              </span>
+                              <span className="badge badge-primary" style={{
+                                background: '#ECFDF5',
+                                color: '#047857',
+                                border: '1px solid #A7F3D0',
+                                fontWeight: 800,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}>
+                                <CheckCircle2 size={13} color="#059669" /> Completed & Paid
+                              </span>
+                              <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
+                                Booked on {order.date || 'Recent'}
+                              </span>
+                            </div>
+                            <div style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)' }}>
+                              <MapPin size={13} style={{ display: 'inline', marginRight: '4px' }} />
+                              {order.address}, {order.city} ({order.pincode}) • Time Slot: <strong>{order.slot || '10:00 AM - 12:00 PM'}</strong>
+                            </div>
+                          </div>
+
+                          <div style={{ textAlign: 'right' }}>
+                            <div style={{ fontSize: '0.75rem', color: '#059669', fontWeight: 700 }}>
+                              FINAL PAID TO YOU
+                            </div>
+                            <div style={{ fontSize: '1.45rem', fontWeight: 900, color: '#059669' }}>
+                              ₹{finalAmount}
+                            </div>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+                              {verifiedKg} kg Recycled
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Order Items Pills */}
+                        <div style={{
+                          background: 'var(--color-bg)',
+                          borderRadius: 'var(--radius-md)',
+                          padding: '0.85rem',
+                          display: 'flex',
+                          flexWrap: 'wrap',
+                          gap: '0.5rem',
+                          alignItems: 'center'
+                        }}>
+                          <span style={{ fontSize: '0.775rem', fontWeight: 700, color: 'var(--color-text-muted)' }}>
+                            Weighed Items:
+                          </span>
+                          {order.items && order.items.length > 0 ? (
+                            order.items.map((it, idx) => (
+                              <span key={idx} className="badge badge-neutral" style={{ fontSize: '0.775rem', background: '#FFFFFF', border: '1px solid var(--color-border)' }}>
+                                {it.name || it.item} ({it.estimatedWeight || it.weight || 5}kg)
+                              </span>
+                            ))
+                          ) : (
+                            <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
+                              Mixed household recyclables (~{verifiedKg} kg)
+                            </span>
                           )}
+                        </div>
+
+                        {/* Agent Review Section */}
+                        <div style={{
+                          background: hasReview ? 'linear-gradient(135deg, #F0FDF4 0%, #FFFFFF 100%)' : '#F8FAFC',
+                          borderRadius: 'var(--radius-md)',
+                          padding: '0.9rem 1.15rem',
+                          border: hasReview ? '1.5px solid #A7F3D0' : '1px dashed #CBD5E1',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          flexWrap: 'wrap',
+                          gap: '0.75rem'
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+                            <div style={{
+                              width: '36px',
+                              height: '36px',
+                              borderRadius: '50%',
+                              background: hasReview ? '#10B981' : '#E2E8F0',
+                              color: hasReview ? '#FFFFFF' : '#64748B',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              flexShrink: 0
+                            }}>
+                              <Star size={18} fill={hasReview ? '#FFFFFF' : 'transparent'} />
+                            </div>
+                            <div>
+                              {hasReview ? (
+                                <>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                                    <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#065F46' }}>
+                                      Your Agent Review ({order.review.rating}.0 / 5.0)
+                                    </span>
+                                    <div style={{ display: 'inline-flex', gap: '2px' }}>
+                                      {[1, 2, 3, 4, 5].map((s) => (
+                                        <Star
+                                          key={s}
+                                          size={12}
+                                          color="#F59E0B"
+                                          fill={s <= (order.review.rating || 5) ? '#F59E0B' : 'transparent'}
+                                        />
+                                      ))}
+                                    </div>
+                                    <span style={{ fontSize: '0.75rem', color: '#64748B' }}>
+                                      for <strong>{agentName}</strong>
+                                    </span>
+                                  </div>
+                                  {order.review.tags && order.review.tags.length > 0 && (
+                                    <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', marginTop: '0.25rem' }}>
+                                      {order.review.tags.map((t, tidx) => (
+                                        <span key={tidx} style={{ fontSize: '0.7rem', background: '#ECFDF5', color: '#065F46', padding: '0.1rem 0.45rem', borderRadius: '4px', fontWeight: 700 }}>
+                                          {t}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
+                                  {order.review.comment && (
+                                    <div style={{ fontSize: '0.8rem', color: '#334155', fontStyle: 'italic', marginTop: '0.25rem' }}>
+                                      "{order.review.comment}"
+                                    </div>
+                                  )}
+                                </>
+                              ) : (
+                                <>
+                                  <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#0F172A' }}>
+                                    Rate & Review Your Pickup Executive
+                                  </div>
+                                  <div style={{ fontSize: '0.75rem', color: '#64748B' }}>
+                                    How was your experience with <strong>{agentName}</strong>? Help maintain 5-star doorstep quality.
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          </div>
+
+                          <div>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenReviewModal(order)}
+                              className="btn btn-sm"
+                              style={{
+                                background: hasReview ? '#FFFFFF' : 'linear-gradient(135deg, #059669 0%, #10B981 100%)',
+                                color: hasReview ? '#059669' : '#FFFFFF',
+                                border: hasReview ? '1.5px solid #059669' : 'none',
+                                fontWeight: 800,
+                                fontSize: '0.785rem',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.35rem',
+                                padding: '0.4rem 0.85rem',
+                                borderRadius: '8px',
+                                boxShadow: hasReview ? 'none' : '0 2px 6px rgba(16, 185, 129, 0.3)'
+                              }}
+                            >
+                              <Star size={13} fill={hasReview ? 'transparent' : '#FFFFFF'} />
+                              <span>{hasReview ? 'Edit Review' : 'Rate & Review Agent'}</span>
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Actions Row */}
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.65rem', flexWrap: 'wrap', borderTop: '1px solid var(--color-border)', paddingTop: '0.75rem' }}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              onReorder(order);
+                              showFeedback(`Items from #${order.id} added to new booking!`);
+                            }}
+                            className="btn btn-outline btn-sm"
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+                          >
+                            <RefreshCw size={13} />
+                            <span>1-Click Reorder</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setCustomerTab('certificate')}
+                            className="btn btn-outline btn-sm"
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', color: '#059669', borderColor: '#A7F3D0' }}
+                          >
+                            <Award size={13} />
+                            <span>Eco Certificate</span>
+                          </button>
                         </div>
                       </div>
                     );
@@ -3488,6 +3875,208 @@ export const ProfilePage = ({
                   style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', padding: '0.55rem 1.25rem' }}
                 >
                   <Save size={16} /> Save & Update Wallet
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 5. Customer Agent Review & Quality Feedback Modal */}
+      {reviewModalOrder && (
+        <div
+          className="modal-overlay"
+          onClick={() => setReviewModalOrder(null)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(15, 23, 42, 0.75)',
+            backdropFilter: 'blur(6px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1350,
+            padding: '1rem'
+          }}
+        >
+          <div
+            className="modal-content animate-scale-up"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: '#FFFFFF',
+              borderRadius: 'var(--radius-xl)',
+              width: '100%',
+              maxWidth: '480px',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.25)',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column'
+            }}
+          >
+            {/* Modal Header */}
+            <div style={{
+              padding: '1.25rem 1.5rem',
+              borderBottom: '1px solid var(--color-border)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              background: 'linear-gradient(135deg, #F0FDF4 0%, #FFFFFF 100%)'
+            }}>
+              <div>
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                  <Star size={20} color="#F59E0B" fill="#F59E0B" />
+                  <span>Rate & Review Pickup Agent</span>
+                </h3>
+                <p style={{ margin: '0.15rem 0 0', fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
+                  Pickup Order <strong>#{reviewModalOrder.id}</strong> • Executive: <strong>{reviewModalOrder.agentName || reviewModalOrder.assignedAgent?.name || 'Field Pickup Executive'}</strong>
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setReviewModalOrder(null)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: '#64748B',
+                  padding: '4px',
+                  borderRadius: '6px'
+                }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <form onSubmit={handleSubmitAgentReview} style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.15rem' }}>
+              {/* Star Rating Selector */}
+              <div style={{ textAlign: 'center', padding: '0.5rem 0' }}>
+                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#64748B', marginBottom: '0.5rem' }}>
+                  Select Your Overall Rating
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginBottom: '0.4rem' }}>
+                  {[1, 2, 3, 4, 5].map((starVal) => {
+                    const isFilled = (reviewHoverRating || reviewRating) >= starVal;
+                    return (
+                      <button
+                        key={starVal}
+                        type="button"
+                        onClick={() => setReviewRating(starVal)}
+                        onMouseEnter={() => setReviewHoverRating(starVal)}
+                        onMouseLeave={() => setReviewHoverRating(0)}
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          cursor: 'pointer',
+                          padding: '4px',
+                          transform: (reviewHoverRating || reviewRating) === starVal ? 'scale(1.2)' : 'scale(1)',
+                          transition: 'transform 0.15s ease'
+                        }}
+                      >
+                        <Star
+                          size={32}
+                          color={isFilled ? '#F59E0B' : '#CBD5E1'}
+                          fill={isFilled ? '#F59E0B' : 'transparent'}
+                        />
+                      </button>
+                    );
+                  })}
+                </div>
+                <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#0D5C3A' }}>
+                  {reviewRating === 5 && '🌟 Excellent (5.0) - Fast, Polite & Fair!'}
+                  {reviewRating === 4 && '👍 Good (4.0) - Prompt & Courteous'}
+                  {reviewRating === 3 && '👌 Average (3.0) - Met Expectations'}
+                  {reviewRating === 2 && '👎 Below Expectations (2.0)'}
+                  {reviewRating === 1 && '⚠️ Poor Experience (1.0)'}
+                </div>
+              </div>
+
+              {/* Compliment Tags */}
+              <div>
+                <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '0.4rem' }}>
+                  What did you like the most? (Optional)
+                </label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                  {[
+                    '⚡ Fast & On-Time',
+                    '⚖️ Accurate Scale Weighing',
+                    '🤝 Polite & Professional',
+                    '💳 Instant Cash/UPI Payout',
+                    '🛺 Clean Vehicle',
+                    '🛡️ Verified Badge Executive'
+                  ].map((tag, idx) => {
+                    const isSelected = reviewTags.includes(tag);
+                    return (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => handleToggleReviewTag(tag)}
+                        style={{
+                          padding: '0.3rem 0.65rem',
+                          fontSize: '0.75rem',
+                          fontWeight: 700,
+                          borderRadius: '8px',
+                          border: isSelected ? '1.5px solid #0D5C3A' : '1px solid #E2E8F0',
+                          background: isSelected ? '#ECFDF5' : '#F8FAFC',
+                          color: isSelected ? '#065F46' : '#475569',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.25rem',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        {isSelected && <Check size={12} color="#059669" />}
+                        <span>{tag}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Comment Textarea */}
+              <div>
+                <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '0.4rem' }}>
+                  Detailed Feedback / Comments
+                </label>
+                <textarea
+                  rows={3}
+                  value={reviewComment}
+                  onChange={(e) => setReviewComment(e.target.value)}
+                  placeholder="Share details about the doorstep weighing, timing, or payment experience..."
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    fontSize: '0.85rem',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--color-border)',
+                    resize: 'vertical',
+                    fontFamily: 'inherit',
+                    outline: 'none'
+                  }}
+                />
+              </div>
+
+              {/* Actions */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setReviewModalOrder(null)}
+                  className="btn btn-outline btn-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingReview}
+                  className="btn btn-primary btn-sm"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', padding: '0.55rem 1.35rem' }}
+                >
+                  <Check size={16} />
+                  <span>{isSubmittingReview ? 'Submitting...' : 'Submit Verified Review'}</span>
                 </button>
               </div>
             </form>
