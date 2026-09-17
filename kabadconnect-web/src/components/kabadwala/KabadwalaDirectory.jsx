@@ -35,9 +35,16 @@ export const KabadwalaDirectory = ({
 
   const partnerList = partners && partners.length > 0 ? partners : KABADWALA_PARTNERS;
   const rawPartners = [...partnerList].sort((a, b) => {
+    // 1. Prioritize real database registered field agents
+    if (a.isRealDbAgent && !b.isRealDbAgent) return -1;
+    if (!a.isRealDbAgent && b.isRealDbAgent) return 1;
+
+    // 2. Prioritize current active city
     if (isAhmedabad) {
-      if (a.city === 'Ahmedabad' && b.city !== 'Ahmedabad') return -1;
-      if (b.city === 'Ahmedabad' && a.city !== 'Ahmedabad') return 1;
+      const aIsAhmd = String(a.city || '').toLowerCase().includes('ahmedabad') || String(a.locality || '').toLowerCase().includes('ahmedabad');
+      const bIsAhmd = String(b.city || '').toLowerCase().includes('ahmedabad') || String(b.locality || '').toLowerCase().includes('ahmedabad');
+      if (aIsAhmd && !bIsAhmd) return -1;
+      if (!aIsAhmd && bIsAhmd) return 1;
     }
     return 0;
   });

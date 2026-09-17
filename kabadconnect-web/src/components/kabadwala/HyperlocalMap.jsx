@@ -54,24 +54,46 @@ export const HyperlocalMap = ({
 
   const incomingPartners = partners && partners.length > 0 ? partners : KABADWALA_PARTNERS;
 
-  // Dynamic ranked partners based on user coords, ensuring ALL agents are positioned in the nearby radius
+  // Dynamic ranked partners strictly for the active city, prioritizing real database agents
   const cityPartners = React.useMemo(() => {
     const userLat = currentCoords[0] || (isAhmd ? 23.0135 : 28.6385);
     const userLng = currentCoords[1] || (isAhmd ? 72.5125 : 77.3710);
 
-    // Realistic offsets around doorstep (0.6km - 2.0km in all directions)
+    // 1. Filter partners that belong to the active city / nearby area
+    const localFiltered = incomingPartners.filter((p) => {
+      const pCity = String(p.city || '').toLowerCase();
+      const pLocality = String(p.locality || '').toLowerCase();
+      const pAddress = String(p.address || '').toLowerCase();
+      if (isAhmd) {
+        return pCity.includes('ahmedabad') || pLocality.includes('ahmedabad') || pAddress.includes('ahmedabad') || pLocality.includes('bopal') || pLocality.includes('prahlad') || pLocality.includes('sg highway');
+      } else {
+        // Delhi / Gurugram / Noida / NCR
+        return !pCity.includes('ahmedabad') && !pLocality.includes('ahmedabad') && !pAddress.includes('ahmedabad');
+      }
+    });
+
+    const activeList = localFiltered.length > 0 ? localFiltered : incomingPartners;
+
+    // Realistic offsets around doorstep for local agents (0.5km - 1.8km in all directions)
     const offsets = [
-      [0.0072, 0.0065],   // North-East (~1.1 km)
-      [-0.0068, 0.0080],  // South-East (~1.2 km)
-      [0.0055, -0.0078],  // North-West (~1.0 km)
-      [-0.0082, -0.0065], // South-West (~1.3 km)
-      [0.0105, 0.0022],   // North (~1.2 km)
-      [-0.0098, -0.0028], // South (~1.1 km)
-      [0.0028, 0.0115],   // East (~1.2 km)
-      [-0.0032, -0.0110]  // West (~1.2 km)
+      [0.0055, 0.0048],   // North-East (~0.8 km)
+      [-0.0052, 0.0060],  // South-East (~0.9 km)
+      [0.0042, -0.0058],  // North-West (~0.8 km)
+      [-0.0062, -0.0045], // South-West (~0.9 km)
+      [0.0080, 0.0018],   // North (~1.0 km)
+      [-0.0075, -0.0020], // South (~0.9 km)
+      [0.0020, 0.0085],   // East (~1.0 km)
+      [-0.0025, -0.0080]  // West (~1.0 km)
     ];
 
-    const mapped = incomingPartners.map((p, idx) => {
+    // Prioritize real database agents (e.g. isRealDbAgent: true)
+    const sortedBase = [...activeList].sort((a, b) => {
+      if (a.isRealDbAgent && !b.isRealDbAgent) return -1;
+      if (!a.isRealDbAgent && b.isRealDbAgent) return 1;
+      return 0;
+    });
+
+    const mapped = sortedBase.map((p, idx) => {
       let coords = p.coords;
       const off = offsets[idx % offsets.length];
 
@@ -82,7 +104,7 @@ export const HyperlocalMap = ({
                : (coords[0] > 28.0 && coords[0] < 29.2 && coords[1] > 76.5 && coords[1] < 77.8)
       );
 
-      // If coordinates are in a different city or missing, position them locally near user's doorstep
+      // If coordinates are in current city, use them; otherwise position around doorstep
       if (!isCoordInCurrentCity) {
         coords = [
           parseFloat((userLat + off[0]).toFixed(5)),
@@ -114,7 +136,12 @@ export const HyperlocalMap = ({
 
   useEffect(() => {
     if (cityPartners.length > 0) {
-      setSelectedPartner(cityPartners[0]);
+      setSelectedPartner((prev) => {
+        if (prev && cityPartners.some(p => p.id === prev.id)) {
+          return cityPartners.find(p => p.id === prev.id);
+        }
+        return cityPartners[0];
+      });
     }
   }, [cityPartners]);
 
@@ -394,18 +421,19 @@ export const HyperlocalMap = ({
     });
   }, []);
 
-  // Update markers and route line whenever cityPartners or user coordinates change
+  // Update markers and route line whenever cityPartners, selectedPartner, or user coordinates change
   useEffect(() => {
     if (!mapInstanceRef.current) return;
     const map = mapInstanceRef.current;
     updatePartnerMarkers(map, cityPartners);
 
     const userLngLat = toLngLat(currentCoords);
-    if (nearestPartner && nearestPartner.coords) {
-      const nearestLngLat = toLngLat(nearestPartner.coords);
-      updateRouteLine(map, userLngLat, nearestLngLat);
+    const activeTarget = selectedPartner || nearestPartner;
+    if (activeTarget && activeTarget.coords) {
+      const targetLngLat = toLngLat(activeTarget.coords);
+      updateRouteLine(map, userLngLat, targetLngLat);
     }
-  }, [cityPartners, currentCoords, nearestPartner, updatePartnerMarkers, updateRouteLine]);
+  }, [cityPartners, currentCoords, selectedPartner, nearestPartner, updatePartnerMarkers, updateRouteLine]);
 
   // When user coordinates change dynamically (e.g. after geolocation), re-position and fly
   useEffect(() => {
