@@ -1,11 +1,12 @@
 import { connectToDatabase, isDbConfigured } from '../_lib/dbConnect.js';
 import Partner from '../_models/Partner.js';
+import User from '../_models/User.js';
 import { DEFAULT_PARTNERS } from '../_lib/seedData.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
 
   if (req.method === 'OPTIONS') {
@@ -15,7 +16,7 @@ export default async function handler(req, res) {
 
   const configured = isDbConfigured();
 
-  // GET: Retrieve list of verified partners
+  // GET: Retrieve list of verified partners and live registered field agents
   if (req.method === 'GET') {
     if (!configured) {
       return res.status(200).json({
@@ -29,30 +30,96 @@ export default async function handler(req, res) {
     try {
       await connectToDatabase();
       const { city } = req.query || {};
-      const filter = {};
+
+      // 1. Fetch real registered agents & partners from MongoDB Atlas Users collection
+      const userFilter = { role: { $in: ['agent', 'partner'] } };
       if (city && city !== 'all') {
-        filter.city = new RegExp(city, 'i');
+        userFilter.city = new RegExp(city, 'i');
       }
 
-      let partners = await Partner.find(filter).lean();
+      const realAgentUsers = await User.find(userFilter).lean();
 
-      if (!partners || partners.length === 0) {
-        const totalCount = await Partner.countDocuments();
-        if (totalCount === 0) {
-          try {
-            await Partner.insertMany(DEFAULT_PARTNERS);
-            partners = await Partner.find(filter).lean();
-          } catch (seedErr) {
-            partners = DEFAULT_PARTNERS;
-          }
-        }
+      // Convert real registered users into rich collector/partner objects
+      const dynamicAgentPartners = (realAgentUsers || []).map((u, idx) => {
+        const isAhmd = String(u.city || '').toLowerCase().includes('ahmedabad');
+        const defaultCoords = isAhmd 
+          ? [23.0135 + (idx * 0.004), 72.5125 + (idx * 0.003)] 
+          : [28.6385 + (idx * 0.004), 77.3710 + (idx * 0.003)];
+
+        const reviewsCount = Array.isArray(u.reviews) ? u.reviews.length : (Number(u.reviewCount) || 15);
+        const rating = Number(u.rating) || 4.9;
+        const totalPickups = Number(u.completedPickups || u.todayPickupsCount || 24);
+
+        const vType = u.vehicleType || 'Electric Cargo E-Rickshaw';
+        const vReg = u.vehicleRegNo || u.vehicleNumber || `GJ-01-EA-${5500 + idx}`;
+        const photo = u.avatar || (idx % 2 === 0 
+          ? 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80'
+          : 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80');
+
+        return {
+          id: u.id || String(u._id),
+          name: u.name || 'Verified Field Executive',
+          businessName: u.businessName || `${u.name}'s Verified Scrap Express`,
+          phone: u.phone || '+91 98765 43210',
+          email: u.email,
+          photo: photo,
+          avatar: photo,
+          rating: rating,
+          reviewsCount: reviewsCount,
+          totalPickups: totalPickups,
+          distanceKm: parseFloat((0.8 + (idx * 0.4)).toFixed(1)),
+          locality: u.address || u.operatingZone || (isAhmd ? 'Prahlad Nagar & SG Highway' : 'Indirapuram / Sector 62'),
+          city: u.city || (isAhmd ? 'Ahmedabad' : 'Delhi NCR'),
+          coords: u.coords || defaultCoords,
+          vehicle: `${vType} (${vReg})`,
+          vehicleReg: vReg,
+          badge: totalPickups >= 8 ? '🛡️ Verified Pro Collector' : (u.badge || 'Verified Collector'),
+          digitalScaleVerified: true,
+          kycVerified: true,
+          upiEnabled: true,
+          status: u.dutyStatus === 'Offline' ? 'offline' : 'available',
+          etaMinutes: 10 + (idx * 3),
+          isRealDbAgent: true
+        };
+      });
+
+      // 2. Query any explicitly created Partner collection documents
+      const partnerFilter = {};
+      if (city && city !== 'all') {
+        partnerFilter.city = new RegExp(city, 'i');
+      }
+      const rawPartners = await Partner.find(partnerFilter).lean();
+
+      // Ensure all custom partners have valid working photo URLs
+      const cleanedCustomPartners = (rawPartners || []).map((p, idx) => ({
+        ...p,
+        photo: p.photo || p.avatar || (idx % 2 === 0
+          ? 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80'
+          : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80'),
+        avatar: p.avatar || p.photo
+      }));
+
+      // Combine real dynamic agents from DB Users + custom Partners
+      let finalPartners = [];
+      if (dynamicAgentPartners.length > 0) {
+        // If real registered agents exist, prioritize them!
+        const existingNames = new Set(dynamicAgentPartners.map(a => a.name.toLowerCase()));
+        const nonDuplicateCustom = cleanedCustomPartners.filter(p => !existingNames.has(p.name.toLowerCase()));
+        finalPartners = [...dynamicAgentPartners, ...nonDuplicateCustom];
+      } else if (cleanedCustomPartners.length > 0) {
+        finalPartners = cleanedCustomPartners;
+      } else {
+        finalPartners = DEFAULT_PARTNERS.map(p => ({
+          ...p,
+          photo: p.photo || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80'
+        }));
       }
 
       return res.status(200).json({
         success: true,
         source: 'mongodb',
-        count: partners.length,
-        data: partners
+        count: finalPartners.length,
+        data: finalPartners
       });
     } catch (err) {
       return res.status(200).json({

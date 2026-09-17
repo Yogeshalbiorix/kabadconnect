@@ -183,8 +183,9 @@ export const KabadwalaDirectory = ({
                 {/* Header: Photo, Name, Rating */}
                 <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: '1.25rem' }}>
                   <img
-                    src={partner.photo}
+                    src={partner.photo || partner.avatar || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80'}
                     alt={partner.name}
+                    onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80'; }}
                     style={{
                       width: '64px',
                       height: '64px',

@@ -1,15 +1,15 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { 
-  X, 
-  Upload, 
-  RotateCw, 
-  ZoomIn, 
-  ZoomOut, 
-  Check, 
-  Image as ImageIcon, 
-  Camera, 
-  RefreshCcw, 
-  Sparkles, 
+import {
+  X,
+  Upload,
+  RotateCw,
+  ZoomIn,
+  ZoomOut,
+  Check,
+  Image as ImageIcon,
+  Camera,
+  RefreshCcw,
+  Sparkles,
   Move,
   Maximize2
 } from 'lucide-react';
@@ -217,7 +217,7 @@ export const AvatarCropModal = ({
       }
       onClose();
     } catch (err) {
-      console.error('Failed to crop 400x400 avatar:', err);
+      console.error('Failed to crop avatar:', err);
       alert('Could not process avatar image. Please try another image file.');
     } finally {
       setIsSaving(false);
@@ -530,7 +530,7 @@ export const AvatarCropModal = ({
             style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', padding: '0.55rem 1.35rem' }}
           >
             <Check size={16} />
-            <span>{isSaving ? 'Processing 400×400 Crop...' : 'Save 400×400 Profile Photo'}</span>
+            <span>{isSaving ? 'Processing Crop...' : 'Save Profile Photo'}</span>
           </button>
         </div>
       </div>

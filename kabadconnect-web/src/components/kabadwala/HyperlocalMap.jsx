@@ -282,11 +282,12 @@ export const HyperlocalMap = ({
               white-space: nowrap;
             ">
               <img 
-                src="${partner.photo}" 
+                src="${partner.photo || partner.avatar || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80'}" 
+                onerror="this.src='https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80'"
                 style="width: 28px; height: 28px; border-radius: 50%; object-fit: cover;"
               />
               <div style="display: flex; flex-direction: column; text-align: left;">
-                <span style="font-weight: 700; font-size: 11px; color: #0F172A;">${partner.name.split(' ')[0]}</span>
+                <span style="font-weight: 700; font-size: 11px; color: #0F172A;">${(partner.name || 'Collector').split(' ')[0]}</span>
                 <span style="font-size: 9.5px; color: #10B981; font-weight: 700;">★ ${partner.rating} • ${partner.distanceKm}km</span>
               </div>
             </div>
@@ -644,8 +645,9 @@ export const HyperlocalMap = ({
             }}>
               <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
                 <img
-                  src={selectedPartner.photo}
+                  src={selectedPartner.photo || selectedPartner.avatar || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80'}
                   alt={selectedPartner.name}
+                  onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80'; }}
                   style={{
                     width: '54px',
                     height: '54px',
