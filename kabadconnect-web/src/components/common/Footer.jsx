@@ -200,7 +200,7 @@ export const Footer = ({ onOpenBooking, onOpenPartnerModal, onNavigate = () => {
           </div>
         </div>
 
-        {/* Bottom Bar: Copyright & Attribution */}
+        {/* Bottom Bar: Copyright, Cookie Preferences & Attribution */}
         <div style={{
           borderTop: '1px solid rgba(255, 255, 255, 0.1)',
           paddingTop: '2rem',
@@ -212,8 +212,27 @@ export const Footer = ({ onOpenBooking, onOpenPartnerModal, onNavigate = () => {
           fontSize: '0.8rem',
           color: '#64748B'
         }}>
-          <div>
-            © {new Date().getFullYear()} KabadCollect Technologies Pvt. Ltd. All rights reserved.
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+            <span>© {new Date().getFullYear()} KabadCollect Technologies Pvt. Ltd. All rights reserved.</span>
+            <button
+              onClick={() => window.dispatchEvent(new CustomEvent('kabadconnect_open_cookie_settings'))}
+              style={{
+                background: 'rgba(16, 185, 129, 0.1)',
+                border: '1px solid rgba(16, 185, 129, 0.25)',
+                color: 'var(--color-accent-mint-light)',
+                padding: '3px 10px',
+                borderRadius: '999px',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              <span>🍪 Cookie Settings</span>
+            </button>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#94A3B8' }}>

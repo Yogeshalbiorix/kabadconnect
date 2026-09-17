@@ -27,6 +27,7 @@ import { SellProductModal } from './components/marketplace/SellProductModal';
 import { DoorstepVerificationModal } from './components/orders/DoorstepVerificationModal';
 import { AgentDispatchAlertModal } from './components/agent/AgentDispatchAlertModal';
 import { GeminiChatbot } from './components/common/GeminiChatbot';
+import { CookieConsentModal } from './components/common/CookieConsentModal';
 
 // Initial data & utilities
 import { INITIAL_ORDERS } from './data/mockOrders';
@@ -1111,6 +1112,9 @@ export default function App() {
         onNavigate={navigateTo}
         currentUser={currentUser}
       />
+
+      {/* Global Hyperlocal Cookie Consent Banner & Preferences Modal */}
+      <CookieConsentModal />
     </div>
   );
 }
