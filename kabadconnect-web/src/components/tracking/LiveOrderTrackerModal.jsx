@@ -315,30 +315,64 @@ export const LiveOrderTrackerModal = ({
             border: '1px solid var(--color-border)',
             marginBottom: '1.25rem'
           }}>
-            {/* Stage 1 or 2: Partner Profile & Live Status */}
-            {(simulatedStage <= 2) && (
+            {/* Stage 0: Searching for Nearest Field Agent */}
+            {simulatedStage === 0 && (
+              <div style={{ textAlign: 'center', padding: '1.25rem 0.5rem' }}>
+                <div style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '64px',
+                  height: '64px',
+                  borderRadius: '50%',
+                  background: 'rgba(16, 185, 129, 0.1)',
+                  color: '#10B981',
+                  marginBottom: '1rem',
+                  animation: 'pulse 2s infinite'
+                }}>
+                  <Truck size={32} />
+                </div>
+                <h4 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: '0.35rem' }}>
+                  Dispatching to Nearest Online Field Agent...
+                </h4>
+                <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', maxWidth: '380px', margin: '0 auto 1rem' }}>
+                  Your pickup request has been broadcasted to verified collectors in your locality. As soon as an agent accepts, their live vehicle tracking and ETA will appear here.
+                </p>
+                <div className="badge badge-primary" style={{ padding: '0.4rem 0.85rem', fontSize: '0.8rem' }}>
+                  Broadcast Active • Radius: 3.5 km
+                </div>
+              </div>
+            )}
+
+            {/* Stage 1 or 2: Partner / Field Agent Profile & Live Status */}
+            {(simulatedStage === 1 || simulatedStage === 2) && (
               <div>
                 <div className="flex-between" style={{ marginBottom: '0.85rem' }}>
                   <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>
-                    Collector Details & ETA
+                    {currentOrder?.assignedAgentId ? 'Assigned Field Agent' : 'Collector Details & ETA'}
                   </div>
                   <span className="badge badge-primary">
-                    ETA: ~14 Mins (0.8 km)
+                    ETA: ~12 Mins (0.6 km)
                   </span>
                 </div>
 
                 <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
                   <img
-                    src={currentOrder?.kabadwala?.photo || 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=120&q=80'}
+                    src={currentOrder?.agentAvatar || currentOrder?.kabadwala?.photo || 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=120&q=80'}
                     alt="Collector"
                     style={{ width: '56px', height: '56px', borderRadius: '14px', objectFit: 'cover' }}
                   />
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 800, fontSize: '1.05rem' }}>
-                      {currentOrder?.kabadwala?.name || 'Ramesh Kumar'}
+                    <div style={{ fontWeight: 800, fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <span>{currentOrder?.agentName || currentOrder?.kabadwala?.name || 'Ramesh Kumar'}</span>
+                      {currentOrder?.agentCode && (
+                        <span style={{ fontSize: '0.72rem', background: '#E0E7FF', color: '#3730A3', padding: '1px 6px', borderRadius: '4px', fontWeight: 700 }}>
+                          {currentOrder.agentCode}
+                        </span>
+                      )}
                     </div>
                     <div style={{ fontSize: '0.825rem', color: 'var(--color-text-muted)' }}>
-                      Vehicle: {currentOrder?.kabadwala?.vehicle || 'E-Rickshaw (DL-5ER-8921)'}
+                      Vehicle: {currentOrder?.agentVehicle || currentOrder?.kabadwala?.vehicle || 'E-Rickshaw (DL-5ER-8921)'}
                     </div>
                     <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.2rem', alignItems: 'center' }}>
                       <span style={{ color: '#F59E0B', fontWeight: 700, fontSize: '0.8rem' }}>★ 4.9</span>
@@ -347,7 +381,7 @@ export const LiveOrderTrackerModal = ({
                   </div>
 
                   <a
-                    href={`tel:${currentOrder?.kabadwala?.phone || '9811234567'}`}
+                    href={`tel:${currentOrder?.agentPhone || currentOrder?.kabadwala?.phone || '9811234567'}`}
                     className="btn btn-sm btn-outline"
                     style={{ borderRadius: 'var(--radius-full)' }}
                   >

@@ -195,12 +195,12 @@ export const DEMO_USERS = {
   customer: {
     name: 'Guest User',
     email: 'guest@kabadcollect.com',
-    phone: '',
+    phone: '+91 98765 43210',
     role: 'user',
     avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
     address: 'Not logged in',
     city: 'Delhi NCR',
-    pincode: '',
+    pincode: '110001',
     upiId: '',
     totalEarned: 0,
     totalRecycledKg: 0,
@@ -211,26 +211,58 @@ export const DEMO_USERS = {
   agent: {
     name: 'Pickup Agent',
     agentCode: 'AG-ONLINE',
-    email: '',
-    phone: '',
+    email: 'agent@kabadcollect.com',
+    phone: '+91 98112 34567',
     role: 'agent',
     avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
     city: 'Delhi NCR',
+    rating: '4.9',
+    vehicleType: 'Electric 3-Wheeler Cargo',
+    vehicleRegNo: 'DL-1ER-4829',
+    todaysEarnings: 2450,
+    monthlyEarnings: 48500,
+    completedPickups: 342,
+    onTimeRate: '98.4%',
+    currentPayloadKg: 140,
+    maxPayloadKg: 500,
+    scaleCertificationNo: 'NABL-QC-2026-88',
     assignedRoutes: []
   },
   partner: {
-    name: 'Recycling Merchant',
-    businessName: 'Verified Yard Hub',
-    partnerTier: 'Certified Merchant Hub',
-    email: '',
-    phone: '',
+    name: 'Rajesh Sharma',
+    businessName: 'GreenEarth Aggregators & Yard Hub',
+    partnerTier: 'Certified Tier-1 Merchant',
+    email: 'merchant@kabadcollect.com',
+    phone: '+91 98990 12345',
     role: 'partner',
     avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80',
-    currentStockTons: 0
+    gstin: '07AAACG1234F1Z5',
+    tradeLicense: 'TRD-NDMC-2024-9981',
+    address: 'Plot 44, Okhla Industrial Area Phase-III',
+    city: 'New Delhi',
+    currentStockTons: 48.5,
+    monthlyCapacityTons: 150,
+    totalProcuredTons: 1840,
+    totalDisbursedLakhs: '94.2',
+    activeContractVehicles: 12,
+    directMillTieups: [
+      'Tata Steel Circularity Works (Faridabad)',
+      'Century Pulp & Paper Mills (Lalkuan)',
+      'Bhilosa Polymers Recycled Flakes Plant'
+    ],
+    bankAccount: {
+      bankName: 'HDFC Bank Commercial Banking',
+      accountNo: '•••• •••• 4912',
+      ifsc: 'HDFC0000128'
+    }
   },
   admin: {
     name: 'System Admin',
     email: 'admin@kabadcollect.com',
+    phone: '+91 99999 00000',
+    city: 'Delhi NCR',
+    avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=150&q=80',
     role: 'admin'
   }
 };
+

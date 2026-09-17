@@ -49,9 +49,9 @@ export const Navbar = ({
   onOpenSellModal = null,
   walletBalance = null
 }) => {
-  const displayWallet = walletBalance !== null && walletBalance !== undefined 
+  const displayWallet = Number(walletBalance !== null && walletBalance !== undefined 
     ? walletBalance 
-    : (currentUser?.totalEarned || 0);
+    : (currentUser?.totalEarned || 0)) || 0;
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [cityDropdownOpen, setCityDropdownOpen] = useState(false);

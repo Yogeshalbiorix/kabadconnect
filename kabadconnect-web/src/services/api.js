@@ -125,6 +125,27 @@ export async function apiUpdateOrder(orderId, updates) {
   return { success: false, source: 'local' };
 }
 
+export async function apiAcceptPickupOrder(orderId, agentUser) {
+  try {
+    const res = await fetchWithTimeout(`${API_BASE}/orders?id=${encodeURIComponent(orderId)}&action=accept-pickup`, {
+      method: 'PUT',
+      body: JSON.stringify({ 
+        id: orderId, 
+        action: 'accept-pickup',
+        agent: agentUser 
+      })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return { success: true, source: data.source, order: data.data };
+    }
+  } catch (err) {
+    console.warn('[API Service] Accept pickup API call failed, using local state:', err.message);
+  }
+  return { success: false, source: 'local' };
+}
+
+
 // ----------------------------------------------------
 // 3. Scrap Rates API (Live Market Rates)
 // ----------------------------------------------------

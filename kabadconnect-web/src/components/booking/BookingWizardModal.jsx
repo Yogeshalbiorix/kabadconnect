@@ -291,6 +291,8 @@ export const BookingWizardModal = ({
 
     const calculatedTotalAmount = initialScrapData?.estimatedRupees || initialScrapData?.totalPayout || calculatedItems.reduce((acc, it) => acc + (it.amount || Math.round(it.weight * it.rate)), 0) || 750;
 
+    const pickupOtp = Math.floor(1000 + Math.random() * 9000).toString();
+
     const newOrder = {
       id: bookingId,
       customerName: formData.name,
@@ -298,7 +300,12 @@ export const BookingWizardModal = ({
       address: `${formData.address}, ${formData.city}`,
       pincode: formData.pincode,
       scheduledSlot: selectedSlot,
-      status: 'in_transit',
+      status: 'pending',
+      doorstepVerification: {
+        otp: pickupOtp,
+        isVerified: false,
+        paymentStatus: 'pending'
+      },
       createdAt: new Date().toISOString(),
       categories: selectedCategories,
       items: calculatedItems,

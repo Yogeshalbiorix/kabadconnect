@@ -346,6 +346,9 @@ export default async function handler(req, res) {
       // Hash password
       const hashedPassword = hashPassword(rawPassword);
 
+      const isAgent = (body.role || 'user') === 'agent';
+      const isPartner = (body.role || 'user') === 'partner';
+
       const newUserData = {
         id: body.id || `usr-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
         name,
@@ -353,7 +356,11 @@ export default async function handler(req, res) {
         password: hashedPassword,
         phone: (body.phone || '').trim(),
         role: body.role || 'user',
-        avatar: body.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
+        avatar: body.avatar || (isAgent 
+          ? 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80'
+          : isPartner 
+            ? 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80'
+            : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80'),
         city: body.city || 'Delhi NCR',
         pincode: (body.pincode || '').trim(),
         address: (body.address || '').trim(),
@@ -362,6 +369,35 @@ export default async function handler(req, res) {
         totalRecycledKg: 0,
         co2SavedKg: 0,
         treesSaved: 0,
+        // Agent Specific Fields (clean real data)
+        ...(isAgent ? {
+          agentCode: body.agentCode || `AG-${Math.floor(1000 + Math.random() * 9000)}`,
+          dutyStatus: body.dutyStatus || 'Online',
+          vehicleType: body.vehicleType || 'Electric 3-Wheeler Cargo',
+          vehicleRegNo: body.vehicleRegNo || '',
+          scaleCertificationNo: body.scaleCertificationNo || `NABL-QC-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`,
+          rating: 5.0,
+          completedPickups: 0,
+          todaysEarnings: 0,
+          monthlyEarnings: 0,
+          currentPayloadKg: 0,
+          maxPayloadKg: 500,
+          assignedRoutes: []
+        } : {}),
+        // Partner Specific Fields (clean real data)
+        ...(isPartner ? {
+          businessName: body.businessName || `${name}'s Recycling Hub`,
+          partnerTier: body.partnerTier || 'Certified Merchant Hub',
+          gstin: body.gstin || '',
+          tradeLicense: body.tradeLicense || 'Pending Verification',
+          currentStockTons: 0,
+          monthlyCapacityTons: body.monthlyCapacityTons || 100,
+          totalProcuredTons: 0,
+          totalDisbursedLakhs: 0,
+          activeContractVehicles: body.activeContractVehicles || 0,
+          directMillTieups: [],
+          bankAccount: body.bankAccount || null
+        } : {}),
         savedAddresses: body.address ? [
           { id: 'addr-1', label: 'Home', address: body.address, city: body.city || 'Delhi NCR', pincode: body.pincode || '', isDefault: true }
         ] : []

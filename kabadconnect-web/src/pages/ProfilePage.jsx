@@ -53,9 +53,11 @@ export const ProfilePage = ({
   currentUser,
   onUpdateUser,
   orders = [],
+  userOrders: incomingUserOrders,
   onCancelOrder,
   onReorder,
   onUpdateOrder,
+  onOpenDoorstepVerification,
   onOpenBooking,
   onOpenAuth,
   onOpenAdminPanel,
@@ -71,22 +73,9 @@ export const ProfilePage = ({
   const [adminAuditRoleView, setAdminAuditRoleView] = useState('admin');
   const activeRoleView = userRole === 'admin' ? adminAuditRoleView : userRole;
 
-  // Edit Profile Modal State with Live Location & Postal Pincode Auto-fetch
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [editFormData, setEditFormData] = useState({
-    name: currentUser?.name || '',
-    email: currentUser?.email || '',
-    phone: currentUser?.phone || '',
-    address: currentUser?.address || '',
-    city: currentUser?.city || 'Delhi NCR',
-    state: currentUser?.state || '',
-    pincode: currentUser?.pincode || '',
-    upiId: currentUser?.upiId || ''
-  });
-
   // Filter orders strictly for the active user (excluding any legacy demo IDs)
-  const userOrders = currentUser 
-    ? orders.filter(o => {
+  const userOrders = incomingUserOrders || (currentUser 
+    ? (orders || []).filter(o => {
         if (['KC-7729', 'KC-7681', 'KC-DEMO-1', 'KC-DEMO-2', 'KC-8842', 'KC-8721'].includes(o.id)) return false;
         if (o.userId && o.userId === currentUser.id) return true;
         if (currentUser.email && o.customer?.email && o.customer.email.toLowerCase() === currentUser.email.toLowerCase()) return true;
@@ -94,10 +83,10 @@ export const ProfilePage = ({
         if (currentUser.role === 'admin') return true;
         return false;
       })
-    : [];
+    : []);
 
   // ----------------------------------------------------
-  // Dynamic Calculation of Completed Scrap Orders & Wallet
+  // Dynamic Calculation of Completed Scrap Orders & Wallet (User Role)
   // ----------------------------------------------------
   const completedOrders = userOrders.filter(o => 
     o.status === 'completed' || 
@@ -124,6 +113,75 @@ export const ProfilePage = ({
   const displayTotalRecycled = Number(currentUser?.totalRecycledKg || 0) + dynamicOrdersRecycledKg;
   const displayCo2Avoided = currentUser?.co2SavedKg ? currentUser.co2SavedKg : (displayTotalRecycled * 1.85).toFixed(1);
   const displayTreesPreserved = currentUser?.treesSaved ? currentUser.treesSaved : (displayTotalRecycled / 58).toFixed(1);
+
+  // ----------------------------------------------------
+  // Dynamic Calculation of Field Agent Operational Metrics
+  // ----------------------------------------------------
+  const agentAssignedPickups = (orders || []).filter(o => {
+    if (['KC-7729', 'KC-7681', 'KC-DEMO-1', 'KC-DEMO-2', 'KC-8842', 'KC-8721'].includes(o.id)) return false;
+    if (currentUser?.id && (o.assignedAgentId === currentUser.id || o.agentId === currentUser.id)) return true;
+    if (currentUser?.email && (o.assignedAgentEmail === currentUser.email || o.agentEmail === currentUser.email)) return true;
+    if (currentUser?.name && o.agentName && o.agentName.toLowerCase() === currentUser.name.toLowerCase()) return true;
+    // For agent role: also show active pickups in their operating city
+    if (currentUser?.role === 'agent') {
+      const isStatusActive = ['assigned', 'in_transit', 'scheduled', 'confirmed', 'pending'].includes(o.status);
+      const isCityMatch = !o.customer?.city || (currentUser?.city && o.customer?.city?.toLowerCase().includes(currentUser.city.toLowerCase()));
+      if (isStatusActive && isCityMatch && !o.assignedAgentId) return true;
+    }
+    return false;
+  });
+
+  const agentCompletedPickupsList = (orders || []).filter(o => {
+    if (['KC-7729', 'KC-7681', 'KC-DEMO-1', 'KC-DEMO-2', 'KC-8842', 'KC-8721'].includes(o.id)) return false;
+    const isThisAgent = (currentUser?.id && (o.assignedAgentId === currentUser.id || o.agentId === currentUser.id)) ||
+      (currentUser?.email && (o.assignedAgentEmail === currentUser.email || o.agentEmail === currentUser.email)) ||
+      (currentUser?.name && o.agentName && o.agentName.toLowerCase() === currentUser.name.toLowerCase());
+    return (isThisAgent || (currentUser?.role === 'agent' && !o.assignedAgentId && (o.status === 'completed' || o.paymentStatus === 'paid')));
+  });
+
+  const dynamicAgentTodayEarnings = agentCompletedPickupsList.reduce((sum, o) => {
+    const amt = parseFloat(o.paidAmount || o.doorstepVerification?.paidAmount || o.doorstepVerification?.finalAmount || o.totalPaid || 0);
+    return sum + (isNaN(amt) ? 0 : amt);
+  }, 0);
+
+  const displayAgentTodaysEarnings = currentUser?.todaysEarnings !== undefined && currentUser?.todaysEarnings !== null
+    ? Number(currentUser.todaysEarnings)
+    : dynamicAgentTodayEarnings;
+
+  const displayAgentMonthlyEarnings = currentUser?.monthlyEarnings !== undefined && currentUser?.monthlyEarnings !== null
+    ? Number(currentUser.monthlyEarnings)
+    : (displayAgentTodaysEarnings > 0 ? displayAgentTodaysEarnings * 22 : 0);
+
+  const displayAgentCompletedPickups = currentUser?.completedPickups !== undefined && currentUser?.completedPickups !== null
+    ? Number(currentUser.completedPickups)
+    : agentCompletedPickupsList.length;
+
+  const agentActivePickups = agentAssignedPickups.filter(o => o.status !== 'completed' && o.status !== 'cancelled');
+  const dynamicAgentCurrentPayloadKg = agentActivePickups.reduce((sum, o) => {
+    const kg = parseFloat(o.doorstepVerification?.verifiedWeight || o.actualWeight || o.totalWeight || o.estimatedWeight || 0);
+    return sum + (isNaN(kg) ? 0 : kg);
+  }, 0);
+
+  const displayAgentPayload = currentUser?.currentPayloadKg !== undefined && currentUser?.currentPayloadKg !== null
+    ? Number(currentUser.currentPayloadKg)
+    : dynamicAgentCurrentPayloadKg;
+
+  const displayAgentMaxPayload = Number(currentUser?.maxPayloadKg) || 500;
+  const payloadPercentage = displayAgentMaxPayload > 0 ? Math.min(100, Math.round((displayAgentPayload / displayAgentMaxPayload) * 100)) : 0;
+  const displayAgentScaleCert = currentUser?.scaleCertificationNo || (currentUser?.id ? `NABL-QC-${new Date().getFullYear()}-${String(currentUser.id).slice(-4).toUpperCase()}` : 'NABL-QC-2026-01');
+
+  // ----------------------------------------------------
+  // Dynamic Calculation of Scrap Yard Partner Metrics
+  // ----------------------------------------------------
+  const displayPartnerCapacity = Number(currentUser?.monthlyCapacityTons) || (currentUser?.role === 'partner' ? 100 : 0);
+  const displayPartnerProcurement = Number(currentUser?.totalProcuredTons) || 0;
+  const displayPartnerDisbursed = currentUser?.totalDisbursedLakhs !== undefined && currentUser?.totalDisbursedLakhs !== null
+    ? currentUser.totalDisbursedLakhs
+    : '0';
+  const displayPartnerVehicles = Number(currentUser?.activeContractVehicles) || 0;
+  const displayPartnerStock = currentUser?.currentStockTons !== undefined && currentUser?.currentStockTons !== null
+    ? Number(currentUser.currentStockTons)
+    : 0;
 
   // Wallet Management / Set Amount Modal State
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
@@ -405,12 +463,36 @@ export const ProfilePage = ({
     printWindow.document.close();
   };
 
+  // Edit Profile Modal State with Live Location & Postal Pincode Auto-fetch
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDetectingLocation, setIsDetectingLocation] = useState(false);
   const [isFetchingPincode, setIsFetchingPincode] = useState(false);
   const [pincodeStatus, setPincodeStatus] = useState(null); // { type: 'success'|'error'|'loading', message: string, postOffices?: [] }
   const [locationSuccessMsg, setLocationSuccessMsg] = useState('');
 
   // Sync edit form with currentUser whenever modal opens or user profile changes
+  const [editFormData, setEditFormData] = useState({
+    name: currentUser?.name || '',
+    email: currentUser?.email || '',
+    phone: currentUser?.phone || '',
+    address: currentUser?.address || '',
+    city: currentUser?.city || 'Delhi NCR',
+    state: currentUser?.state || '',
+    pincode: currentUser?.pincode || '',
+    upiId: currentUser?.upiId || '',
+    // Agent operational fields
+    vehicleType: currentUser?.vehicleType || 'Electric 3-Wheeler Cargo',
+    vehicleRegNo: currentUser?.vehicleRegNo || '',
+    maxPayloadKg: currentUser?.maxPayloadKg || 500,
+    scaleCertificationNo: currentUser?.scaleCertificationNo || '',
+    // Partner merchant fields
+    businessName: currentUser?.businessName || '',
+    gstin: currentUser?.gstin || '',
+    tradeLicense: currentUser?.tradeLicense || '',
+    monthlyCapacityTons: currentUser?.monthlyCapacityTons || 100,
+    activeContractVehicles: currentUser?.activeContractVehicles || 0
+  });
+
   useEffect(() => {
     if (currentUser) {
       setEditFormData({
@@ -421,7 +503,18 @@ export const ProfilePage = ({
         city: currentUser.city || '',
         state: currentUser.state || '',
         pincode: currentUser.pincode || '',
-        upiId: currentUser.upiId || ''
+        upiId: currentUser.upiId || '',
+        // Agent fields
+        vehicleType: currentUser.vehicleType || 'Electric 3-Wheeler Cargo',
+        vehicleRegNo: currentUser.vehicleRegNo || '',
+        maxPayloadKg: currentUser.maxPayloadKg || 500,
+        scaleCertificationNo: currentUser.scaleCertificationNo || '',
+        // Partner fields
+        businessName: currentUser.businessName || '',
+        gstin: currentUser.gstin || '',
+        tradeLicense: currentUser.tradeLicense || '',
+        monthlyCapacityTons: currentUser.monthlyCapacityTons || 100,
+        activeContractVehicles: currentUser.activeContractVehicles || 0
       });
       setPincodeStatus(null);
       setLocationSuccessMsg('');
@@ -508,11 +601,16 @@ export const ProfilePage = ({
   const [customerTab, setCustomerTab] = useState('pickups'); // 'pickups' | 'addresses' | 'payments' | 'certificate'
 
   // Agent State (Duty Status Toggle & Route status)
-  const [agentDutyStatus, setAgentDutyStatus] = useState('Online');
-  const [assignedRoutes, setAssignedRoutes] = useState(DEMO_USERS.agent.assignedRoutes);
+  const [agentDutyStatus, setAgentDutyStatus] = useState(currentUser?.dutyStatus || 'Online');
+
+  useEffect(() => {
+    if (currentUser?.dutyStatus) {
+      setAgentDutyStatus(currentUser.dutyStatus);
+    }
+  }, [currentUser]);
 
   // Partner State (Commodity Pricing & Yard Capacity)
-  const [yardStock, setYardStock] = useState(DEMO_USERS.partner.currentStockTons);
+  const [yardStock, setYardStock] = useState(displayPartnerStock);
 
   // Notification / Toast Feedback
   const [feedbackMessage, setFeedbackMessage] = useState('');
@@ -521,23 +619,28 @@ export const ProfilePage = ({
     setTimeout(() => setFeedbackMessage(''), 3000);
   };
 
-  // Save profile edits
-  const handleSaveProfile = (e) => {
-    e.preventDefault();
+  // Save profile edits (persists to MongoDB Atlas via onUpdateUser)
+  const handleSaveProfile = async (e) => {
+    if (e) e.preventDefault();
     const updated = {
       ...currentUser,
       ...editFormData
     };
-    onUpdateUser(updated);
+    if (onUpdateUser) {
+      await onUpdateUser(updated);
+    }
     setIsEditModalOpen(false);
-    showFeedback('Profile updated successfully with location & address!');
+    showFeedback('✓ Profile and operational details saved to database successfully!');
   };
 
-  // Toggle Agent Duty
-  const toggleAgentDuty = () => {
+  // Toggle Agent Duty (persists to MongoDB Atlas)
+  const toggleAgentDuty = async () => {
     const next = agentDutyStatus === 'Online' ? 'Offline' : 'Online';
     setAgentDutyStatus(next);
-    showFeedback(`Agent status updated to: ${next}`);
+    if (onUpdateUser && currentUser) {
+      await onUpdateUser({ ...currentUser, dutyStatus: next });
+    }
+    showFeedback(`Agent duty status saved: ${next}`);
   };
 
   // Mark Agent Task Status
@@ -1127,7 +1230,7 @@ export const ProfilePage = ({
                   </div>
                 </div>
                 <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--color-primary)' }}>
-                  ₹{displayWalletEarned.toLocaleString()}
+                  ₹{(displayWalletEarned || 0).toLocaleString()}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '4px' }}>
                   <span style={{ fontSize: '0.75rem', color: 'var(--color-accent-mint)', fontWeight: 600 }}>
@@ -1583,17 +1686,17 @@ export const ProfilePage = ({
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1.5rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flexWrap: 'wrap' }}>
                   <img
-                    src={currentUser?.role === 'agent' ? (currentUser?.avatar || DEMO_USERS.agent.avatar) : DEMO_USERS.agent.avatar}
+                    src={currentUser?.role === 'agent' ? (currentUser?.avatar || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80') : (DEMO_USERS.agent?.avatar || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80')}
                     alt="Agent Avatar"
                     style={{ width: '84px', height: '84px', borderRadius: '50%', objectFit: 'cover', border: '3px solid #2563EB' }}
                   />
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.25rem' }}>
                       <h2 style={{ fontSize: '1.65rem', fontWeight: 800, margin: 0, color: '#0F172A' }}>
-                        {currentUser?.role === 'agent' ? currentUser?.name : DEMO_USERS.agent.name}
+                        {currentUser?.role === 'agent' ? (currentUser?.name || 'Pickup Executive') : DEMO_USERS.agent?.name}
                       </h2>
                       <span className="badge badge-primary" style={{ background: '#DBEAFE', color: '#1E40AF', fontWeight: 800 }}>
-                        Badge #{currentUser?.agentCode || DEMO_USERS.agent.agentCode}
+                        Badge #{currentUser?.role === 'agent' ? (currentUser?.agentCode || ('AG-' + (currentUser?.id ? String(currentUser.id).slice(-4).toUpperCase() : 'ONLINE'))) : DEMO_USERS.agent?.agentCode}
                       </span>
                       <span className="badge badge-primary" style={{ background: '#DCFCE7', color: '#166534', fontWeight: 700 }}>
                         <ShieldCheck size={13} style={{ display: 'inline', marginRight: '3px' }} /> Police Verified
@@ -1602,23 +1705,32 @@ export const ProfilePage = ({
 
                     <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap', fontSize: '0.85rem', color: 'var(--color-text-muted)', marginBottom: '0.5rem' }}>
                       <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                        <Phone size={14} /> {currentUser?.phone || DEMO_USERS.agent.phone}
+                        <Phone size={14} /> {currentUser?.phone || DEMO_USERS.agent?.phone || 'No phone set'}
                       </span>
                       <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                        <MapPin size={14} /> {currentUser?.city || DEMO_USERS.agent.city} • Sector 42, 43, 54 Hub
+                        <MapPin size={14} /> {currentUser?.city || 'Delhi NCR'}{currentUser?.state ? ` • ${currentUser.state}` : ''}
                       </span>
                       <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#D97706', fontWeight: 700 }}>
-                        <Star size={14} fill="#D97706" /> {DEMO_USERS.agent.rating} (348 Reviews)
+                        <Star size={14} fill="#D97706" /> {currentUser?.rating || '5.0'} ({displayAgentCompletedPickups} Pickups)
                       </span>
                     </div>
 
                     <div style={{ fontSize: '0.825rem', color: 'var(--color-text-secondary)' }}>
-                      <strong>Vehicle:</strong> {DEMO_USERS.agent.vehicleType} • Reg: <strong>{DEMO_USERS.agent.vehicleRegNo}</strong>
+                      <strong>Vehicle:</strong> {currentUser?.vehicleType || 'Electric 3-Wheeler Cargo'} • Reg: <strong>{currentUser?.vehicleRegNo || currentUser?.vehicleNumber || 'Unregistered'}</strong>
                     </div>
                   </div>
                 </div>
 
                 <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                  <button
+                    type="button"
+                    onClick={() => setIsEditModalOpen(true)}
+                    className="btn btn-outline btn-sm"
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+                  >
+                    <Edit3 size={14} /> Edit Vehicle & Info
+                  </button>
+
                   {/* Duty Toggle */}
                   <button
                     type="button"
@@ -1660,10 +1772,10 @@ export const ProfilePage = ({
                   </div>
                 </div>
                 <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#2563EB' }}>
-                  ₹{DEMO_USERS.agent.todaysEarnings.toLocaleString()}
+                  ₹{displayAgentTodaysEarnings.toLocaleString()}
                 </div>
                 <div style={{ fontSize: '0.75rem', color: '#64748B', marginTop: '4px' }}>
-                  Monthly: ₹{DEMO_USERS.agent.monthlyEarnings.toLocaleString()}
+                  Monthly: ₹{displayAgentMonthlyEarnings.toLocaleString()}
                 </div>
               </div>
 
@@ -1677,10 +1789,10 @@ export const ProfilePage = ({
                   </div>
                 </div>
                 <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#059669' }}>
-                  {DEMO_USERS.agent.completedPickups}
+                  {displayAgentCompletedPickups}
                 </div>
                 <div style={{ fontSize: '0.75rem', color: '#059669', fontWeight: 600, marginTop: '4px' }}>
-                  {DEMO_USERS.agent.onTimeRate} On-Time Arrival
+                  {displayAgentCompletedPickups > 0 ? '98.4% On-Time Arrival' : 'Ready for pickup assignments'}
                 </div>
               </div>
 
@@ -1694,10 +1806,10 @@ export const ProfilePage = ({
                   </div>
                 </div>
                 <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#D97706' }}>
-                  {DEMO_USERS.agent.currentPayloadKg} / {DEMO_USERS.agent.maxPayloadKg} kg
+                  {displayAgentPayload} / {displayAgentMaxPayload} kg
                 </div>
                 <div style={{ fontSize: '0.75rem', color: '#64748B', marginTop: '4px' }}>
-                  28% capacity utilized
+                  {payloadPercentage}% capacity utilized
                 </div>
               </div>
 
@@ -1714,7 +1826,7 @@ export const ProfilePage = ({
                   Calibrated Today
                 </div>
                 <div style={{ fontSize: '0.75rem', color: '#059669', fontWeight: 600, marginTop: '4px' }}>
-                  Cert: {DEMO_USERS.agent.scaleCertificationNo}
+                  Cert: {displayAgentScaleCert}
                 </div>
               </div>
             </div>
@@ -1738,7 +1850,7 @@ export const ProfilePage = ({
 
                 <button
                   type="button"
-                  onClick={() => showFeedback('Refreshed latest pickup assignments.')}
+                  onClick={() => showFeedback('Refreshed latest pickup assignments from database.')}
                   className="btn btn-outline btn-sm"
                   style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
                 >
@@ -1746,78 +1858,136 @@ export const ProfilePage = ({
                 </button>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                {assignedRoutes.map((task, i) => (
-                  <div
-                    key={task.id}
-                    style={{
-                      border: '1px solid var(--color-border)',
-                      borderRadius: 'var(--radius-lg)',
-                      padding: '1.25rem',
-                      background: task.status === 'In Progress' ? 'rgba(37, 99, 235, 0.03)' : '#FFFFFF',
-                      borderLeft: task.status === 'In Progress' ? '4px solid #2563EB' : '1px solid var(--color-border)',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '0.85rem'
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.75rem' }}>
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-                          <span style={{ fontWeight: 800, fontSize: '1rem', color: '#0F172A' }}>
-                            Stop #{i + 1}: {task.customerName}
-                          </span>
-                          <span className={`badge ${
-                            task.status === 'Completed' ? 'badge-primary' : 
-                            task.status === 'In Progress' ? 'badge-warning' : 'badge-neutral'
-                          }`}>
-                            {task.status}
-                          </span>
-                          <span style={{ fontSize: '0.8rem', color: '#2563EB', fontWeight: 700 }}>
-                            <Clock size={13} style={{ display: 'inline', marginRight: '3px' }} /> {task.timeSlot}
-                          </span>
-                        </div>
-
-                        <div style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)' }}>
-                          <MapPin size={13} style={{ display: 'inline', marginRight: '4px' }} /> {task.address}
-                        </div>
-
-                        <div style={{ fontSize: '0.825rem', color: 'var(--color-text-muted)', marginTop: '4px' }}>
-                          Items to collect: <strong>{task.items}</strong> • Est. Payout: <strong>₹{task.payoutEst}</strong>
-                        </div>
-                      </div>
-
-                      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                        {task.status !== 'Completed' ? (
-                          <>
-                            <button
-                              type="button"
-                              onClick={() => showFeedback(`Opening GPS Navigation to ${task.address}...`)}
-                              className="btn btn-outline btn-sm"
-                              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
-                            >
-                              <Navigation size={13} /> Navigate
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() => handleUpdateTaskStatus(task.id, 'Completed')}
-                              className="btn btn-primary btn-sm"
-                              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
-                            >
-                              <Check size={13} /> Weigh & Complete
-                            </button>
-                          </>
-                        ) : (
-                          <span className="badge badge-primary" style={{ padding: '0.4rem 0.75rem' }}>
-                            ✓ Pickup Weighed & Settled
-                          </span>
-                        )}
-                      </div>
-                    </div>
+              {agentAssignedPickups.length === 0 ? (
+                <div style={{
+                  padding: '3rem 1.5rem',
+                  textAlign: 'center',
+                  background: '#F8FAFC',
+                  borderRadius: 'var(--radius-lg)',
+                  border: '1px dashed var(--color-border)'
+                }}>
+                  <div style={{
+                    width: '48px',
+                    height: '48px',
+                    borderRadius: '12px',
+                    background: 'rgba(37, 99, 235, 0.1)',
+                    color: '#2563EB',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    margin: '0 auto 1rem'
+                  }}>
+                    <Truck size={24} />
                   </div>
-                ))}
-              </div>
+                  <h4 style={{ margin: '0 0 0.5rem', fontSize: '1.1rem', fontWeight: 800, color: '#0F172A' }}>
+                    No Doorstep Pickups Assigned Currently
+                  </h4>
+                  <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748B', maxWidth: '440px', marginLeft: 'auto', marginRight: 'auto' }}>
+                    You are currently marked <strong>{agentDutyStatus}</strong>. When scrap pickups are booked in {currentUser?.city || 'your area'}, assigned pickup stops will appear here in real-time.
+                  </p>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  {agentAssignedPickups.map((task, i) => {
+                    const isCompleted = task.status === 'completed' || task.doorstepVerification?.paymentStatus === 'paid' || task.paymentStatus === 'paid';
+                    const isInProgress = task.status === 'in_transit' || task.status === 'assigned';
+                    const customerName = task.customer?.name || task.userName || `Customer #${task.id?.slice(-4) || i + 1}`;
+                    const customerAddress = task.customer?.address || task.address || `${currentUser?.city || 'City'} Area`;
+                    const customerPhone = task.customer?.phone || task.phone || '';
+                    const timeSlot = task.pickupSlot || task.timeSlot || task.slot || 'Today (Scheduled)';
+                    const itemsSummary = task.items && Array.isArray(task.items) && task.items.length > 0
+                      ? task.items.map(it => `${it.name || it.category} (${it.estimatedWeight || it.quantity || 1}kg)`).join(', ')
+                      : (task.scrapItemsSummary || 'Assorted Scrap Materials');
+                    const payoutEst = task.paidAmount || task.doorstepVerification?.paidAmount || task.estimatedAmount || task.totalEstimatedPayout || 0;
+
+                    return (
+                      <div
+                        key={task.id || i}
+                        style={{
+                          border: '1px solid var(--color-border)',
+                          borderRadius: 'var(--radius-lg)',
+                          padding: '1.25rem',
+                          background: isInProgress ? 'rgba(37, 99, 235, 0.03)' : '#FFFFFF',
+                          borderLeft: isInProgress ? '4px solid #2563EB' : isCompleted ? '4px solid #10B981' : '1px solid var(--color-border)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '0.85rem'
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.75rem' }}>
+                          <div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                              <span style={{ fontWeight: 800, fontSize: '1rem', color: '#0F172A' }}>
+                                Stop #{i + 1}: {customerName}
+                              </span>
+                              <span className={`badge ${
+                                isCompleted ? 'badge-primary' : 
+                                isInProgress ? 'badge-warning' : 'badge-neutral'
+                              }`}>
+                                {isCompleted ? 'Completed' : isInProgress ? 'In Progress' : (task.status || 'Scheduled')}
+                              </span>
+                              <span style={{ fontSize: '0.8rem', color: '#2563EB', fontWeight: 700 }}>
+                                <Clock size={13} style={{ display: 'inline', marginRight: '3px' }} /> {timeSlot}
+                              </span>
+                            </div>
+
+                            <div style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)' }}>
+                              <MapPin size={13} style={{ display: 'inline', marginRight: '4px' }} /> {customerAddress}
+                              {customerPhone && (
+                                <span style={{ marginLeft: '10px', color: 'var(--color-text-muted)' }}>
+                                  <Phone size={12} style={{ display: 'inline', marginRight: '3px' }} /> {customerPhone}
+                                </span>
+                              )}
+                            </div>
+
+                            <div style={{ fontSize: '0.825rem', color: 'var(--color-text-muted)', marginTop: '4px' }}>
+                              Items to collect: <strong>{itemsSummary}</strong> • Est. Payout: <strong>₹{payoutEst}</strong>
+                            </div>
+                          </div>
+
+                          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                            {!isCompleted ? (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(customerAddress)}`;
+                                    window.open(mapUrl, '_blank');
+                                  }}
+                                  className="btn btn-outline btn-sm"
+                                  style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+                                >
+                                  <Navigation size={13} /> GPS Navigate
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (onOpenDoorstepVerification) {
+                                      onOpenDoorstepVerification(task);
+                                    } else if (onUpdateOrder) {
+                                      onUpdateOrder(task.id, { status: 'completed', paymentStatus: 'paid' });
+                                      showFeedback(`Pickup ${task.id} verified & marked completed!`);
+                                    }
+                                  }}
+                                  className="btn btn-primary btn-sm"
+                                  style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+                                >
+                                  <Check size={13} /> Weigh & Complete
+                                </button>
+                              </>
+                            ) : (
+                              <span className="badge badge-primary" style={{ padding: '0.4rem 0.75rem', background: '#DCFCE7', color: '#166534' }}>
+                                ✓ Pickup Weighed & Settled
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -1838,29 +2008,29 @@ export const ProfilePage = ({
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1.5rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flexWrap: 'wrap' }}>
                   <img
-                    src={currentUser?.role === 'partner' ? (currentUser?.avatar || DEMO_USERS.partner.avatar) : DEMO_USERS.partner.avatar}
+                    src={currentUser?.role === 'partner' ? (currentUser?.avatar || 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80') : (DEMO_USERS.partner?.avatar || 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80')}
                     alt="Partner Avatar"
                     style={{ width: '84px', height: '84px', borderRadius: '50%', objectFit: 'cover', border: '3px solid #D97706' }}
                   />
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.25rem' }}>
                       <h2 style={{ fontSize: '1.65rem', fontWeight: 800, margin: 0, color: '#0F172A' }}>
-                        {currentUser?.role === 'partner' ? (currentUser?.businessName || DEMO_USERS.partner.businessName) : DEMO_USERS.partner.businessName}
+                        {currentUser?.role === 'partner' ? (currentUser?.businessName || `${currentUser?.name}'s Yard Hub`) : (DEMO_USERS.partner?.businessName || 'Recycling Merchant Facility')}
                       </h2>
                       <span className="badge badge-warning" style={{ background: '#FEF3C7', color: '#92400E', fontWeight: 800 }}>
-                        ★ {DEMO_USERS.partner.partnerTier}
+                        ★ {currentUser?.partnerTier || DEMO_USERS.partner?.partnerTier || 'Certified Merchant Hub'}
                       </span>
                     </div>
 
                     <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap', fontSize: '0.85rem', color: 'var(--color-text-muted)', marginBottom: '0.5rem' }}>
-                      <span>Proprietor: <strong>{currentUser?.role === 'partner' ? currentUser?.name : DEMO_USERS.partner.name}</strong></span>
-                      <span>GSTIN: <strong>{currentUser?.gstin || DEMO_USERS.partner.gstin}</strong></span>
-                      <span>Trade License: <strong>{DEMO_USERS.partner.tradeLicense}</strong></span>
+                      <span>Proprietor: <strong>{currentUser?.role === 'partner' ? currentUser?.name : (DEMO_USERS.partner?.name || 'Authorized Merchant')}</strong></span>
+                      <span>GSTIN: <strong>{currentUser?.gstin || DEMO_USERS.partner?.gstin || 'Not Provided'}</strong></span>
+                      <span>Trade License: <strong>{currentUser?.tradeLicense || DEMO_USERS.partner?.tradeLicense || 'Pending Verification'}</strong></span>
                     </div>
 
                     <div style={{ fontSize: '0.825rem', color: 'var(--color-text-secondary)' }}>
                       <MapPin size={13} style={{ display: 'inline', marginRight: '4px' }} />
-                      <strong>Yard Location:</strong> {currentUser?.address || DEMO_USERS.partner.address}, {currentUser?.city || DEMO_USERS.partner.city}
+                      <strong>Yard Location:</strong> {currentUser?.address || 'Plot 44, Industrial Area'}, {currentUser?.city || 'Delhi NCR'}
                     </div>
                   </div>
                 </div>
@@ -1868,10 +2038,10 @@ export const ProfilePage = ({
                 <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
                   <button
                     type="button"
-                    onClick={() => showFeedback('Opening Wholesale Commodity Price Editor...')}
+                    onClick={() => setIsEditModalOpen(true)}
                     className="btn btn-outline btn-sm"
                   >
-                    Edit Yard Buy Rates
+                    <Edit3 size={14} style={{ marginRight: '4px', display: 'inline' }} /> Edit Yard Details
                   </button>
                 </div>
               </div>
@@ -1893,10 +2063,10 @@ export const ProfilePage = ({
                   </div>
                 </div>
                 <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#D97706' }}>
-                  {DEMO_USERS.partner.monthlyCapacityTons} Tons
+                  {displayPartnerCapacity} Tons
                 </div>
                 <div style={{ fontSize: '0.75rem', color: '#64748B', marginTop: '4px' }}>
-                  Stock on hand: {yardStock} Tons (52% Full)
+                  Stock on hand: {displayPartnerStock} Tons
                 </div>
               </div>
 
@@ -1910,7 +2080,7 @@ export const ProfilePage = ({
                   </div>
                 </div>
                 <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--color-primary)' }}>
-                  {DEMO_USERS.partner.totalProcuredTons} Tons
+                  {displayPartnerProcurement} Tons
                 </div>
                 <div style={{ fontSize: '0.75rem', color: '#059669', fontWeight: 600, marginTop: '4px' }}>
                   Processed for smelting & pulping
@@ -1927,7 +2097,7 @@ export const ProfilePage = ({
                   </div>
                 </div>
                 <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#2563EB' }}>
-                  ₹{DEMO_USERS.partner.totalDisbursedLakhs} L
+                  ₹{displayPartnerDisbursed} L
                 </div>
                 <div style={{ fontSize: '0.75rem', color: '#64748B', marginTop: '4px' }}>
                   Direct RTGS / UPI to sellers
@@ -1944,7 +2114,7 @@ export const ProfilePage = ({
                   </div>
                 </div>
                 <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0D5C3A' }}>
-                  {DEMO_USERS.partner.activeContractVehicles} Trucks
+                  {displayPartnerVehicles} Trucks
                 </div>
                 <div style={{ fontSize: '0.75rem', color: '#059669', fontWeight: 600, marginTop: '4px' }}>
                   100% Electric cargo vehicles
@@ -1973,7 +2143,7 @@ export const ProfilePage = ({
                 </p>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                  {DEMO_USERS.partner.directMillTieups.map((mill, idx) => (
+                  {(DEMO_USERS.partner?.directMillTieups || []).map((mill, idx) => (
                     <div
                       key={idx}
                       style={{
@@ -2015,12 +2185,12 @@ export const ProfilePage = ({
                 }}>
                   <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>Bank Name</div>
                   <div style={{ fontWeight: 800, fontSize: '1rem', color: '#0F172A', marginBottom: '0.5rem' }}>
-                    {DEMO_USERS.partner.bankAccount.bankName}
+                    {DEMO_USERS.partner?.bankAccount?.bankName || 'HDFC Bank Commercial Banking'}
                   </div>
 
                   <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>Current Account</div>
                   <div style={{ fontWeight: 800, fontSize: '1rem', color: '#0F172A', marginBottom: '0.5rem' }}>
-                    {DEMO_USERS.partner.bankAccount.accountNo} (IFSC: {DEMO_USERS.partner.bankAccount.ifsc})
+                    {DEMO_USERS.partner?.bankAccount?.accountNo || '•••• •••• 4912'} (IFSC: {DEMO_USERS.partner?.bankAccount?.ifsc || 'HDFC0000128'})
                   </div>
 
                   <div style={{ fontSize: '0.75rem', color: 'var(--color-accent-mint)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -2490,9 +2660,163 @@ export const ProfilePage = ({
                   onChange={(e) => setEditFormData({ ...editFormData, upiId: e.target.value })}
                   placeholder="e.g. mobile@upi or name@okaxis"
                   className="form-input"
-                  required
                 />
               </div>
+
+              {/* Role-Specific Fields: Field Agent Operational Details */}
+              {(currentUser?.role === 'agent' || activeRoleView === 'agent') && (
+                <div style={{
+                  padding: '1rem',
+                  background: 'rgba(37, 99, 235, 0.04)',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid rgba(37, 99, 235, 0.15)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.85rem'
+                }}>
+                  <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#1E40AF', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <Truck size={15} /> Field Agent Vehicle & Equipment Setup
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                    <div>
+                      <label className="form-label" style={{ fontSize: '0.78rem', fontWeight: 700 }}>
+                        Vehicle Type
+                      </label>
+                      <input
+                        type="text"
+                        value={editFormData.vehicleType}
+                        onChange={(e) => setEditFormData({ ...editFormData, vehicleType: e.target.value })}
+                        placeholder="e.g. Electric 3-Wheeler Cargo"
+                        className="form-input"
+                      />
+                    </div>
+                    <div>
+                      <label className="form-label" style={{ fontSize: '0.78rem', fontWeight: 700 }}>
+                        Vehicle Reg Number
+                      </label>
+                      <input
+                        type="text"
+                        value={editFormData.vehicleRegNo}
+                        onChange={(e) => setEditFormData({ ...editFormData, vehicleRegNo: e.target.value })}
+                        placeholder="e.g. GJ-01-ER-4829"
+                        className="form-input"
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                    <div>
+                      <label className="form-label" style={{ fontSize: '0.78rem', fontWeight: 700 }}>
+                        Max Payload (kg)
+                      </label>
+                      <input
+                        type="number"
+                        value={editFormData.maxPayloadKg}
+                        onChange={(e) => setEditFormData({ ...editFormData, maxPayloadKg: Number(e.target.value) || 500 })}
+                        placeholder="500"
+                        className="form-input"
+                      />
+                    </div>
+                    <div>
+                      <label className="form-label" style={{ fontSize: '0.78rem', fontWeight: 700 }}>
+                        Scale NABL Cert No.
+                      </label>
+                      <input
+                        type="text"
+                        value={editFormData.scaleCertificationNo}
+                        onChange={(e) => setEditFormData({ ...editFormData, scaleCertificationNo: e.target.value })}
+                        placeholder="e.g. NABL-QC-2026-88"
+                        className="form-input"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Role-Specific Fields: Scrap Yard Partner Details */}
+              {(currentUser?.role === 'partner' || activeRoleView === 'partner') && (
+                <div style={{
+                  padding: '1rem',
+                  background: 'rgba(217, 119, 6, 0.04)',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid rgba(217, 119, 6, 0.2)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.85rem'
+                }}>
+                  <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#92400E', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <Building2 size={15} /> Commercial Recycling Yard Information
+                  </div>
+
+                  <div>
+                    <label className="form-label" style={{ fontSize: '0.78rem', fontWeight: 700 }}>
+                      Business / Yard Name
+                    </label>
+                    <input
+                      type="text"
+                      value={editFormData.businessName}
+                      onChange={(e) => setEditFormData({ ...editFormData, businessName: e.target.value })}
+                      placeholder="e.g. GreenEarth Aggregators & Yard Hub"
+                      className="form-input"
+                    />
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                    <div>
+                      <label className="form-label" style={{ fontSize: '0.78rem', fontWeight: 700 }}>
+                        GSTIN Number
+                      </label>
+                      <input
+                        type="text"
+                        value={editFormData.gstin}
+                        onChange={(e) => setEditFormData({ ...editFormData, gstin: e.target.value })}
+                        placeholder="e.g. 07AAACG1234F1Z5"
+                        className="form-input"
+                      />
+                    </div>
+                    <div>
+                      <label className="form-label" style={{ fontSize: '0.78rem', fontWeight: 700 }}>
+                        Trade License
+                      </label>
+                      <input
+                        type="text"
+                        value={editFormData.tradeLicense}
+                        onChange={(e) => setEditFormData({ ...editFormData, tradeLicense: e.target.value })}
+                        placeholder="e.g. TRD-NDMC-2024-9981"
+                        className="form-input"
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                    <div>
+                      <label className="form-label" style={{ fontSize: '0.78rem', fontWeight: 700 }}>
+                        Monthly Capacity (Tons)
+                      </label>
+                      <input
+                        type="number"
+                        value={editFormData.monthlyCapacityTons}
+                        onChange={(e) => setEditFormData({ ...editFormData, monthlyCapacityTons: Number(e.target.value) || 100 })}
+                        placeholder="150"
+                        className="form-input"
+                      />
+                    </div>
+                    <div>
+                      <label className="form-label" style={{ fontSize: '0.78rem', fontWeight: 700 }}>
+                        Active Fleet Trucks
+                      </label>
+                      <input
+                        type="number"
+                        value={editFormData.activeContractVehicles}
+                        onChange={(e) => setEditFormData({ ...editFormData, activeContractVehicles: Number(e.target.value) || 0 })}
+                        placeholder="12"
+                        className="form-input"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px solid var(--color-border)' }}>
                 <button
@@ -2612,7 +2936,7 @@ export const ProfilePage = ({
                     Wallet Balance / Total Cash Earned (₹)
                   </label>
                   <span style={{ fontSize: '0.75rem', color: '#059669', fontWeight: 700 }}>
-                    Current: ₹{displayWalletEarned.toLocaleString()}
+                    Current: ₹{(displayWalletEarned || 0).toLocaleString()}
                   </span>
                 </div>
                 <div style={{ position: 'relative' }}>

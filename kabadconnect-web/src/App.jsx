@@ -25,6 +25,7 @@ import { MyPickupsModal } from './components/orders/MyPickupsModal';
 import { AdminPanelModal } from './components/admin/AdminPanelModal';
 import { SellProductModal } from './components/marketplace/SellProductModal';
 import { DoorstepVerificationModal } from './components/orders/DoorstepVerificationModal';
+import { AgentDispatchAlertModal } from './components/agent/AgentDispatchAlertModal';
 import { GeminiChatbot } from './components/common/GeminiChatbot';
 
 // Initial data & utilities
@@ -39,6 +40,7 @@ import {
   apiFetchOrders,
   apiCreateOrder,
   apiUpdateOrder,
+  apiAcceptPickupOrder,
   apiFetchRates,
   apiUpdateRate,
   checkDatabaseHealth,
@@ -230,6 +232,33 @@ export default function App() {
     }).catch(() => { });
   }, []);
 
+  // Declined dispatch orders state for field agents
+  const [declinedOrderIds, setDeclinedOrderIds] = useState([]);
+
+  // Dynamic incoming dispatch order for online field agents
+  const isAgentOnline = currentUser?.role === 'agent' && (currentUser?.dutyStatus === 'Online' || currentUser?.dutyStatus === 'On Duty' || !currentUser?.dutyStatus);
+  const incomingDispatchOrder = isAgentOnline
+    ? orders.find((o) => {
+        if (!o || !o.id) return false;
+        if (['KC-7729', 'KC-7681', 'KC-DEMO-1', 'KC-DEMO-2', 'KC-8842', 'KC-8721'].includes(o.id)) return false;
+        if (declinedOrderIds.includes(o.id)) return false;
+        if (o.assignedAgentId || o.status === 'assigned' || o.status === 'completed' || o.status === 'cancelled') return false;
+        return o.status === 'pending' || !o.status;
+      })
+    : null;
+
+  // Live background sync: Poll orders every 6 seconds so customers and field agents stay synchronized
+  useEffect(() => {
+    const pollInterval = setInterval(() => {
+      apiFetchOrders().then((res) => {
+        if (res && res.success && Array.isArray(res.orders)) {
+          setOrders(res.orders);
+        }
+      }).catch(() => { });
+    }, 6000);
+    return () => clearInterval(pollInterval);
+  }, []);
+
   // 1. Initialize Lenis Smooth Scrolling Engine
   useEffect(() => {
     const lenis = initSmoothScroll();
@@ -241,7 +270,7 @@ export default function App() {
   // 2. Pause Lenis smooth scroll while modals or drawers are open so background page stays fixed
   useEffect(() => {
     const isAnyModalOpen = isBookingOpen || isTrackerOpen || isPartnerModalOpen ||
-      isCartOpen || isPickupListOpen || isAuthModalOpen || isMyPickupsOpen || isAdminPanelOpen || isSellModalOpen || isDoorstepModalOpen;
+      isCartOpen || isPickupListOpen || isAuthModalOpen || isMyPickupsOpen || isAdminPanelOpen || isSellModalOpen || isDoorstepModalOpen || Boolean(incomingDispatchOrder);
 
     const lenis = getLenis();
     if (lenis) {
@@ -251,7 +280,7 @@ export default function App() {
         lenis.start();
       }
     }
-  }, [isBookingOpen, isTrackerOpen, isPartnerModalOpen, isCartOpen, isPickupListOpen, isAuthModalOpen, isMyPickupsOpen, isAdminPanelOpen, isSellModalOpen, isDoorstepModalOpen]);
+  }, [isBookingOpen, isTrackerOpen, isPartnerModalOpen, isCartOpen, isPickupListOpen, isAuthModalOpen, isMyPickupsOpen, isAdminPanelOpen, isSellModalOpen, isDoorstepModalOpen, incomingDispatchOrder]);
 
   // 3. Reset scroll position to top on route change
   useEffect(() => {
@@ -479,7 +508,7 @@ export default function App() {
       setDoorstepOrder({ ...doorstepOrder, ...updatedFields });
     }
 
-    // Auto-credit user's wallet and scrap recycling stats upon order payment / completion
+    // Auto-credit user's wallet or agent's commission and stats upon order payment / completion
     const isNowPaid = updatedFields.status === 'completed' || 
       updatedFields.doorstepVerification?.paymentStatus === 'completed' || 
       updatedFields.doorstepVerification?.paymentStatus === 'paid' ||
@@ -499,7 +528,20 @@ export default function App() {
         0
       );
 
-      if (addedCash > 0 || addedKg > 0) {
+      if (currentUser.role === 'agent') {
+        const curEarned = parseFloat(currentUser.todayEarnings || 0);
+        const curPickups = parseInt(currentUser.todayPickupsCount || 0, 10);
+        const curLoad = parseFloat(currentUser.currentLoadKg || 0);
+        const agentComm = Math.round(addedCash * 0.15) || 120;
+        const updatedAgent = {
+          ...currentUser,
+          todayEarnings: curEarned + agentComm,
+          todayPickupsCount: curPickups + 1,
+          currentLoadKg: curLoad + addedKg,
+          walletBalance: (parseFloat(currentUser.walletBalance || 0) + agentComm)
+        };
+        handleUpdateUser(updatedAgent);
+      } else {
         const curWallet = parseFloat(currentUser.walletBalance ?? currentUser.totalEarned ?? 0);
         const curKg = parseFloat(currentUser.totalRecycledKg || 0);
         const newWallet = curWallet + addedCash;
@@ -518,6 +560,45 @@ export default function App() {
 
     // Persist updates to MongoDB Atlas
     apiUpdateOrder(orderId, updatedFields).catch(() => { });
+  };
+
+  // ----------------------------------------------------
+  // Field Agent Dispatch Handlers (Accept / Decline Live Route)
+  // ----------------------------------------------------
+  const handleAcceptPickupByAgent = async (orderId) => {
+    if (!currentUser || !orderId) return;
+    const agentInfo = {
+      id: currentUser.id,
+      name: currentUser.name || 'Field Agent',
+      phone: currentUser.phone || '',
+      agentCode: currentUser.agentCode || 'AGT-7749',
+      vehicleNumber: currentUser.vehicleNumber || 'E-Rickshaw (DL-5ER-8921)',
+      vehicleType: currentUser.vehicleType || 'E-Rickshaw'
+    };
+
+    const updatedFields = {
+      assignedAgentId: currentUser.id,
+      assignedAgent: agentInfo,
+      agentName: agentInfo.name,
+      agentPhone: agentInfo.phone,
+      agentCode: agentInfo.agentCode,
+      agentVehicle: agentInfo.vehicleNumber,
+      agentAvatar: currentUser.avatar || 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=120&q=80',
+      status: 'assigned',
+      assignedAt: new Date().toISOString()
+    };
+
+    handleUpdateOrder(orderId, updatedFields);
+
+    try {
+      await apiAcceptPickupOrder(orderId, currentUser);
+    } catch (e) {
+      console.warn('Failed to sync agent pickup acceptance to MongoDB Atlas:', e);
+    }
+  };
+
+  const handleDeclinePickupByAgent = (orderId) => {
+    setDeclinedOrderIds((prev) => [...prev, orderId]);
   };
 
   const handleOpenDoorstepVerification = (order) => {
@@ -829,10 +910,12 @@ export default function App() {
           <ProfilePage
             currentUser={currentUser}
             onUpdateUser={handleUpdateUser}
-            orders={userOrders}
+            orders={orders}
+            userOrders={userOrders}
             onCancelOrder={handleCancelOrder}
             onReorder={handleReorder}
             onUpdateOrder={handleUpdateOrder}
+            onOpenDoorstepVerification={handleOpenDoorstepVerification}
             onOpenBooking={() => handleOpenBookingProtected()}
             onOpenAuth={() => setIsAuthModalOpen(true)}
             onOpenAdminPanel={() => setIsAdminPanelOpen(true)}
@@ -989,6 +1072,16 @@ export default function App() {
         onUpdateOrder={handleUpdateOrder}
         currentUser={currentUser}
       />
+
+      {/* Real-Time Doorstep Pickup Dispatch Alert Modal for Field Agents */}
+      <AgentDispatchAlertModal
+        isOpen={Boolean(incomingDispatchOrder)}
+        order={incomingDispatchOrder}
+        onAccept={handleAcceptPickupByAgent}
+        onDecline={handleDeclinePickupByAgent}
+        agentUser={currentUser}
+      />
+
       {/* Global Google Gemini Real-Time AI Recycling Chatbot */}
       <GeminiChatbot
         onOpenBooking={() => handleOpenBookingProtected()}
