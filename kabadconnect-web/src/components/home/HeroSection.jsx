@@ -20,7 +20,8 @@ export const HeroSection = ({
   activeCity,
   userLocation = null,
   onDetectLocation = null,
-  isDetectingLocation = false
+  isDetectingLocation = false,
+  partners = []
 }) => {
   const [pincode, setPincode] = useState('');
   const [pincodeChecked, setPincodeChecked] = useState(false);
@@ -29,21 +30,57 @@ export const HeroSection = ({
 
   const isAhmedabad = activeCity?.toLowerCase().includes('ahmedabad') || userLocation?.city?.toLowerCase().includes('ahmedabad');
 
-  const previewAgent = isAhmedabad ? {
-    name: 'Jignesh Patel',
-    businessName: 'Sabarmati Clean Recyclers',
-    photo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&q=80',
-    vehicle: 'Electric E-Rickshaw (GJ-01)',
-    rating: 4.92,
-    pickups: '1,680+'
-  } : {
-    name: 'Ramesh Kumar',
-    businessName: 'GreenEarth Scrap',
-    photo: 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=120&q=80',
-    vehicle: 'E-Rickshaw (DL-5ER)',
-    rating: 4.9,
-    pickups: '1,420+'
-  };
+  // Dynamically resolve nearest registered field agent from MongoDB database
+  const previewAgent = React.useMemo(() => {
+    if (partners && partners.length > 0) {
+      const cityMatches = partners.filter((p) => {
+        const pCity = String(p.city || '').toLowerCase();
+        const pLoc = String(p.locality || '').toLowerCase();
+        const pAddr = String(p.address || '').toLowerCase();
+        if (isAhmedabad) {
+          return pCity.includes('ahmedabad') || pLoc.includes('ahmedabad') || pAddr.includes('ahmedabad') || pLoc.includes('bopal') || pLoc.includes('prahlad');
+        } else {
+          return !pCity.includes('ahmedabad') && !pLoc.includes('ahmedabad');
+        }
+      });
+
+      const listToPick = cityMatches.length > 0 ? cityMatches : partners;
+
+      const sorted = [...listToPick].sort((a, b) => {
+        if (a.isRealDbAgent && !b.isRealDbAgent) return -1;
+        if (!a.isRealDbAgent && b.isRealDbAgent) return 1;
+        return 0;
+      });
+
+      const top = sorted[0];
+      if (top) {
+        return {
+          name: top.name,
+          businessName: top.businessName || `${top.name}'s Verified Scrap Express`,
+          photo: top.photo || top.avatar || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&q=80',
+          vehicle: top.vehicle || 'Electric Cargo E-Rickshaw',
+          rating: Number(top.rating) || 4.9,
+          pickups: `${top.totalPickups || top.todayPickupsCount || 15}+ Pickups`
+        };
+      }
+    }
+
+    return isAhmedabad ? {
+      name: 'Hiren M',
+      businessName: "Hiren M's Verified Scrap Express",
+      photo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&q=80',
+      vehicle: 'Electric 3-Wheeler Cargo (GJ-01)',
+      rating: 4.9,
+      pickups: '15+ Pickups'
+    } : {
+      name: 'Suresh Kumar',
+      businessName: 'EcoSeva Circular Depot',
+      photo: 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=120&q=80',
+      vehicle: 'Electric Tempo (HR-26)',
+      rating: 4.8,
+      pickups: '325+ Pickups'
+    };
+  }, [partners, isAhmedabad]);
 
   // Auto-populate if userLocation exists
   useEffect(() => {
@@ -376,6 +413,7 @@ export const HeroSection = ({
                 <img
                   src={previewAgent.photo}
                   alt={previewAgent.name}
+                  onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&q=80'; }}
                   style={{ width: '56px', height: '56px', borderRadius: '12px', objectFit: 'cover', flexShrink: 0 }}
                 />
                 <div style={{ flex: 1, minWidth: 0 }}>

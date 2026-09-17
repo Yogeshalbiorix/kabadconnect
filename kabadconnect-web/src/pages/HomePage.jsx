@@ -53,6 +53,7 @@ export const HomePage = ({
         userLocation={userLocation}
         onDetectLocation={onDetectLocation}
         isDetectingLocation={isDetectingLocation}
+        partners={partners}
       />
 
       {/* 2. Live Radar & Verified Kabadwalas Near You */}
