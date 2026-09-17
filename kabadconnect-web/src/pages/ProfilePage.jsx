@@ -52,6 +52,7 @@ import {
 } from 'lucide-react';
 import { DEMO_USERS } from '../utils/auth';
 import { fetchLocationByPincode, detectCurrentLocationWithAddress } from '../utils/geolocation';
+import { AvatarCropModal } from '../components/common/AvatarCropModal';
 
 export const ProfilePage = ({
   currentUser,
@@ -224,31 +225,21 @@ export const ProfilePage = ({
     ? (agentCustomerReviews.reduce((sum, r) => sum + (Number(r.rating) || 5), 0) / agentCustomerReviews.length).toFixed(1)
     : (currentUser?.rating || '5.0');
 
-  // Avatar Upload Handler with Base64 Conversion
-  const handleAvatarUpload = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  // Avatar 400x400 Crop Modal State & Handlers
+  const [isAvatarCropModalOpen, setIsAvatarCropModalOpen] = useState(false);
 
-    if (file.size > 5 * 1024 * 1024) {
-      alert('Avatar image size must be under 5MB.');
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      const base64Data = event.target.result;
-      if (base64Data && currentUser) {
-        const updatedUser = {
-          ...currentUser,
-          avatar: base64Data
-        };
-        if (onUpdateUser) {
-          await onUpdateUser(updatedUser);
-        }
-        showFeedback('✓ Profile picture updated and saved to database!');
+  const handleSaveCroppedAvatar = async (croppedBase64) => {
+    if (currentUser && croppedBase64) {
+      const updatedUser = {
+        ...currentUser,
+        avatar: croppedBase64
+      };
+      setEditFormData((prev) => ({ ...prev, avatar: croppedBase64 }));
+      if (onUpdateUser) {
+        await onUpdateUser(updatedUser);
       }
-    };
-    reader.readAsDataURL(file);
+      showFeedback('✓ 400×400 Profile photo cropped and saved successfully!');
+    }
   };
 
   // Wallet Management / Set Amount Modal State
@@ -1176,15 +1167,18 @@ export const ProfilePage = ({
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1.5rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flexWrap: 'wrap' }}>
-                  {/* Customer Avatar with Quick Upload Button */}
-                  <div style={{ position: 'relative', width: '84px', height: '84px', flexShrink: 0 }}>
+                  {/* Customer Avatar with 400x400 Interactive Crop Modal Trigger */}
+                  <div
+                    onClick={() => setIsAvatarCropModalOpen(true)}
+                    style={{ position: 'relative', width: '84px', height: '84px', flexShrink: 0, cursor: 'pointer' }}
+                    title="Click to change and crop 400×400 profile picture"
+                  >
                     <img
                       src={currentUser?.role === 'user' ? (currentUser?.avatar || DEMO_USERS.customer.avatar) : DEMO_USERS.customer.avatar}
                       alt="Customer Avatar"
-                      style={{ width: '84px', height: '84px', borderRadius: '50%', objectFit: 'cover', border: '3px solid var(--color-accent-mint)' }}
+                      style={{ width: '84px', height: '84px', borderRadius: '50%', objectFit: 'cover', border: '3px solid var(--color-accent-mint)', transition: 'transform 0.2s ease' }}
                     />
-                    <label
-                      htmlFor="user-avatar-upload-hero"
+                    <div
                       style={{
                         position: 'absolute',
                         bottom: '-2px',
@@ -1197,22 +1191,13 @@ export const ProfilePage = ({
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        cursor: 'pointer',
                         boxShadow: '0 2px 6px rgba(0,0,0,0.25)',
-                        border: '2px solid #FFFFFF',
-                        transition: 'transform 0.15s ease'
+                        border: '2px solid #FFFFFF'
                       }}
-                      title="Upload profile photo"
+                      title="Upload & crop 400×400 profile photo"
                     >
-                      <Camera size={13} />
-                    </label>
-                    <input
-                      type="file"
-                      id="user-avatar-upload-hero"
-                      accept="image/*"
-                      style={{ display: 'none' }}
-                      onChange={handleAvatarUpload}
-                    />
+                      <Camera size={14} />
+                    </div>
                   </div>
 
                   <div>
@@ -1793,15 +1778,18 @@ export const ProfilePage = ({
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1.5rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flexWrap: 'wrap' }}>
-                  {/* Agent Avatar with Quick Upload Button */}
-                  <div style={{ position: 'relative', width: '84px', height: '84px', flexShrink: 0 }}>
+                  {/* Agent Avatar with 400x400 Interactive Crop Modal Trigger */}
+                  <div
+                    onClick={() => setIsAvatarCropModalOpen(true)}
+                    style={{ position: 'relative', width: '84px', height: '84px', flexShrink: 0, cursor: 'pointer' }}
+                    title="Click to change and crop 400×400 profile picture"
+                  >
                     <img
                       src={currentUser?.role === 'agent' ? (currentUser?.avatar || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80') : (DEMO_USERS.agent?.avatar || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80')}
                       alt="Agent Avatar"
-                      style={{ width: '84px', height: '84px', borderRadius: '50%', objectFit: 'cover', border: '3px solid #2563EB' }}
+                      style={{ width: '84px', height: '84px', borderRadius: '50%', objectFit: 'cover', border: '3px solid #2563EB', transition: 'transform 0.2s ease' }}
                     />
-                    <label
-                      htmlFor="agent-avatar-upload-hero"
+                    <div
                       style={{
                         position: 'absolute',
                         bottom: '-2px',
@@ -1814,22 +1802,13 @@ export const ProfilePage = ({
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        cursor: 'pointer',
                         boxShadow: '0 2px 6px rgba(0,0,0,0.25)',
-                        border: '2px solid #FFFFFF',
-                        transition: 'transform 0.15s ease'
+                        border: '2px solid #FFFFFF'
                       }}
-                      title="Upload profile picture"
+                      title="Upload & crop 400×400 profile photo"
                     >
-                      <Camera size={13} />
-                    </label>
-                    <input
-                      type="file"
-                      id="agent-avatar-upload-hero"
-                      accept="image/*"
-                      style={{ display: 'none' }}
-                      onChange={handleAvatarUpload}
-                    />
+                      <Camera size={14} />
+                    </div>
                   </div>
 
                   <div>
@@ -2338,11 +2317,38 @@ export const ProfilePage = ({
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1.5rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flexWrap: 'wrap' }}>
-                  <img
-                    src={currentUser?.role === 'partner' ? (currentUser?.avatar || 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80') : (DEMO_USERS.partner?.avatar || 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80')}
-                    alt="Partner Avatar"
-                    style={{ width: '84px', height: '84px', borderRadius: '50%', objectFit: 'cover', border: '3px solid #D97706' }}
-                  />
+                  {/* Partner Avatar with 400x400 Interactive Crop Modal Trigger */}
+                  <div
+                    onClick={() => setIsAvatarCropModalOpen(true)}
+                    style={{ position: 'relative', width: '84px', height: '84px', flexShrink: 0, cursor: 'pointer' }}
+                    title="Click to change and crop 400×400 profile picture"
+                  >
+                    <img
+                      src={currentUser?.role === 'partner' ? (currentUser?.avatar || 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80') : (DEMO_USERS.partner?.avatar || 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80')}
+                      alt="Partner Avatar"
+                      style={{ width: '84px', height: '84px', borderRadius: '50%', objectFit: 'cover', border: '3px solid #D97706', transition: 'transform 0.2s ease' }}
+                    />
+                    <div
+                      style={{
+                        position: 'absolute',
+                        bottom: '-2px',
+                        right: '-2px',
+                        background: '#D97706',
+                        color: '#FFFFFF',
+                        borderRadius: '50%',
+                        width: '28px',
+                        height: '28px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        boxShadow: '0 2px 6px rgba(0,0,0,0.25)',
+                        border: '2px solid #FFFFFF'
+                      }}
+                      title="Upload & crop 400×400 profile photo"
+                    >
+                      <Camera size={14} />
+                    </div>
+                  </div>
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.25rem' }}>
                       <h2 style={{ fontSize: '1.65rem', fontWeight: 800, margin: 0, color: '#0F172A' }}>
@@ -2548,11 +2554,38 @@ export const ProfilePage = ({
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1.5rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flexWrap: 'wrap' }}>
-                  <img
-                    src={currentUser?.avatar || DEMO_USERS.admin.avatar}
-                    alt="Admin Avatar"
-                    style={{ width: '84px', height: '84px', borderRadius: '50%', objectFit: 'cover', border: '3px solid #F59E0B' }}
-                  />
+                  {/* Admin Avatar with 400x400 Interactive Crop Modal Trigger */}
+                  <div
+                    onClick={() => setIsAvatarCropModalOpen(true)}
+                    style={{ position: 'relative', width: '84px', height: '84px', flexShrink: 0, cursor: 'pointer' }}
+                    title="Click to change and crop 400×400 profile picture"
+                  >
+                    <img
+                      src={currentUser?.avatar || DEMO_USERS.admin.avatar}
+                      alt="Admin Avatar"
+                      style={{ width: '84px', height: '84px', borderRadius: '50%', objectFit: 'cover', border: '3px solid #F59E0B', transition: 'transform 0.2s ease' }}
+                    />
+                    <div
+                      style={{
+                        position: 'absolute',
+                        bottom: '-2px',
+                        right: '-2px',
+                        background: '#F59E0B',
+                        color: '#FFFFFF',
+                        borderRadius: '50%',
+                        width: '28px',
+                        height: '28px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        boxShadow: '0 2px 6px rgba(0,0,0,0.25)',
+                        border: '2px solid #FFFFFF'
+                      }}
+                      title="Upload & crop 400×400 profile photo"
+                    >
+                      <Camera size={14} />
+                    </div>
+                  </div>
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.25rem' }}>
                       <h2 style={{ fontSize: '1.65rem', fontWeight: 800, margin: 0, color: '#0F172A' }}>
@@ -2770,32 +2803,16 @@ export const ProfilePage = ({
                   />
                   <div>
                     <div style={{ fontSize: '0.825rem', fontWeight: 700, color: '#0F172A', marginBottom: '0.25rem' }}>
-                      Profile Photo
+                      Profile Photo (400 × 400)
                     </div>
-                    <label
-                      htmlFor="modal-avatar-upload"
+                    <button
+                      type="button"
+                      onClick={() => setIsAvatarCropModalOpen(true)}
                       className="btn btn-outline btn-sm"
-                      style={{ padding: '0.3rem 0.75rem', fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer' }}
+                      style={{ padding: '0.3rem 0.75rem', fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
                     >
-                      <Upload size={12} /> Change Photo
-                    </label>
-                    <input
-                      type="file"
-                      id="modal-avatar-upload"
-                      accept="image/*"
-                      style={{ display: 'none' }}
-                      onChange={(e) => {
-                        const f = e.target.files?.[0];
-                        if (!f) return;
-                        const r = new FileReader();
-                        r.onload = (ev) => {
-                          if (ev.target.result) {
-                            setEditFormData(prev => ({ ...prev, avatar: ev.target.result }));
-                          }
-                        };
-                        r.readAsDataURL(f);
-                      }}
-                    />
+                      <Upload size={12} /> Crop & Change Photo
+                    </button>
                   </div>
                 </div>
 
@@ -3477,6 +3494,15 @@ export const ProfilePage = ({
           </div>
         </div>
       )}
+
+      {/* Interactive 400x400 Circular Avatar Crop & Upload Modal */}
+      <AvatarCropModal
+        isOpen={isAvatarCropModalOpen}
+        onClose={() => setIsAvatarCropModalOpen(false)}
+        currentAvatar={currentUser?.avatar}
+        onSaveAvatar={handleSaveCroppedAvatar}
+        title={currentUser?.role === 'agent' ? 'Field Agent Profile Photo (400 × 400)' : 'Customer Profile Photo (400 × 400)'}
+      />
     </div>
   );
 };
