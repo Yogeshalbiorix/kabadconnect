@@ -358,30 +358,30 @@ export const LiveOrderTrackerModal = ({
 
                 <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
                   <img
-                    src={currentOrder?.agentAvatar || currentOrder?.kabadwala?.photo || 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=120&q=80'}
+                    src={currentOrder?.agentAvatar || currentOrder?.assignedAgent?.avatar || currentOrder?.kabadwala?.photo || currentOrder?.kabadwala?.avatar || 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=120&q=80'}
                     alt="Collector"
                     style={{ width: '56px', height: '56px', borderRadius: '14px', objectFit: 'cover' }}
                   />
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 800, fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                      <span>{currentOrder?.agentName || currentOrder?.kabadwala?.name || 'Ramesh Kumar'}</span>
-                      {currentOrder?.agentCode && (
+                      <span>{currentOrder?.agentName || currentOrder?.assignedAgent?.name || currentOrder?.kabadwala?.name || 'Verified Field Agent'}</span>
+                      {(currentOrder?.agentCode || currentOrder?.assignedAgent?.agentCode) && (
                         <span style={{ fontSize: '0.72rem', background: '#E0E7FF', color: '#3730A3', padding: '1px 6px', borderRadius: '4px', fontWeight: 700 }}>
-                          {currentOrder.agentCode}
+                          {currentOrder?.agentCode || currentOrder?.assignedAgent?.agentCode}
                         </span>
                       )}
                     </div>
                     <div style={{ fontSize: '0.825rem', color: 'var(--color-text-muted)' }}>
-                      Vehicle: {currentOrder?.agentVehicle || currentOrder?.kabadwala?.vehicle || 'E-Rickshaw (DL-5ER-8921)'}
+                      Vehicle: {currentOrder?.agentVehicle || currentOrder?.assignedAgent?.vehicleNumber || currentOrder?.kabadwala?.vehicle || 'Electric Cargo Vehicle'}
                     </div>
                     <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.2rem', alignItems: 'center' }}>
-                      <span style={{ color: '#F59E0B', fontWeight: 700, fontSize: '0.8rem' }}>★ 4.9</span>
+                      <span style={{ color: '#F59E0B', fontWeight: 700, fontSize: '0.8rem' }}>★ {currentOrder?.assignedAgent?.rating || currentOrder?.kabadwala?.rating || '5.0'}</span>
                       <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>Verified Aadhaar & Digital Scale</span>
                     </div>
                   </div>
 
                   <a
-                    href={`tel:${currentOrder?.agentPhone || currentOrder?.kabadwala?.phone || '9811234567'}`}
+                    href={`tel:${currentOrder?.agentPhone || currentOrder?.assignedAgent?.phone || currentOrder?.kabadwala?.phone || '9876543210'}`}
                     className="btn btn-sm btn-outline"
                     style={{ borderRadius: 'var(--radius-full)' }}
                   >

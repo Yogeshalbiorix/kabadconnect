@@ -247,15 +247,21 @@ export default function App() {
       })
     : null;
 
-  // Live background sync: Poll orders every 6 seconds so customers and field agents stay synchronized
+  // Live background sync: Poll orders every 3 seconds so customers and field agents stay synchronized
   useEffect(() => {
     const pollInterval = setInterval(() => {
       apiFetchOrders().then((res) => {
         if (res && res.success && Array.isArray(res.orders)) {
           setOrders(res.orders);
+          // Keep activeOrder reactive to live status, agent acceptance, and OTP changes
+          setActiveOrder((prevActive) => {
+            if (!prevActive) return prevActive;
+            const fresh = res.orders.find((o) => o.id === prevActive.id);
+            return fresh || prevActive;
+          });
         }
       }).catch(() => { });
-    }, 6000);
+    }, 3000);
     return () => clearInterval(pollInterval);
   }, []);
 
@@ -567,23 +573,39 @@ export default function App() {
   // ----------------------------------------------------
   const handleAcceptPickupByAgent = async (orderId) => {
     if (!currentUser || !orderId) return;
+
+    const vReg = currentUser.vehicleRegNo || currentUser.vehicleNumber || 'Unregistered';
+    const vType = currentUser.vehicleType || 'Electric 3-Wheeler Cargo';
+    const fullVehicle = `${vType} • Reg: ${vReg}`;
+    const agentBadge = currentUser.agentCode || currentUser.badgeNumber || 'AGT-7749';
+
     const agentInfo = {
       id: currentUser.id,
       name: currentUser.name || 'Field Agent',
       phone: currentUser.phone || '',
-      agentCode: currentUser.agentCode || 'AGT-7749',
-      vehicleNumber: currentUser.vehicleNumber || 'E-Rickshaw (DL-5ER-8921)',
-      vehicleType: currentUser.vehicleType || 'E-Rickshaw'
+      agentCode: agentBadge,
+      vehicleNumber: fullVehicle,
+      vehicleType: vType,
+      avatar: currentUser.avatar || 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=120&q=80'
     };
 
     const updatedFields = {
       assignedAgentId: currentUser.id,
       assignedAgent: agentInfo,
-      agentName: agentInfo.name,
-      agentPhone: agentInfo.phone,
-      agentCode: agentInfo.agentCode,
-      agentVehicle: agentInfo.vehicleNumber,
+      agentName: currentUser.name,
+      agentPhone: currentUser.phone,
+      agentCode: agentBadge,
+      agentVehicle: fullVehicle,
       agentAvatar: currentUser.avatar || 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=120&q=80',
+      kabadwala: {
+        id: currentUser.id,
+        name: currentUser.name,
+        phone: currentUser.phone,
+        rating: Number(currentUser.rating) || 5.0,
+        vehicle: fullVehicle,
+        photo: currentUser.avatar || 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=120&q=80',
+        avatar: currentUser.avatar || 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=120&q=80'
+      },
       status: 'assigned',
       assignedAt: new Date().toISOString()
     };

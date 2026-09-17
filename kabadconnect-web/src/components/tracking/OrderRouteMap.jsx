@@ -62,6 +62,7 @@ export const OrderRouteMap = ({ order }) => {
       new mapboxgl.Marker({ element: userEl }).setLngLat(userLngLat).addTo(map);
 
       // Collector vehicle marker
+      const collectorDisplayName = order?.agentName || order?.assignedAgent?.name || order?.kabadwala?.name || 'Collector';
       const vehicleEl = document.createElement('div');
       vehicleEl.innerHTML = `
         <div style="
@@ -80,7 +81,7 @@ export const OrderRouteMap = ({ order }) => {
           font-family: sans-serif;
         ">
           <span>🛺</span>
-          <span>${order?.kabadwala?.name?.split(' ')[0] || 'Collector'} (En Route)</span>
+          <span>${collectorDisplayName.split(' ')[0]} (En Route)</span>
         </div>
       `;
       new mapboxgl.Marker({ element: vehicleEl, anchor: 'center' }).setLngLat(collectorLngLat).addTo(map);
@@ -131,6 +132,8 @@ export const OrderRouteMap = ({ order }) => {
     };
   }, [token, order]);
 
+  const activeCollectorName = order?.agentName || order?.assignedAgent?.name || order?.kabadwala?.name || 'Collector';
+
   if (!token) {
     return (
       <div style={{
@@ -148,7 +151,7 @@ export const OrderRouteMap = ({ order }) => {
           <span>Live Vehicle Tracking Active</span>
         </div>
         <p style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', margin: 0 }}>
-          {order?.kabadwala?.name || 'Collector'} is currently traveling on {isAhmedabad ? 'SG Highway near Iscon' : 'Sector 62 Indirapuram'}. Estimated arrival in <strong>12-14 minutes</strong> (~0.8 km away).
+          {activeCollectorName} is currently traveling on {isAhmedabad ? 'SG Highway near Iscon' : 'Sector 62 Indirapuram'}. Estimated arrival in <strong>12-14 minutes</strong> (~0.8 km away).
         </p>
         <div style={{
           height: '6px',

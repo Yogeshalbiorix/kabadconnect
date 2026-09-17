@@ -313,7 +313,9 @@ export const BookingWizardModal = ({
       estimatedWeight: weightBracket,
       estimatedAmount: calculatedTotalAmount,
       totalPaid: calculatedTotalAmount,
-      kabadwala: assignedPartner,
+      assignedAgentId: null,
+      agentName: null,
+      kabadwala: null,
       userCoords: userLocation?.coords || null
     };
 
@@ -907,7 +909,7 @@ export const BookingWizardModal = ({
                 Booking ID: <strong style={{ color: 'var(--color-primary)' }}>{bookingId}</strong>
               </p>
 
-              {/* Matched Partner Card */}
+              {/* Hyperlocal Collector Dispatch Network */}
               <div style={{
                 background: 'var(--color-bg)',
                 borderRadius: 'var(--radius-lg)',
@@ -917,24 +919,33 @@ export const BookingWizardModal = ({
                 marginBottom: '1.5rem'
               }}>
                 <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', marginBottom: '0.75rem' }}>
-                  Assigned Scrap Collection Partner
+                  Hyperlocal Dispatch Network
                 </div>
 
                 <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                  <img
-                    src={assignedPartner.photo}
-                    alt={assignedPartner.name}
-                    style={{ width: '60px', height: '60px', borderRadius: '14px', objectFit: 'cover' }}
-                  />
+                  <div style={{
+                    width: '56px',
+                    height: '56px',
+                    borderRadius: '14px',
+                    background: 'rgba(16, 185, 129, 0.12)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#10B981',
+                    flexShrink: 0
+                  }}>
+                    <Truck size={28} />
+                  </div>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 800, fontSize: '1.1rem' }}>{assignedPartner.name}</div>
-                    <div style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>
-                      {assignedPartner.businessName} • {assignedPartner.vehicle}
+                    <div style={{ fontWeight: 800, fontSize: '1.05rem', color: 'var(--color-text)' }}>
+                      Broadcasting to Local Verified Collectors
                     </div>
-                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem', alignItems: 'center' }}>
-                      <span style={{ color: '#F59E0B', fontWeight: 700, fontSize: '0.85rem' }}>★ {assignedPartner.rating}</span>
-                      <span className="badge badge-success" style={{ fontSize: '0.65rem' }}>Digital Scale Verified</span>
-                      <span className="badge badge-primary" style={{ fontSize: '0.65rem' }}>ETA: ~35 Mins</span>
+                    <div style={{ fontSize: '0.825rem', color: 'var(--color-text-muted)', marginTop: '2px' }}>
+                      Nearest online field agent in {formData.city || activeCity} will accept and arrive with certified electronic scale.
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.35rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                      <span className="badge badge-success" style={{ fontSize: '0.65rem' }}>✓ NABL Electronic Scale</span>
+                      <span className="badge badge-primary" style={{ fontSize: '0.65rem' }}>✓ Instant UPI/Cash</span>
                     </div>
                   </div>
                 </div>

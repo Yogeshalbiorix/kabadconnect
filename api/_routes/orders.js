@@ -159,12 +159,14 @@ export default async function handler(req, res) {
       body.status = 'assigned';
       body.acceptedAt = new Date();
       if (body.agent) {
+        const vReg = body.agent.vehicleRegNo || body.agent.vehicleNumber || 'Unregistered';
+        const vType = body.agent.vehicleType || 'Electric 3-Wheeler Cargo';
         body.assignedAgentId = body.agent.id || body.agent._id;
         body.assignedAgentEmail = body.agent.email;
         body.agentName = body.agent.name;
         body.agentPhone = body.agent.phone;
-        body.agentCode = body.agent.agentCode;
-        body.agentVehicle = `${body.agent.vehicleType || 'Electric Cargo'} (${body.agent.vehicleRegNo || 'Reg Pending'})`;
+        body.agentCode = body.agent.agentCode || body.agent.badgeNumber || 'AGT-7749';
+        body.agentVehicle = `${vType} • Reg: ${vReg}`;
         body.agentAvatar = body.agent.avatar;
         // Also sync to kabadwala object for backward compatibility
         body.kabadwala = {
@@ -172,8 +174,9 @@ export default async function handler(req, res) {
           name: body.agent.name,
           phone: body.agent.phone,
           rating: Number(body.agent.rating) || 5.0,
-          vehicle: `${body.agent.vehicleType || 'Electric Cargo'} • ${body.agent.vehicleRegNo || ''}`,
-          avatar: body.agent.avatar
+          vehicle: `${vType} • Reg: ${vReg}`,
+          avatar: body.agent.avatar,
+          photo: body.agent.avatar
         };
       }
     }
