@@ -157,6 +157,7 @@ export const KabadwalaDirectory = ({
               onSelectPartnerForBooking={onSelectPartnerForBooking} 
               userLocation={userLocation}
               onLocationDetected={onLocationDetected}
+              partners={partnerList}
             />
           </div>
         )}

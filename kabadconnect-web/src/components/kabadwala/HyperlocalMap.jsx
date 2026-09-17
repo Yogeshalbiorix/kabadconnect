@@ -28,7 +28,8 @@ export const HyperlocalMap = ({
   activeCity, 
   onSelectPartnerForBooking,
   userLocation: propUserLocation = null,
-  onLocationDetected = null
+  onLocationDetected = null,
+  partners = []
 }) => {
   const mapContainerRef = useRef(null);
   const mapInstanceRef = useRef(null);
@@ -44,21 +45,65 @@ export const HyperlocalMap = ({
   const [activeUserLocation, setActiveUserLocation] = useState(propUserLocation);
 
   // Determine city key and coordinates
-  const cityKey = activeCity?.toLowerCase().includes('ahmedabad') ? 'ahmedabad' : 'delhi';
+  const isAhmd = String(activeCity || '').toLowerCase().includes('ahmedabad');
+  const cityKey = isAhmd ? 'ahmedabad' : 'delhi';
   const cityData = CITY_COORDINATES[cityKey] || CITY_COORDINATES.delhi;
 
   // Compute active user coords [lat, lng]
   const currentCoords = activeUserLocation?.coords || cityData.userLocation.coords;
 
-  // Dynamic ranked partners based on user coords
-  const cityPartners = React.useMemo(() => {
-    const raw = KABADWALA_PARTNERS.filter(p => 
-      cityKey === 'ahmedabad' ? p.city === 'Ahmedabad' : p.city !== 'Ahmedabad'
-    );
-    return rankPartnersByProximity(raw, currentCoords);
-  }, [cityKey, currentCoords]);
+  const incomingPartners = partners && partners.length > 0 ? partners : KABADWALA_PARTNERS;
 
-  const nearestPartner = cityPartners[0] || KABADWALA_PARTNERS[0];
+  // Dynamic ranked partners based on user coords, ensuring ALL agents are positioned in the nearby radius
+  const cityPartners = React.useMemo(() => {
+    const userLat = currentCoords[0] || (isAhmd ? 23.0135 : 28.6385);
+    const userLng = currentCoords[1] || (isAhmd ? 72.5125 : 77.3710);
+
+    // Realistic offsets around doorstep (0.6km - 2.0km in all directions)
+    const offsets = [
+      [0.0072, 0.0065],   // North-East (~1.1 km)
+      [-0.0068, 0.0080],  // South-East (~1.2 km)
+      [0.0055, -0.0078],  // North-West (~1.0 km)
+      [-0.0082, -0.0065], // South-West (~1.3 km)
+      [0.0105, 0.0022],   // North (~1.2 km)
+      [-0.0098, -0.0028], // South (~1.1 km)
+      [0.0028, 0.0115],   // East (~1.2 km)
+      [-0.0032, -0.0110]  // West (~1.2 km)
+    ];
+
+    const mapped = incomingPartners.map((p, idx) => {
+      let coords = p.coords;
+      const off = offsets[idx % offsets.length];
+
+      const hasValidCoords = Array.isArray(coords) && coords.length >= 2 && !isNaN(coords[0]) && !isNaN(coords[1]);
+      
+      const isCoordInCurrentCity = hasValidCoords && (
+        isAhmd ? (coords[0] > 22.5 && coords[0] < 23.5 && coords[1] > 72.0 && coords[1] < 73.0)
+               : (coords[0] > 28.0 && coords[0] < 29.2 && coords[1] > 76.5 && coords[1] < 77.8)
+      );
+
+      // If coordinates are in a different city or missing, position them locally near user's doorstep
+      if (!isCoordInCurrentCity) {
+        coords = [
+          parseFloat((userLat + off[0]).toFixed(5)),
+          parseFloat((userLng + off[1]).toFixed(5))
+        ];
+      }
+
+      const dist = calculateDistanceKm(userLat, userLng, coords[0], coords[1]);
+
+      return {
+        ...p,
+        coords,
+        distanceKm: parseFloat(dist.toFixed(1)),
+        etaMinutes: Math.max(8, Math.round(dist * 6))
+      };
+    });
+
+    return rankPartnersByProximity(mapped, currentCoords);
+  }, [incomingPartners, currentCoords, isAhmd]);
+
+  const nearestPartner = cityPartners[0] || incomingPartners[0];
 
   // Sync prop changes
   useEffect(() => {
@@ -68,8 +113,10 @@ export const HyperlocalMap = ({
   }, [propUserLocation]);
 
   useEffect(() => {
-    setSelectedPartner(nearestPartner);
-  }, [cityKey]);
+    if (cityPartners.length > 0) {
+      setSelectedPartner(cityPartners[0]);
+    }
+  }, [cityPartners]);
 
   // Handle token save
   const handleSaveToken = (e) => {
@@ -255,62 +302,8 @@ export const HyperlocalMap = ({
 
       updateUserMarker(map, userLngLat, label, addr);
 
-      // 2. Kabadwala Partner Markers
-      cityPartners.forEach((partner) => {
-        const partnerLngLat = toLngLat(partner.coords);
-        const isEnRoute = partner.status === 'en_route';
-
-        const partnerEl = document.createElement('div');
-        partnerEl.style.cursor = 'pointer';
-        partnerEl.innerHTML = `
-          <div style="
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            filter: drop-shadow(0 4px 10px rgba(0,0,0,0.2));
-            transition: transform 0.2s ease;
-          ">
-            <div style="
-              display: flex;
-              align-items: center;
-              gap: 6px;
-              background: #FFFFFF;
-              border: 2px solid ${isEnRoute ? '#10B981' : '#F59E0B'};
-              border-radius: 999px;
-              padding: 4px 9px 4px 4px;
-              font-family: sans-serif;
-              white-space: nowrap;
-            ">
-              <img 
-                src="${partner.photo || partner.avatar || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80'}" 
-                onerror="this.src='https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80'"
-                style="width: 28px; height: 28px; border-radius: 50%; object-fit: cover;"
-              />
-              <div style="display: flex; flex-direction: column; text-align: left;">
-                <span style="font-weight: 700; font-size: 11px; color: #0F172A;">${(partner.name || 'Collector').split(' ')[0]}</span>
-                <span style="font-size: 9.5px; color: #10B981; font-weight: 700;">★ ${partner.rating} • ${partner.distanceKm}km</span>
-              </div>
-            </div>
-            <div style="
-              width: 0; 
-              height: 0; 
-              border-left: 5px solid transparent;
-              border-right: 5px solid transparent;
-              border-top: 6px solid ${isEnRoute ? '#10B981' : '#F59E0B'};
-            "></div>
-          </div>
-        `;
-
-        partnerEl.addEventListener('click', () => {
-          setSelectedPartner(partner);
-        });
-
-        const pMarker = new mapboxgl.Marker({ element: partnerEl, anchor: 'bottom' })
-          .setLngLat(partnerLngLat)
-          .addTo(map);
-
-        partnerMarkersRef.current.push(pMarker);
-      });
+      // 2. Kabadwala Partner Markers (Initial render)
+      updatePartnerMarkers(map, cityPartners);
 
       // 3. Draw initial Route Line on style load
       map.on('load', () => {
@@ -332,6 +325,87 @@ export const HyperlocalMap = ({
       }
     };
   }, [token, cityKey]);
+
+  // Re-render partner markers on map whenever cityPartners list changes
+  const updatePartnerMarkers = useCallback((map, partnersToRender) => {
+    if (!map) return;
+
+    if (partnerMarkersRef.current && partnerMarkersRef.current.length > 0) {
+      partnerMarkersRef.current.forEach(m => m.remove());
+    }
+    partnerMarkersRef.current = [];
+
+    partnersToRender.forEach((partner) => {
+      const partnerLngLat = toLngLat(partner.coords);
+      const isEnRoute = partner.status === 'en_route' || partner.status === 'available';
+
+      const partnerEl = document.createElement('div');
+      partnerEl.style.cursor = 'pointer';
+      partnerEl.className = 'kabadwala-map-marker';
+      partnerEl.innerHTML = `
+        <div style="
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          filter: drop-shadow(0 4px 10px rgba(0,0,0,0.25));
+          transition: transform 0.2s ease;
+        ">
+          <div style="
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: #FFFFFF;
+            border: 2.5px solid ${isEnRoute ? '#10B981' : '#F59E0B'};
+            border-radius: 999px;
+            padding: 4px 10px 4px 4px;
+            font-family: sans-serif;
+            white-space: nowrap;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+          ">
+            <img 
+              src="${partner.photo || partner.avatar || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80'}" 
+              onerror="this.src='https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80'"
+              style="width: 28px; height: 28px; border-radius: 50%; object-fit: cover; border: 1.5px solid #10B981;"
+            />
+            <div style="display: flex; flex-direction: column; text-align: left;">
+              <span style="font-weight: 800; font-size: 11px; color: #0F172A;">${(partner.name || 'Collector').split(' ')[0]}</span>
+              <span style="font-size: 9.5px; color: #059669; font-weight: 800;">★ ${partner.rating || '4.9'} • ${partner.distanceKm || '1.1'}km</span>
+            </div>
+          </div>
+          <div style="
+            width: 0; 
+            height: 0; 
+            border-left: 5px solid transparent;
+            border-right: 5px solid transparent;
+            border-top: 6px solid ${isEnRoute ? '#10B981' : '#F59E0B'};
+          "></div>
+        </div>
+      `;
+
+      partnerEl.addEventListener('click', () => {
+        setSelectedPartner(partner);
+      });
+
+      const pMarker = new mapboxgl.Marker({ element: partnerEl, anchor: 'bottom' })
+        .setLngLat(partnerLngLat)
+        .addTo(map);
+
+      partnerMarkersRef.current.push(pMarker);
+    });
+  }, []);
+
+  // Update markers and route line whenever cityPartners or user coordinates change
+  useEffect(() => {
+    if (!mapInstanceRef.current) return;
+    const map = mapInstanceRef.current;
+    updatePartnerMarkers(map, cityPartners);
+
+    const userLngLat = toLngLat(currentCoords);
+    if (nearestPartner && nearestPartner.coords) {
+      const nearestLngLat = toLngLat(nearestPartner.coords);
+      updateRouteLine(map, userLngLat, nearestLngLat);
+    }
+  }, [cityPartners, currentCoords, nearestPartner, updatePartnerMarkers, updateRouteLine]);
 
   // When user coordinates change dynamically (e.g. after geolocation), re-position and fly
   useEffect(() => {
