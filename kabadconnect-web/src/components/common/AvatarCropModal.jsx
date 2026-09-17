@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { 
   X, 
   Upload, 
@@ -8,9 +8,10 @@ import {
   Check, 
   Image as ImageIcon, 
   Camera, 
-  RefreshCcw,
-  Sparkles,
-  Move
+  RefreshCcw, 
+  Sparkles, 
+  Move,
+  Maximize2
 } from 'lucide-react';
 
 const PRESET_AVATARS = [
@@ -22,6 +23,9 @@ const PRESET_AVATARS = [
   'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=400&q=80'
 ];
 
+const VIEWPORT_SIZE = 280; // 280px preview container
+const TARGET_SIZE = 400;   // Exact 400x400 export resolution
+
 export const AvatarCropModal = ({
   isOpen,
   onClose,
@@ -30,6 +34,7 @@ export const AvatarCropModal = ({
   title = 'Upload & Crop Profile Picture'
 }) => {
   const [imageSrc, setImageSrc] = useState(null);
+  const [naturalDimensions, setNaturalDimensions] = useState({ width: 400, height: 400 });
   const [zoom, setZoom] = useState(1);
   const [rotation, setRotation] = useState(0);
   const [position, setPosition] = useState({ x: 0, y: 0 });
@@ -41,33 +46,50 @@ export const AvatarCropModal = ({
   const imageRef = useRef(null);
   const fileInputRef = useRef(null);
 
+  // Load image dimensions to calculate base fit scale
+  const loadImage = useCallback((src) => {
+    setImageSrc(src);
+    setZoom(1);
+    setRotation(0);
+    setPosition({ x: 0, y: 0 });
+
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      setNaturalDimensions({
+        width: img.naturalWidth || 400,
+        height: img.naturalHeight || 400
+      });
+    };
+    img.src = src;
+  }, []);
+
   // Initialize with current avatar if open
   useEffect(() => {
     if (isOpen) {
-      setImageSrc(currentAvatar || PRESET_AVATARS[1]);
-      setZoom(1);
-      setRotation(0);
-      setPosition({ x: 0, y: 0 });
+      loadImage(currentAvatar || PRESET_AVATARS[1]);
     }
-  }, [isOpen, currentAvatar]);
+  }, [isOpen, currentAvatar, loadImage]);
 
   if (!isOpen) return null;
+
+  // Base fit scale: scales the shorter edge to match the 280px circular viewport at 100% zoom
+  const minDimension = Math.min(naturalDimensions.width, naturalDimensions.height) || 400;
+  const baseFitScale = VIEWPORT_SIZE / minDimension;
+  const effectiveDisplayScale = zoom * baseFitScale;
 
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 8 * 1024 * 1024) {
-      alert('Selected image size exceeds 8MB. Please choose a smaller file.');
+    if (file.size > 12 * 1024 * 1024) {
+      alert('Selected image size exceeds 12MB. Please choose a smaller file.');
       return;
     }
 
     const reader = new FileReader();
     reader.onload = (event) => {
-      setImageSrc(event.target.result);
-      setZoom(1);
-      setRotation(0);
-      setPosition({ x: 0, y: 0 });
+      loadImage(event.target.result);
     };
     reader.readAsDataURL(file);
   };
@@ -118,6 +140,16 @@ export const AvatarCropModal = ({
     setIsDragging(false);
   };
 
+  // Mouse Wheel Zoom
+  const handleWheel = (e) => {
+    e.preventDefault();
+    const delta = e.deltaY * -0.0015;
+    setZoom((prev) => {
+      const nextZoom = Math.min(Math.max(prev + delta, 0.1), 3.0);
+      return parseFloat(nextZoom.toFixed(2));
+    });
+  };
+
   const handleRotate = () => {
     setRotation((prev) => (prev + 90) % 360);
   };
@@ -128,6 +160,14 @@ export const AvatarCropModal = ({
     setPosition({ x: 0, y: 0 });
   };
 
+  // Auto-fit entire image inside the circle
+  const handleFitEntireImage = () => {
+    const maxDimension = Math.max(naturalDimensions.width, naturalDimensions.height) || 400;
+    const fitAllZoom = (minDimension / maxDimension);
+    setZoom(parseFloat(fitAllZoom.toFixed(2)));
+    setPosition({ x: 0, y: 0 });
+  };
+
   // Generate exact 400x400 pixel circular cropped image via HTML5 Canvas
   const handleGenerateCrop = async () => {
     if (!imageRef.current) return;
@@ -135,9 +175,8 @@ export const AvatarCropModal = ({
 
     try {
       const canvas = document.createElement('canvas');
-      const targetSize = 400; // 400x400 square / circle format
-      canvas.width = targetSize;
-      canvas.height = targetSize;
+      canvas.width = TARGET_SIZE;
+      canvas.height = TARGET_SIZE;
       const ctx = canvas.getContext('2d');
 
       const img = new Image();
@@ -150,24 +189,24 @@ export const AvatarCropModal = ({
         img.onerror = reject;
       });
 
-      // Clear canvas with white background
+      // Clear canvas with clean white background
       ctx.fillStyle = '#FFFFFF';
-      ctx.fillRect(0, 0, targetSize, targetSize);
+      ctx.fillRect(0, 0, TARGET_SIZE, TARGET_SIZE);
 
       ctx.save();
       // Move to center of 400x400 canvas
-      ctx.translate(targetSize / 2, targetSize / 2);
+      ctx.translate(TARGET_SIZE / 2, TARGET_SIZE / 2);
       ctx.rotate((rotation * Math.PI) / 180);
 
       // Crop viewport display dimension is 280px, scale factor to 400px
-      const displayViewportSize = 280;
-      const scaleFactor = targetSize / displayViewportSize;
+      const scaleFactor = TARGET_SIZE / VIEWPORT_SIZE;
+      const canvasEffectiveScale = effectiveDisplayScale * scaleFactor;
 
-      ctx.scale(zoom * scaleFactor, zoom * scaleFactor);
+      ctx.scale(canvasEffectiveScale, canvasEffectiveScale);
 
-      // Position offset adjusted
-      const drawX = position.x / zoom - (img.naturalWidth || img.width) / 2;
-      const drawY = position.y / zoom - (img.naturalHeight || img.height) / 2;
+      // Position offset adjusted in unscaled natural image coordinates
+      const drawX = position.x / effectiveDisplayScale - (img.naturalWidth || img.width) / 2;
+      const drawY = position.y / effectiveDisplayScale - (img.naturalHeight || img.height) / 2;
 
       ctx.drawImage(img, drawX, drawY);
       ctx.restore();
@@ -211,7 +250,7 @@ export const AvatarCropModal = ({
           background: '#FFFFFF',
           borderRadius: 'var(--radius-xl)',
           width: '100%',
-          maxWidth: '480px',
+          maxWidth: '500px',
           boxShadow: '0 20px 40px rgba(0,0,0,0.25)',
           overflow: 'hidden',
           display: 'flex',
@@ -263,10 +302,11 @@ export const AvatarCropModal = ({
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
+            onWheel={handleWheel}
             style={{
               position: 'relative',
-              width: '280px',
-              height: '280px',
+              width: `${VIEWPORT_SIZE}px`,
+              height: `${VIEWPORT_SIZE}px`,
               borderRadius: '50%',
               overflow: 'hidden',
               background: '#0F172A',
@@ -275,6 +315,7 @@ export const AvatarCropModal = ({
               userSelect: 'none',
               touchAction: 'none'
             }}
+            title="Drag to center face • Scroll mouse wheel to zoom"
           >
             {imageSrc ? (
               <img
@@ -286,12 +327,12 @@ export const AvatarCropModal = ({
                   position: 'absolute',
                   top: '50%',
                   left: '50%',
-                  transform: `translate(-50%, -50%) translate(${position.x}px, ${position.y}px) scale(${zoom}) rotate(${rotation}deg)`,
+                  transform: `translate(-50%, -50%) translate(${position.x}px, ${position.y}px) scale(${effectiveDisplayScale}) rotate(${rotation}deg)`,
                   transformOrigin: 'center center',
                   maxWidth: 'none',
                   maxHeight: 'none',
                   pointerEvents: 'none',
-                  transition: isDragging ? 'none' : 'transform 0.1s ease'
+                  transition: isDragging ? 'none' : 'transform 0.05s ease'
                 }}
               />
             ) : (
@@ -324,18 +365,25 @@ export const AvatarCropModal = ({
 
           <div style={{ fontSize: '0.75rem', color: '#64748B', marginTop: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
             <Move size={14} color="#10B981" />
-            <span>Click & drag image inside circle to center your face</span>
+            <span>Click & drag inside circle • Scroll wheel or use slider to zoom</span>
           </div>
 
-          {/* Controls: Zoom & Rotate */}
-          <div style={{ width: '100%', marginTop: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          {/* Controls: Zoom Slider & Percentage */}
+          <div style={{ width: '100%', marginTop: '1.15rem', display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <ZoomOut size={18} color="#64748B" />
+              <button
+                type="button"
+                onClick={() => setZoom((prev) => Math.max(0.1, parseFloat((prev - 0.1).toFixed(2))))}
+                style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, color: '#64748B' }}
+                title="Zoom out"
+              >
+                <ZoomOut size={18} />
+              </button>
               <input
                 type="range"
-                min="0.6"
-                max="3"
-                step="0.05"
+                min="0.1"
+                max="3.0"
+                step="0.01"
                 value={zoom}
                 onChange={(e) => setZoom(parseFloat(e.target.value))}
                 style={{
@@ -345,18 +393,61 @@ export const AvatarCropModal = ({
                   height: '6px'
                 }}
               />
-              <ZoomIn size={18} color="#64748B" />
-              <span style={{ fontSize: '0.8rem', fontWeight: 700, minWidth: '42px', color: '#0F172A' }}>
+              <button
+                type="button"
+                onClick={() => setZoom((prev) => Math.min(3.0, parseFloat((prev + 0.1).toFixed(2))))}
+                style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, color: '#64748B' }}
+                title="Zoom in"
+              >
+                <ZoomIn size={18} />
+              </button>
+              <span style={{ fontSize: '0.85rem', fontWeight: 800, minWidth: '46px', textAlign: 'right', color: '#0F172A' }}>
                 {Math.round(zoom * 100)}%
               </span>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '0.65rem' }}>
+            {/* Quick Zoom Preset Buttons */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+              {[
+                { label: 'Fit View', action: handleFitEntireImage, icon: <Maximize2 size={11} /> },
+                { label: '30%', val: 0.3 },
+                { label: '50%', val: 0.5 },
+                { label: '75%', val: 0.75 },
+                { label: '100%', val: 1.0 },
+                { label: '150%', val: 1.5 },
+                { label: '200%', val: 2.0 }
+              ].map((chip, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => chip.action ? chip.action() : setZoom(chip.val)}
+                  style={{
+                    padding: '0.2rem 0.55rem',
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    borderRadius: '6px',
+                    border: '1px solid #E2E8F0',
+                    background: chip.val && Math.abs(zoom - chip.val) < 0.05 ? '#0D5C3A' : '#F1F5F9',
+                    color: chip.val && Math.abs(zoom - chip.val) < 0.05 ? '#FFFFFF' : '#334155',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.25rem',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  {chip.icon} {chip.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Rotation & File Upload Actions */}
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginTop: '0.35rem' }}>
               <button
                 type="button"
                 onClick={handleRotate}
                 className="btn btn-outline btn-sm"
-                style={{ fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+                style={{ fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.35rem 0.75rem' }}
               >
                 <RotateCw size={14} /> Rotate 90°
               </button>
@@ -364,7 +455,7 @@ export const AvatarCropModal = ({
                 type="button"
                 onClick={handleReset}
                 className="btn btn-outline btn-sm"
-                style={{ fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+                style={{ fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.35rem 0.75rem' }}
               >
                 <RefreshCcw size={14} /> Reset
               </button>
@@ -372,9 +463,9 @@ export const AvatarCropModal = ({
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 className="btn btn-outline btn-sm"
-                style={{ fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', color: '#2563EB', borderColor: '#BFDBFE' }}
+                style={{ fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', color: '#2563EB', borderColor: '#BFDBFE', padding: '0.35rem 0.75rem' }}
               >
-                <Upload size={14} /> Upload Device File
+                <Upload size={14} /> Upload Image
               </button>
               <input
                 ref={fileInputRef}
@@ -387,7 +478,7 @@ export const AvatarCropModal = ({
           </div>
 
           {/* Quick Preset Avatars */}
-          <div style={{ width: '100%', marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px solid var(--color-border)' }}>
+          <div style={{ width: '100%', marginTop: '1rem', paddingTop: '0.85rem', borderTop: '1px solid var(--color-border)' }}>
             <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-muted)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
               <Sparkles size={13} color="#F59E0B" />
               <span>Or Choose from Verified Preset Avatars:</span>
@@ -398,20 +489,15 @@ export const AvatarCropModal = ({
                   key={idx}
                   src={url}
                   alt={`Preset ${idx + 1}`}
-                  onClick={() => {
-                    setImageSrc(url);
-                    setZoom(1);
-                    setRotation(0);
-                    setPosition({ x: 0, y: 0 });
-                  }}
+                  onClick={() => loadImage(url)}
                   style={{
-                    width: '42px',
-                    height: '42px',
+                    width: '38px',
+                    height: '38px',
                     borderRadius: '50%',
                     objectFit: 'cover',
                     cursor: 'pointer',
                     border: imageSrc === url ? '2.5px solid #10B981' : '1.5px solid #E2E8F0',
-                    transform: imageSrc === url ? 'scale(1.15)' : 'scale(1)',
+                    transform: imageSrc === url ? 'scale(1.12)' : 'scale(1)',
                     transition: 'all 0.15s ease'
                   }}
                 />
@@ -422,7 +508,7 @@ export const AvatarCropModal = ({
 
         {/* Modal Footer */}
         <div style={{
-          padding: '1rem 1.5rem',
+          padding: '0.85rem 1.5rem',
           borderTop: '1px solid var(--color-border)',
           background: '#F8FAFC',
           display: 'flex',
@@ -451,3 +537,4 @@ export const AvatarCropModal = ({
     </div>
   );
 };
+
