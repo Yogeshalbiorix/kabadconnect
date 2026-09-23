@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { Truck, X, Bell } from 'lucide-react';
 import { Navbar } from './components/common/Navbar';
+
 import { LiveRateTicker } from './components/home/LiveRateTicker';
 import { Footer } from './components/common/Footer';
 
@@ -44,6 +46,10 @@ import {
   apiAcceptPickupOrder,
   apiFetchRates,
   apiUpdateRate,
+  apiCreateRate,
+  apiDeleteRate,
+  apiBulkUpdateRates,
+  apiSeedDatabase,
   checkDatabaseHealth,
   apiCreateOrUpdateUser,
   apiUpdateUserProfile,
@@ -118,8 +124,14 @@ export default function App() {
     })
     : [];
 
-  // Centralized Scrap Rates State (allows Admin live editing)
-  const [scrapItems, setScrapItems] = useState(SCRAP_ITEMS);
+  // Centralized Scrap Rates State (allows Admin live editing, persisted in localStorage & MongoDB)
+  const [scrapItems, setScrapItems] = useState(() => {
+    try {
+      const saved = localStorage.getItem('kabadcollect_scrap_rates') || localStorage.getItem('kabadconnect_scrap_rates');
+      if (saved) return JSON.parse(saved);
+    } catch (e) { }
+    return SCRAP_ITEMS;
+  });
 
   // Centralized Marketplace State (Almirahs, Tables, AC, Sofa, Bed, Mattress, Cycles, etc.)
   const [marketplaceItems, setMarketplaceItems] = useState(() => {
@@ -151,8 +163,10 @@ export default function App() {
   const [isSellModalOpen, setIsSellModalOpen] = useState(false);
   const [isDoorstepModalOpen, setIsDoorstepModalOpen] = useState(false);
   const [doorstepOrder, setDoorstepOrder] = useState(null);
+  const [agentNotification, setAgentNotification] = useState(null);
 
   // Dynamic booking state & pickup list
+
   const [selectedScrapItems, setSelectedScrapItems] = useState([]);
   const [calculatedScrapData, setCalculatedScrapData] = useState(null);
   const [activeOrder, setActiveOrder] = useState(null);
@@ -193,6 +207,13 @@ export default function App() {
       localStorage.setItem('kabadcollect_partners', JSON.stringify(partners));
     } catch (e) { }
   }, [partners]);
+
+  // Sync scrap items to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('kabadcollect_scrap_rates', JSON.stringify(scrapItems));
+    } catch (e) { }
+  }, [scrapItems]);
 
   // Initial load: Verify MongoDB connection & load live records from database
   useEffect(() => {
@@ -613,12 +634,31 @@ export default function App() {
 
     handleUpdateOrder(orderId, updatedFields);
 
+    const existingOrder = orders.find((o) => o.id === orderId) || { id: orderId };
+    const fullMergedOrder = { ...existingOrder, ...updatedFields };
+
+    // 1. Instant Notification / Message for Field Agent
+    setAgentNotification({
+      title: '✅ Pickup Order Assigned!',
+      message: `Pickup Order #${orderId} (${existingOrder.customer?.name || existingOrder.userName || 'Customer'}) is assigned to you. Opening Doorstep Weighing & Inspection Terminal...`,
+      orderId: orderId
+    });
+
+    setTimeout(() => {
+      setAgentNotification(null);
+    }, 7000);
+
+    // 2. Open Doorstep Weighing & Inspection Modal DIRECTLY (no need to open Profile)
+    setDoorstepOrder(fullMergedOrder);
+    setIsDoorstepModalOpen(true);
+
     try {
       await apiAcceptPickupOrder(orderId, currentUser);
     } catch (e) {
       console.warn('Failed to sync agent pickup acceptance to MongoDB Atlas:', e);
     }
   };
+
 
   const handleDeclinePickupByAgent = (orderId) => {
     setDeclinedOrderIds((prev) => [...prev, orderId]);
@@ -658,21 +698,76 @@ export default function App() {
     apiUpdateOrder(orderId, { kabadwala: partner, status: 'assigned' }).catch(() => { });
   };
 
-  const handleUpdateScrapRate = (itemId, newRate, newTrend) => {
+  // ----------------------------------------------------
+  // Scrap Rates & Catalog Operations (CRUD & Bulk Adjustment)
+  // ----------------------------------------------------
+  const handleCreateScrapItem = async (newItemData) => {
+    const item = {
+      ...newItemData,
+      id: newItemData.id || `${newItemData.category || 'scrap'}-${Date.now().toString(36)}`
+    };
+    setScrapItems((prev) => [item, ...prev]);
+    const res = await apiCreateRate(item);
+    if (res && res.success && res.item) {
+      setScrapItems((prev) => prev.map((p) => p.id === item.id ? res.item : p));
+    }
+  };
+
+  const handleUpdateScrapRate = (itemId, updatesOrRate, newTrend) => {
+    const isObject = typeof updatesOrRate === 'object' && updatesOrRate !== null;
+    const updates = isObject ? updatesOrRate : { rate: Number(updatesOrRate), trendType: newTrend };
+
     setScrapItems((prev) =>
       prev.map((it) =>
         it.id === itemId
           ? {
             ...it,
-            rate: newRate,
-            trendType: newTrend || it.trendType
+            ...updates,
+            rate: updates.rate !== undefined ? Number(updates.rate) : it.rate
           }
           : it
       )
     );
 
     // Persist live rate change to MongoDB Atlas
-    apiUpdateRate({ id: itemId, rate: newRate, trendType: newTrend }).catch(() => { });
+    apiUpdateRate({ id: itemId, ...updates }).catch(() => { });
+  };
+
+  const handleDeleteScrapItem = async (itemId) => {
+    setScrapItems((prev) => prev.filter((it) => it.id !== itemId));
+    await apiDeleteRate(itemId);
+  };
+
+  const handleBulkUpdateScrapRates = async (category, deltaPercent = null, deltaAmount = null) => {
+    setScrapItems((prev) =>
+      prev.map((item) => {
+        if (category !== 'all' && item.category !== category) return item;
+        let newRate = item.rate;
+        if (deltaPercent) {
+          newRate = Math.max(1, Math.round(item.rate * (1 + Number(deltaPercent) / 100)));
+        } else if (deltaAmount) {
+          newRate = Math.max(1, item.rate + Number(deltaAmount));
+        }
+        const trendT = newRate > item.rate ? 'up' : newRate < item.rate ? 'down' : 'stable';
+        const trendTxt = newRate > item.rate ? `+₹${newRate - item.rate}.00` : newRate < item.rate ? `-₹${item.rate - newRate}.00` : 'Stable';
+        return {
+          ...item,
+          rate: newRate,
+          trend: trendTxt,
+          trendType: trendT
+        };
+      })
+    );
+
+    await apiBulkUpdateRates(category, deltaPercent, deltaAmount);
+  };
+
+  const handleResetScrapRates = async () => {
+    setScrapItems(SCRAP_ITEMS);
+    try {
+      localStorage.setItem('kabadcollect_scrap_rates', JSON.stringify(SCRAP_ITEMS));
+      await apiSeedDatabase();
+    } catch (e) { }
   };
 
   // ----------------------------------------------------
@@ -1066,6 +1161,10 @@ export default function App() {
         onCancelOrder={handleCancelOrder}
         scrapItems={scrapItems}
         onUpdateScrapRate={handleUpdateScrapRate}
+        onCreateScrapItem={handleCreateScrapItem}
+        onDeleteScrapItem={handleDeleteScrapItem}
+        onBulkUpdateScrapRates={handleBulkUpdateScrapRates}
+        onResetScrapRates={handleResetScrapRates}
         currentUser={currentUser}
         onReorder={handleReorder}
         dbStatus={dbStatus}
@@ -1115,6 +1214,63 @@ export default function App() {
 
       {/* Global Hyperlocal Cookie Consent Banner & Preferences Modal */}
       <CookieConsentModal />
+
+      {/* Real-time Agent Dispatch / Acceptance Notification Toast */}
+      {agentNotification && (
+        <div style={{
+          position: 'fixed',
+          top: '24px',
+          right: '24px',
+          zIndex: 9999,
+          background: 'linear-gradient(135deg, #0D5C3A 0%, #16A34A 100%)',
+          color: '#FFFFFF',
+          padding: '1rem 1.25rem',
+          borderRadius: '12px',
+          boxShadow: '0 12px 36px rgba(0, 0, 0, 0.28)',
+          maxWidth: '440px',
+          display: 'flex',
+          alignItems: 'flex-start',
+          gap: '0.85rem',
+          border: '1px solid rgba(255, 255, 255, 0.25)'
+        }}>
+          <div style={{
+            background: 'rgba(255, 255, 255, 0.22)',
+            borderRadius: '50%',
+            padding: '8px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0
+          }}>
+            <Truck size={22} color="#FFFFFF" />
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 800, fontSize: '0.96rem', marginBottom: '3px' }}>
+              {agentNotification.title}
+            </div>
+            <div style={{ fontSize: '0.835rem', opacity: 0.95, lineHeight: 1.4 }}>
+              {agentNotification.message}
+            </div>
+          </div>
+          <button
+            onClick={() => setAgentNotification(null)}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#FFFFFF',
+              cursor: 'pointer',
+              opacity: 0.8,
+              padding: '2px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+          >
+            <X size={18} />
+          </button>
+        </div>
+      )}
     </div>
   );
 }
+

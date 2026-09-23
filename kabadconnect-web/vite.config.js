@@ -1,4 +1,5 @@
 import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
 import { defineConfig } from 'vite'
 import path from 'path'
 import { fileURLToPath, pathToFileURL } from 'url'
@@ -80,7 +81,11 @@ function vercelServerlessDevPlugin() {
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), vercelServerlessDevPlugin()],
+  plugins: [
+    tailwindcss(),
+    react(),
+    vercelServerlessDevPlugin()
+  ],
   build: {
     chunkSizeWarningLimit: 3000,
   }

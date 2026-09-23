@@ -9,11 +9,14 @@
     "build": "npm --prefix kabadconnect-web run build",
     "preview": "npm --prefix kabadconnect-web run preview",
     "test-db": "node scripts/test-db.js",
+    "test-payment": "node scripts/test-razorpay.js",
     "seed-db": "node scripts/seed-db.js"
+
   },
   "dependencies": {
     "dotenv": "^17.4.2",
     "mongoose": "^9.9.5",
-    "nodemailer": "^10.0.10"
+    "nodemailer": "^10.0.10",
+    "razorpay": "^2.9.8"
   }
 }

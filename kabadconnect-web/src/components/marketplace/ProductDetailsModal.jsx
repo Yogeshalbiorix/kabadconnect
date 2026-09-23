@@ -9,13 +9,14 @@ import {
   Calendar, 
   CheckCircle2, 
   HeartHandshake, 
-  Sparkles,
-  Truck,
-  Eye,
-  Share2,
-  Trash2,
-  Check
+  Sparkles, 
+  Truck, 
+  Eye, 
+  Share2, 
+  Trash2, 
+  Check 
 } from 'lucide-react';
+import { RazorpayCheckoutButton } from '../common/RazorpayCheckoutButton';
 
 export const ProductDetailsModal = ({
   isOpen,
@@ -263,6 +264,35 @@ export const ProductDetailsModal = ({
 
               {/* Action Buttons */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', marginTop: '0.5rem' }}>
+                {/* Razorpay Online Instant Checkout */}
+                {product.status !== 'sold' && (
+                  <RazorpayCheckoutButton
+                    amountInRupees={Number(product.price) || 1}
+                    productName={product.title}
+                    description={`Marketplace item by ${product.seller?.name || 'Seller'}`}
+                    customerName={currentUser?.name || ''}
+                    customerEmail={currentUser?.email || ''}
+                    customerPhone={currentUser?.phone || ''}
+                    notes={{
+                      productId: product.id,
+                      productTitle: product.title,
+                      sellerId: product.seller?.id || '',
+                      buyerId: currentUser?.id || ''
+                    }}
+                    onPaymentSuccess={(data) => {
+                      if (onMarkAsSold) {
+                        onMarkAsSold(product.id);
+                      }
+                    }}
+                    buttonText={`⚡ Instant Checkout • Pay ₹${Number(product.price || 0).toLocaleString('en-IN')}`}
+                    style={{
+                      width: '100%',
+                      padding: '0.85rem 1.25rem',
+                      fontSize: '0.95rem'
+                    }}
+                  />
+                )}
+
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 140px), 1fr))', gap: '0.75rem' }}>
                   <a
                     href={whatsappUrl}
@@ -302,6 +332,7 @@ export const ProductDetailsModal = ({
                     <span>Call Seller</span>
                   </a>
                 </div>
+
 
                 {/* Owner controls: Mark Sold or Delete */}
                 {isOwner && (

@@ -177,6 +177,58 @@ export async function apiUpdateRate(rateData) {
   } catch (err) {
     console.warn('[API Service] Update rate API call failed:', err.message);
   }
+  return { success: false, source: 'local', rate: rateData };
+}
+
+export async function apiCreateRate(itemData) {
+  try {
+    const res = await fetchWithTimeout(`${API_BASE}/rates`, {
+      method: 'POST',
+      body: JSON.stringify(itemData)
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return { success: true, source: data.source, item: data.data };
+    }
+  } catch (err) {
+    console.warn('[API Service] Create rate API call failed:', err.message);
+  }
+  return { success: false, source: 'local', item: itemData };
+}
+
+export async function apiDeleteRate(itemId) {
+  try {
+    const res = await fetchWithTimeout(`${API_BASE}/rates?id=${encodeURIComponent(itemId)}`, {
+      method: 'DELETE'
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return { success: true, source: data.source, id: itemId };
+    }
+  } catch (err) {
+    console.warn('[API Service] Delete rate API call failed:', err.message);
+  }
+  return { success: false, source: 'local', id: itemId };
+}
+
+export async function apiBulkUpdateRates(category, deltaPercent = null, deltaAmount = null) {
+  try {
+    const res = await fetchWithTimeout(`${API_BASE}/rates`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        action: 'bulk_category_update',
+        category,
+        deltaPercent,
+        deltaAmount
+      })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return { success: true, source: data.source, rates: data.data };
+    }
+  } catch (err) {
+    console.warn('[API Service] Bulk update rate API call failed:', err.message);
+  }
   return { success: false, source: 'local' };
 }
 

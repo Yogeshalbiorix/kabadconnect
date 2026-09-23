@@ -27,7 +27,20 @@ import {
   Lock,
   Eye,
   EyeOff,
-  Check
+  Check,
+  Plus,
+  Trash2,
+  Sparkles,
+  Percent,
+  ArrowUpRight,
+  ArrowDownRight,
+  Layers,
+  Settings2,
+  Tag,
+  Sliders,
+  PlusCircle,
+  HelpCircle,
+  Info
 } from 'lucide-react';
 import { KABADWALA_PARTNERS } from '../../data/kabadwalas';
 import { apiSeedDatabase, apiGetDbConfig, apiUpdateDbConfig } from '../../services/api';
@@ -41,6 +54,10 @@ export const AdminPanelModal = ({
   onCancelOrder,
   scrapItems = [],
   onUpdateScrapRate,
+  onCreateScrapItem = null,
+  onDeleteScrapItem = null,
+  onBulkUpdateScrapRates = null,
+  onResetScrapRates = null,
   currentUser,
   onReorder = null,
   dbStatus = { connected: false, status: 'checking', message: '' },
@@ -54,9 +71,40 @@ export const AdminPanelModal = ({
   const [orderFilter, setOrderFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Rate editor state: { [itemId]: { rate: number, trendType: string } }
+  // Rate editor state: { [itemId]: { rate: number, trendType: string, trend: string } }
   const [editingRates, setEditingRates] = useState({});
   const [rateSavedMessage, setRateSavedMessage] = useState('');
+
+  // Scrap Manager State
+  const [scrapCategoryFilter, setScrapCategoryFilter] = useState('all');
+  const [scrapSearchQuery, setScrapSearchQuery] = useState('');
+  const [isAddScrapModalOpen, setIsAddScrapModalOpen] = useState(false);
+  const [isBulkAdjustModalOpen, setIsBulkAdjustModalOpen] = useState(false);
+  const [editingScrapItem, setEditingScrapItem] = useState(null);
+  const [deleteConfirmScrapId, setDeleteConfirmScrapId] = useState(null);
+
+  // New Scrap Item Form State
+  const initialNewScrapForm = {
+    name: '',
+    hindiName: '',
+    category: 'paper',
+    rate: '',
+    unit: 'kg',
+    trend: 'Stable',
+    trendType: 'stable',
+    minWeight: '5 kg',
+    description: '',
+    co2SavedPerKg: 1.5,
+    waterSavedPerKg: 20,
+    treesSavedPerKg: 0.015
+  };
+  const [newScrapForm, setNewScrapForm] = useState(initialNewScrapForm);
+
+  // Bulk Adjustment Form State
+  const [bulkCategory, setBulkCategory] = useState('metal');
+  const [bulkAdjustmentType, setBulkAdjustmentType] = useState('percent'); // 'percent' | 'amount'
+  const [bulkAdjustmentSign, setBulkAdjustmentSign] = useState('+'); // '+' | '-'
+  const [bulkAdjustmentValue, setBulkAdjustmentValue] = useState(5);
 
   // Database Seed state
   const [isSeeding, setIsSeeding] = useState(false);
@@ -129,6 +177,17 @@ export const AdminPanelModal = ({
     return matchesFilter && matchesSearch;
   });
 
+  // Scrap Rate Filtering
+  const filteredScrapItems = scrapItems.filter((item) => {
+    const matchesCategory = scrapCategoryFilter === 'all' || item.category === scrapCategoryFilter;
+    const matchesSearch =
+      !scrapSearchQuery.trim() ||
+      item.name.toLowerCase().includes(scrapSearchQuery.toLowerCase()) ||
+      (item.hindiName && item.hindiName.toLowerCase().includes(scrapSearchQuery.toLowerCase())) ||
+      item.category.toLowerCase().includes(scrapSearchQuery.toLowerCase());
+    return matchesCategory && matchesSearch;
+  });
+
   const handleRateInputChange = (itemId, newRate) => {
     setEditingRates(prev => ({
       ...prev,
@@ -139,14 +198,116 @@ export const AdminPanelModal = ({
     }));
   };
 
+  const handleTrendTypeChange = (itemId, trendType) => {
+    setEditingRates(prev => ({
+      ...prev,
+      [itemId]: {
+        ...prev[itemId],
+        trendType,
+        trend: trendType === 'up' ? '+₹2.00 today' : trendType === 'down' ? '-₹1.00 today' : 'Stable'
+      }
+    }));
+  };
+
   const handleSaveRate = (item) => {
     const updated = editingRates[item.id];
     const newRate = updated?.rate !== undefined ? updated.rate : item.rate;
-    const newTrend = updated?.trendType || item.trendType;
+    const newTrendType = updated?.trendType || item.trendType;
+    const newTrend = updated?.trend || (newTrendType === 'up' ? '+₹2.00 today' : newTrendType === 'down' ? '-₹1.00 today' : 'Stable');
 
-    onUpdateScrapRate(item.id, newRate, newTrend);
-    setRateSavedMessage(`Updated rate for "${item.name}" to ₹${newRate}/${item.unit || 'kg'}`);
+    onUpdateScrapRate(item.id, {
+      rate: newRate,
+      trend: newTrend,
+      trendType: newTrendType
+    });
+    setRateSavedMessage(`✓ Updated "${item.name}" rate to ₹${newRate}/${item.unit || 'kg'} (${newTrendType})`);
     setTimeout(() => setRateSavedMessage(''), 3500);
+  };
+
+  const handleCreateNewScrapSubmit = async (e) => {
+    e.preventDefault();
+    if (!newScrapForm.name.trim() || !newScrapForm.rate) {
+      alert('Please fill in Item Name and Rate.');
+      return;
+    }
+
+    const payload = {
+      ...newScrapForm,
+      rate: Number(newScrapForm.rate),
+      co2SavedPerKg: Number(newScrapForm.co2SavedPerKg) || 1.5,
+      waterSavedPerKg: Number(newScrapForm.waterSavedPerKg) || 20,
+      treesSavedPerKg: Number(newScrapForm.treesSavedPerKg) || 0.015,
+      trend: newScrapForm.trend || 'Stable',
+      trendType: newScrapForm.trendType || 'stable'
+    };
+
+    if (onCreateScrapItem) {
+      await onCreateScrapItem(payload);
+    }
+    setIsAddScrapModalOpen(false);
+    setNewScrapForm(initialNewScrapForm);
+    setRateSavedMessage(`✓ Added new scrap item "${payload.name}" to live catalog.`);
+    setTimeout(() => setRateSavedMessage(''), 3500);
+  };
+
+  const handleSaveEditScrapSubmit = (e) => {
+    e.preventDefault();
+    if (!editingScrapItem) return;
+
+    onUpdateScrapRate(editingScrapItem.id, {
+      ...editingScrapItem,
+      rate: Number(editingScrapItem.rate),
+      co2SavedPerKg: Number(editingScrapItem.co2SavedPerKg) || 1.5,
+      waterSavedPerKg: Number(editingScrapItem.waterSavedPerKg) || 20,
+      treesSavedPerKg: Number(editingScrapItem.treesSavedPerKg) || 0.015
+    });
+
+    setRateSavedMessage(`✓ Updated full details for "${editingScrapItem.name}".`);
+    setEditingScrapItem(null);
+    setTimeout(() => setRateSavedMessage(''), 3500);
+  };
+
+  const handleExecuteBulkAdjust = async (e) => {
+    e.preventDefault();
+    const val = Number(bulkAdjustmentValue);
+    if (!val || val <= 0) {
+      alert('Please enter a valid adjustment value.');
+      return;
+    }
+
+    const sign = bulkAdjustmentSign === '+' ? 1 : -1;
+    const finalVal = val * sign;
+
+    if (onBulkUpdateScrapRates) {
+      if (bulkAdjustmentType === 'percent') {
+        await onBulkUpdateScrapRates(bulkCategory, finalVal, null);
+      } else {
+        await onBulkUpdateScrapRates(bulkCategory, null, finalVal);
+      }
+    }
+
+    setIsBulkAdjustModalOpen(false);
+    setRateSavedMessage(`✓ Applied ${bulkAdjustmentSign}${val}${bulkAdjustmentType === 'percent' ? '%' : ' ₹'} adjustment across ${bulkCategory.toUpperCase()} items.`);
+    setTimeout(() => setRateSavedMessage(''), 4000);
+  };
+
+  const handleDeleteScrapConfirmed = async (itemId) => {
+    if (onDeleteScrapItem) {
+      await onDeleteScrapItem(itemId);
+    }
+    setDeleteConfirmScrapId(null);
+    setRateSavedMessage('✓ Item deleted from scrap catalog.');
+    setTimeout(() => setRateSavedMessage(''), 3500);
+  };
+
+  const handleResetRatesConfirmed = async () => {
+    if (window.confirm('Reset all scrap rates to the standard baseline catalog? Any custom prices will revert.')) {
+      if (onResetScrapRates) {
+        await onResetScrapRates();
+      }
+      setRateSavedMessage('✓ Reset all scrap items to official master baseline catalog.');
+      setTimeout(() => setRateSavedMessage(''), 4000);
+    }
   };
 
   return (
@@ -656,12 +817,13 @@ export const AdminPanelModal = ({
             </div>
           )}
 
-          {/* TAB 2: LIVE SCRAP RATE EDITOR */}
+          {/* TAB 2: COMPREHENSIVE SCRAP RATES & CATALOG MANAGER */}
           {activeTab === 'rates' && (
             <div>
+              {/* Notification Banner */}
               {rateSavedMessage && (
                 <div style={{
-                  padding: '0.75rem 1rem',
+                  padding: '0.75rem 1.25rem',
                   background: '#ECFDF5',
                   border: '1px solid #34D399',
                   borderRadius: 'var(--radius-md)',
@@ -671,100 +833,396 @@ export const AdminPanelModal = ({
                   marginBottom: '1rem',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.5rem'
+                  gap: '0.6rem',
+                  boxShadow: 'var(--shadow-xs)'
                 }}>
-                  <CheckCircle2 size={16} color="#10B981" />
+                  <CheckCircle2 size={18} color="#10B981" />
                   <span>{rateSavedMessage}</span>
                 </div>
               )}
 
-              <div className="" style={{
+              {/* Manager Toolbar */}
+              <div style={{
+                background: '#FFFFFF',
+                borderRadius: 'var(--radius-lg)',
+                padding: '1rem 1.25rem',
+                border: '1px solid var(--color-border)',
+                marginBottom: '1rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.85rem',
+                boxShadow: 'var(--shadow-xs)'
+              }}>
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                  gap: '0.75rem'
+                }}>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Scale size={18} color="var(--color-primary)" />
+                      <span>Live Scrap Pricing & Catalog Engine</span>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748B', background: '#F1F5F9', padding: '2px 8px', borderRadius: '999px' }}>
+                        {scrapItems.length} Managed Items
+                      </span>
+                    </h3>
+                    <p style={{ margin: '2px 0 0', fontSize: '0.785rem', color: '#64748B' }}>
+                      Set doorstep benchmark rates, daily market fluctuations, unit types, and min pickup rules across all consumer and agent touchpoints.
+                    </p>
+                  </div>
+
+                  {/* Actions */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <button
+                      onClick={() => setIsAddScrapModalOpen(true)}
+                      className="btn btn-primary btn-sm"
+                      style={{
+                        padding: '6px 12px',
+                        fontSize: '0.8rem',
+                        fontWeight: 700,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '5px'
+                      }}
+                    >
+                      <Plus size={15} />
+                      <span>Add Scrap Item</span>
+                    </button>
+
+                    <button
+                      onClick={() => setIsBulkAdjustModalOpen(true)}
+                      className="btn btn-secondary btn-sm"
+                      style={{
+                        padding: '6px 12px',
+                        fontSize: '0.8rem',
+                        fontWeight: 700,
+                        background: '#EEF2FF',
+                        color: '#4338CA',
+                        borderColor: '#C7D2FE',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '5px'
+                      }}
+                      title="Adjust entire category margins by % or ₹"
+                    >
+                      <Sliders size={14} />
+                      <span>Bulk Adjust Margins</span>
+                    </button>
+
+                    <button
+                      onClick={handleResetRatesConfirmed}
+                      className="btn btn-secondary btn-sm"
+                      style={{
+                        padding: '6px 10px',
+                        fontSize: '0.785rem',
+                        color: '#64748B',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                      title="Reset all prices to standard baseline"
+                    >
+                      <RotateCcw size={13} />
+                      <span>Reset</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Search & Category Filter */}
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                  gap: '0.75rem',
+                  paddingTop: '0.5rem',
+                  borderTop: '1px solid #F1F5F9'
+                }}>
+                  {/* Category Pills */}
+                  <div className="no-scrollbar" style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.35rem',
+                    overflowX: 'auto',
+                    maxWidth: '100%'
+                  }}>
+                    {[
+                      { id: 'all', label: 'All Items' },
+                      { id: 'paper', label: '📄 Paper' },
+                      { id: 'plastic', label: '🧴 Plastics' },
+                      { id: 'metal', label: '🔩 Metals' },
+                      { id: 'ewaste', label: '💻 E-Waste' },
+                      { id: 'battery', label: '🔋 Batteries' }
+                    ].map(cat => {
+                      const isActive = scrapCategoryFilter === cat.id;
+                      const count = cat.id === 'all'
+                        ? scrapItems.length
+                        : scrapItems.filter(i => i.category === cat.id).length;
+
+                      return (
+                        <button
+                          key={cat.id}
+                          onClick={() => setScrapCategoryFilter(cat.id)}
+                          style={{
+                            padding: '4px 10px',
+                            borderRadius: '999px',
+                            fontSize: '0.75rem',
+                            fontWeight: isActive ? 700 : 500,
+                            background: isActive ? 'var(--color-primary)' : '#F8FAFC',
+                            color: isActive ? '#FFFFFF' : '#475569',
+                            border: `1px solid ${isActive ? 'var(--color-primary)' : '#E2E8F0'}`,
+                            cursor: 'pointer',
+                            whiteSpace: 'nowrap',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          <span>{cat.label}</span>
+                          <span style={{
+                            fontSize: '0.65rem',
+                            background: isActive ? 'rgba(255,255,255,0.25)' : '#E2E8F0',
+                            padding: '1px 5px',
+                            borderRadius: '999px'
+                          }}>
+                            {count}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Search Bar */}
+                  <div style={{ position: 'relative', minWidth: '220px', flex: '1', maxWidth: '300px' }}>
+                    <Search size={14} color="#94A3B8" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)' }} />
+                    <input
+                      type="text"
+                      placeholder="Search scrap / कबाड़..."
+                      value={scrapSearchQuery}
+                      onChange={(e) => setScrapSearchQuery(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '5px 10px 5px 30px',
+                        fontSize: '0.8rem',
+                        borderRadius: 'var(--radius-md)',
+                        border: '1px solid #CBD5E1',
+                        background: '#F8FAFC'
+                      }}
+                    />
+                    {scrapSearchQuery && (
+                      <button
+                        onClick={() => setScrapSearchQuery('')}
+                        style={{
+                          position: 'absolute',
+                          right: '8px',
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          border: 'none',
+                          background: 'transparent',
+                          color: '#94A3B8',
+                          cursor: 'pointer',
+                          fontSize: '0.75rem'
+                        }}
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Scrap Items Catalog Table */}
+              <div style={{
                 background: '#FFFFFF',
                 borderRadius: 'var(--radius-lg)',
                 border: '1px solid var(--color-border)',
                 overflowX: 'auto',
                 boxShadow: 'var(--shadow-sm)'
               }}>
-                <table style={{ width: '100%', minWidth: '640px', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                <table style={{ width: '100%', minWidth: '780px', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                   <thead>
-                    <tr style={{ background: '#F1F5F9', borderBottom: '1px solid #E2E8F0', textAlign: 'left', color: '#475569' }}>
-                      <th style={{ padding: '0.75rem 1rem' }}>Item Name</th>
-                      <th style={{ padding: '0.75rem 1rem' }}>Category</th>
-                      <th style={{ padding: '0.75rem 1rem' }}>Current Rate (₹/unit)</th>
-                      <th style={{ padding: '0.75rem 1rem' }}>New Rate</th>
-                      <th style={{ padding: '0.75rem 1rem' }}>Trend Indicator</th>
-                      <th style={{ padding: '0.75rem 1rem' }}>Save</th>
+                    <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', textAlign: 'left', color: '#475569' }}>
+                      <th style={{ padding: '0.75rem 1rem' }}>Scrap Item & Hindi Name</th>
+                      <th style={{ padding: '0.75rem 0.75rem' }}>Category</th>
+                      <th style={{ padding: '0.75rem 0.75rem' }}>Unit</th>
+                      <th style={{ padding: '0.75rem 0.75rem' }}>Current Rate</th>
+                      <th style={{ padding: '0.75rem 0.75rem', minWidth: '120px' }}>New Rate</th>
+                      <th style={{ padding: '0.75rem 0.75rem', minWidth: '160px' }}>Market Trend</th>
+                      <th style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {scrapItems.map((item) => {
-                      const currentVal = editingRates[item.id]?.rate !== undefined
-                        ? editingRates[item.id].rate
-                        : item.rate;
+                    {filteredScrapItems.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} style={{ padding: '3rem 1rem', textAlign: 'center', color: '#64748B' }}>
+                          <Package size={36} color="#CBD5E1" style={{ margin: '0 auto 0.5rem' }} />
+                          <div style={{ fontWeight: 600 }}>No scrap items found matching criteria.</div>
+                          <div style={{ fontSize: '0.75rem', marginTop: '4px' }}>Try adjusting your category filter or search query.</div>
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredScrapItems.map((item) => {
+                        const currentVal = editingRates[item.id]?.rate !== undefined
+                          ? editingRates[item.id].rate
+                          : item.rate;
 
-                      return (
-                        <tr key={item.id} style={{ borderBottom: '1px solid #E2E8F0' }}>
-                          <td style={{ padding: '0.85rem 1rem' }}>
-                            <strong>{item.name}</strong>
-                            <div style={{ fontSize: '0.75rem', color: '#64748B' }}>{item.hindiName}</div>
-                          </td>
+                        const currentTrendType = editingRates[item.id]?.trendType !== undefined
+                          ? editingRates[item.id].trendType
+                          : (item.trendType || 'stable');
 
-                          <td style={{ padding: '0.85rem 1rem' }}>
-                            <span className="badge badge-primary" style={{ textTransform: 'capitalize' }}>
-                              {item.category}
-                            </span>
-                          </td>
+                        const isChanged = (editingRates[item.id]?.rate !== undefined && editingRates[item.id].rate !== item.rate) ||
+                          (editingRates[item.id]?.trendType !== undefined && editingRates[item.id].trendType !== item.trendType);
 
-                          <td style={{ padding: '0.85rem 1rem', fontWeight: 800, color: 'var(--color-primary)' }}>
-                            ₹{item.rate}/{item.unit || 'kg'}
-                          </td>
+                        return (
+                          <tr key={item.id} style={{ borderBottom: '1px solid #E2E8F0', background: isChanged ? '#F0FDF4' : 'transparent', transition: 'background 0.2s ease' }}>
+                            {/* Name & Hindi */}
+                            <td style={{ padding: '0.75rem 1rem' }}>
+                              <div style={{ fontWeight: 700, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <span>{item.name}</span>
+                                {item.minWeight && (
+                                  <span style={{ fontSize: '0.685rem', background: '#F1F5F9', color: '#64748B', padding: '1px 6px', borderRadius: '4px', fontWeight: 500 }}>
+                                    Min: {item.minWeight}
+                                  </span>
+                                )}
+                              </div>
+                              <div style={{ fontSize: '0.75rem', color: '#64748B' }}>
+                                {item.hindiName || '—'}
+                              </div>
+                            </td>
 
-                          <td style={{ padding: '0.85rem 1rem' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                              <span style={{ fontWeight: 700 }}>₹</span>
-                              <input
-                                type="number"
-                                min="1"
-                                value={currentVal}
-                                onChange={(e) => handleRateInputChange(item.id, e.target.value)}
-                                style={{
-                                  width: '70px',
-                                  padding: '4px 8px',
-                                  borderRadius: 'var(--radius-sm)',
-                                  border: '1.5px solid #CBD5E1',
-                                  fontSize: '0.85rem',
-                                  fontWeight: 700
-                                }}
-                              />
-                            </div>
-                          </td>
+                            {/* Category */}
+                            <td style={{ padding: '0.75rem 0.75rem' }}>
+                              <span className="badge badge-primary" style={{ textTransform: 'capitalize', fontSize: '0.7rem' }}>
+                                {item.category}
+                              </span>
+                            </td>
 
-                          <td style={{ padding: '0.85rem 1rem' }}>
-                            <span style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '3px',
-                              fontSize: '0.75rem',
-                              fontWeight: 700,
-                              color: item.trendType === 'up' ? '#10B981' : item.trendType === 'down' ? '#EF4444' : '#64748B'
-                            }}>
-                              {item.trendType === 'up' ? '↗ High' : item.trendType === 'down' ? '↘ Low' : '— Stable'} ({item.trend})
-                            </span>
-                          </td>
+                            {/* Unit */}
+                            <td style={{ padding: '0.75rem 0.75rem' }}>
+                              <span style={{
+                                fontSize: '0.72rem',
+                                fontWeight: 700,
+                                padding: '2px 6px',
+                                borderRadius: '4px',
+                                background: item.unit === 'unit' ? '#FEF3C7' : '#E0E7FF',
+                                color: item.unit === 'unit' ? '#92400E' : '#3730A3'
+                              }}>
+                                /{item.unit || 'kg'}
+                              </span>
+                            </td>
 
-                          <td style={{ padding: '0.85rem 1rem' }}>
-                            <button
-                              onClick={() => handleSaveRate(item)}
-                              className="btn btn-primary btn-sm"
-                              style={{ padding: '4px 10px', fontSize: '0.785rem' }}
-                            >
-                              <Save size={13} />
-                              <span>Update</span>
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })}
+                            {/* Current Rate */}
+                            <td style={{ padding: '0.75rem 0.75rem', fontWeight: 800, color: 'var(--color-primary)', fontSize: '0.95rem' }}>
+                              ₹{item.rate}
+                            </td>
+
+                            {/* New Rate Input */}
+                            <td style={{ padding: '0.75rem 0.75rem' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                <span style={{ fontWeight: 700, color: '#64748B', fontSize: '0.8rem' }}>₹</span>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  step="1"
+                                  value={currentVal}
+                                  onChange={(e) => handleRateInputChange(item.id, e.target.value)}
+                                  style={{
+                                    width: '75px',
+                                    padding: '4px 6px',
+                                    borderRadius: 'var(--radius-sm)',
+                                    border: isChanged ? '1.5px solid var(--color-primary)' : '1px solid #CBD5E1',
+                                    fontSize: '0.85rem',
+                                    fontWeight: 700,
+                                    background: '#FFFFFF'
+                                  }}
+                                />
+                              </div>
+                            </td>
+
+                            {/* Trend Selector */}
+                            <td style={{ padding: '0.75rem 0.75rem' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                <select
+                                  value={currentTrendType}
+                                  onChange={(e) => handleTrendTypeChange(item.id, e.target.value)}
+                                  style={{
+                                    padding: '3px 6px',
+                                    borderRadius: 'var(--radius-sm)',
+                                    border: '1px solid #CBD5E1',
+                                    fontSize: '0.75rem',
+                                    fontWeight: 600,
+                                    background:
+                                      currentTrendType === 'up' ? '#ECFDF5' :
+                                        currentTrendType === 'down' ? '#FEF2F2' : '#F8FAFC',
+                                    color:
+                                      currentTrendType === 'up' ? '#065F46' :
+                                        currentTrendType === 'down' ? '#991B1B' : '#475569'
+                                  }}
+                                >
+                                  <option value="stable">━ Stable</option>
+                                  <option value="up">↗ High (Bullish)</option>
+                                  <option value="down">↘ Low (Bearish)</option>
+                                </select>
+                              </div>
+                            </td>
+
+                            {/* Actions */}
+                            <td style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>
+                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                <button
+                                  onClick={() => handleSaveRate(item)}
+                                  className={`btn ${isChanged ? 'btn-primary' : 'btn-secondary'} btn-sm`}
+                                  style={{ padding: '3px 8px', fontSize: '0.75rem', fontWeight: 700 }}
+                                  title="Save price change to live database"
+                                >
+                                  <Save size={12} />
+                                  <span>{isChanged ? 'Save' : 'Update'}</span>
+                                </button>
+
+                                <button
+                                  onClick={() => setEditingScrapItem({ ...item })}
+                                  style={{
+                                    padding: '4px 7px',
+                                    borderRadius: 'var(--radius-sm)',
+                                    border: '1px solid #CBD5E1',
+                                    background: '#FFFFFF',
+                                    color: '#475569',
+                                    cursor: 'pointer',
+                                    fontSize: '0.75rem',
+                                    display: 'inline-flex',
+                                    alignItems: 'center'
+                                  }}
+                                  title="Edit full item metadata (Hindi name, CO2 metrics, description)"
+                                >
+                                  <Edit2 size={12} />
+                                </button>
+
+                                <button
+                                  onClick={() => setDeleteConfirmScrapId(item.id)}
+                                  style={{
+                                    padding: '4px 7px',
+                                    borderRadius: 'var(--radius-sm)',
+                                    border: '1px solid #FECACA',
+                                    background: '#FEF2F2',
+                                    color: '#DC2626',
+                                    cursor: 'pointer',
+                                    fontSize: '0.75rem',
+                                    display: 'inline-flex',
+                                    alignItems: 'center'
+                                  }}
+                                  title="Delete item from scrap catalog"
+                                >
+                                  <Trash2 size={12} />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -1349,6 +1807,587 @@ export const AdminPanelModal = ({
             </div>
           )}
         </div>
+
+        {/* ========================================================================= */}
+        {/* SUB-MODAL 1: ADD NEW SCRAP ITEM MODAL */}
+        {/* ========================================================================= */}
+        {isAddScrapModalOpen && (
+          <div className="modal-overlay" style={{ zIndex: 1300 }} onClick={() => setIsAddScrapModalOpen(false)}>
+            <div
+              className="modal-content"
+              onClick={(e) => e.stopPropagation()}
+              style={{ maxWidth: '560px', width: '92%', maxHeight: '90vh', overflowY: 'auto', padding: '1.5rem' }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <PlusCircle size={20} color="var(--color-primary)" />
+                  <span>Add New Scrap Item</span>
+                </h3>
+                <button
+                  onClick={() => setIsAddScrapModalOpen(false)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748B' }}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <form onSubmit={handleCreateNewScrapSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.785rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
+                      Item Name (English) *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Pure Copper Wire"
+                      value={newScrapForm.name}
+                      onChange={(e) => setNewScrapForm({ ...newScrapForm, name: e.target.value })}
+                      style={{ width: '100%', padding: '8px 10px', borderRadius: 'var(--radius-sm)', border: '1px solid #CBD5E1', fontSize: '0.85rem' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.785rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
+                      Hindi Name / Local Term
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. तांबा (Copper Wire)"
+                      value={newScrapForm.hindiName}
+                      onChange={(e) => setNewScrapForm({ ...newScrapForm, hindiName: e.target.value })}
+                      style={{ width: '100%', padding: '8px 10px', borderRadius: 'var(--radius-sm)', border: '1px solid #CBD5E1', fontSize: '0.85rem' }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.85rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.785rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
+                      Category *
+                    </label>
+                    <select
+                      value={newScrapForm.category}
+                      onChange={(e) => setNewScrapForm({ ...newScrapForm, category: e.target.value })}
+                      style={{ width: '100%', padding: '8px 10px', borderRadius: 'var(--radius-sm)', border: '1px solid #CBD5E1', fontSize: '0.85rem', background: '#FFFFFF' }}
+                    >
+                      <option value="paper">📄 Paper & Cardboard</option>
+                      <option value="plastic">🧴 Plastics</option>
+                      <option value="metal">🔩 Metals</option>
+                      <option value="ewaste">💻 E-Waste & Appliances</option>
+                      <option value="battery">🔋 Vehicles & Batteries</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.785rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
+                      Base Rate (₹) *
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      min="1"
+                      step="0.5"
+                      placeholder="e.g. 430"
+                      value={newScrapForm.rate}
+                      onChange={(e) => setNewScrapForm({ ...newScrapForm, rate: e.target.value })}
+                      style={{ width: '100%', padding: '8px 10px', borderRadius: 'var(--radius-sm)', border: '1px solid #CBD5E1', fontSize: '0.85rem', fontWeight: 700 }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.785rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
+                      Unit Type *
+                    </label>
+                    <select
+                      value={newScrapForm.unit}
+                      onChange={(e) => setNewScrapForm({ ...newScrapForm, unit: e.target.value })}
+                      style={{ width: '100%', padding: '8px 10px', borderRadius: 'var(--radius-sm)', border: '1px solid #CBD5E1', fontSize: '0.85rem', background: '#FFFFFF' }}
+                    >
+                      <option value="kg">₹ / kg (Weight)</option>
+                      <option value="unit">₹ / unit (Piece/Count)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.785rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
+                      Min Pickup Quantity
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 5 kg or 1 unit"
+                      value={newScrapForm.minWeight}
+                      onChange={(e) => setNewScrapForm({ ...newScrapForm, minWeight: e.target.value })}
+                      style={{ width: '100%', padding: '8px 10px', borderRadius: 'var(--radius-sm)', border: '1px solid #CBD5E1', fontSize: '0.85rem' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.785rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
+                      Daily Market Trend
+                    </label>
+                    <select
+                      value={newScrapForm.trendType}
+                      onChange={(e) => setNewScrapForm({
+                        ...newScrapForm,
+                        trendType: e.target.value,
+                        trend: e.target.value === 'up' ? '+₹2.00 today' : e.target.value === 'down' ? '-₹1.00 today' : 'Stable'
+                      })}
+                      style={{ width: '100%', padding: '8px 10px', borderRadius: 'var(--radius-sm)', border: '1px solid #CBD5E1', fontSize: '0.85rem', background: '#FFFFFF' }}
+                    >
+                      <option value="stable">━ Stable Market</option>
+                      <option value="up">↗ Bullish / Up</option>
+                      <option value="down">↘ Bearish / Down</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.785rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
+                    Item Description / Condition Guidelines
+                  </label>
+                  <textarea
+                    rows={2}
+                    placeholder="e.g. Stripped copper wire with no plastic insulation, or clean aluminum vessels."
+                    value={newScrapForm.description}
+                    onChange={(e) => setNewScrapForm({ ...newScrapForm, description: e.target.value })}
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: 'var(--radius-sm)', border: '1px solid #CBD5E1', fontSize: '0.85rem' }}
+                  />
+                </div>
+
+                {/* Eco impact factor inputs */}
+                <div style={{ background: '#F8FAFC', padding: '0.85rem', borderRadius: 'var(--radius-md)', border: '1px solid #E2E8F0' }}>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#047857', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <Sparkles size={13} />
+                    <span>Environmental Recycling Factors (Per kg)</span>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem' }}>
+                    <div>
+                      <span style={{ fontSize: '0.7rem', color: '#64748B' }}>CO₂ Saved (kg)</span>
+                      <input
+                        type="number"
+                        step="0.1"
+                        value={newScrapForm.co2SavedPerKg}
+                        onChange={(e) => setNewScrapForm({ ...newScrapForm, co2SavedPerKg: e.target.value })}
+                        style={{ width: '100%', padding: '4px 6px', fontSize: '0.8rem', borderRadius: '4px', border: '1px solid #CBD5E1' }}
+                      />
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '0.7rem', color: '#64748B' }}>Water Saved (L)</span>
+                      <input
+                        type="number"
+                        step="1"
+                        value={newScrapForm.waterSavedPerKg}
+                        onChange={(e) => setNewScrapForm({ ...newScrapForm, waterSavedPerKg: e.target.value })}
+                        style={{ width: '100%', padding: '4px 6px', fontSize: '0.8rem', borderRadius: '4px', border: '1px solid #CBD5E1' }}
+                      />
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '0.7rem', color: '#64748B' }}>Trees Saved</span>
+                      <input
+                        type="number"
+                        step="0.001"
+                        value={newScrapForm.treesSavedPerKg}
+                        onChange={(e) => setNewScrapForm({ ...newScrapForm, treesSavedPerKg: e.target.value })}
+                        style={{ width: '100%', padding: '4px 6px', fontSize: '0.8rem', borderRadius: '4px', border: '1px solid #CBD5E1' }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
+                  <button
+                    type="button"
+                    onClick={() => setIsAddScrapModalOpen(false)}
+                    className="btn btn-secondary"
+                    style={{ padding: '8px 16px' }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    style={{ padding: '8px 20px', fontWeight: 700 }}
+                  >
+                    Create Scrap Item
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================================= */}
+        {/* SUB-MODAL 2: EDIT FULL SCRAP ITEM METADATA */}
+        {/* ========================================================================= */}
+        {editingScrapItem && (
+          <div className="modal-overlay" style={{ zIndex: 1300 }} onClick={() => setEditingScrapItem(null)}>
+            <div
+              className="modal-content"
+              onClick={(e) => e.stopPropagation()}
+              style={{ maxWidth: '560px', width: '92%', maxHeight: '90vh', overflowY: 'auto', padding: '1.5rem' }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Edit2 size={18} color="var(--color-primary)" />
+                  <span>Edit Scrap Item Details</span>
+                </h3>
+                <button
+                  onClick={() => setEditingScrapItem(null)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748B' }}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveEditScrapSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.785rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
+                      Item Name
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={editingScrapItem.name}
+                      onChange={(e) => setEditingScrapItem({ ...editingScrapItem, name: e.target.value })}
+                      style={{ width: '100%', padding: '8px 10px', borderRadius: 'var(--radius-sm)', border: '1px solid #CBD5E1', fontSize: '0.85rem' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.785rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
+                      Hindi Name / Local Label
+                    </label>
+                    <input
+                      type="text"
+                      value={editingScrapItem.hindiName || ''}
+                      onChange={(e) => setEditingScrapItem({ ...editingScrapItem, hindiName: e.target.value })}
+                      style={{ width: '100%', padding: '8px 10px', borderRadius: 'var(--radius-sm)', border: '1px solid #CBD5E1', fontSize: '0.85rem' }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.85rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.785rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
+                      Category
+                    </label>
+                    <select
+                      value={editingScrapItem.category}
+                      onChange={(e) => setEditingScrapItem({ ...editingScrapItem, category: e.target.value })}
+                      style={{ width: '100%', padding: '8px 10px', borderRadius: 'var(--radius-sm)', border: '1px solid #CBD5E1', fontSize: '0.85rem', background: '#FFFFFF' }}
+                    >
+                      <option value="paper">📄 Paper & Cardboard</option>
+                      <option value="plastic">🧴 Plastics</option>
+                      <option value="metal">🔩 Metals</option>
+                      <option value="ewaste">💻 E-Waste & Appliances</option>
+                      <option value="battery">🔋 Vehicles & Batteries</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.785rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
+                      Rate (₹)
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      min="1"
+                      step="0.5"
+                      value={editingScrapItem.rate}
+                      onChange={(e) => setEditingScrapItem({ ...editingScrapItem, rate: e.target.value })}
+                      style={{ width: '100%', padding: '8px 10px', borderRadius: 'var(--radius-sm)', border: '1px solid #CBD5E1', fontSize: '0.85rem', fontWeight: 700 }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.785rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
+                      Unit
+                    </label>
+                    <select
+                      value={editingScrapItem.unit || 'kg'}
+                      onChange={(e) => setEditingScrapItem({ ...editingScrapItem, unit: e.target.value })}
+                      style={{ width: '100%', padding: '8px 10px', borderRadius: 'var(--radius-sm)', border: '1px solid #CBD5E1', fontSize: '0.85rem', background: '#FFFFFF' }}
+                    >
+                      <option value="kg">₹ / kg</option>
+                      <option value="unit">₹ / unit</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.785rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
+                      Min Pickup
+                    </label>
+                    <input
+                      type="text"
+                      value={editingScrapItem.minWeight || ''}
+                      onChange={(e) => setEditingScrapItem({ ...editingScrapItem, minWeight: e.target.value })}
+                      style={{ width: '100%', padding: '8px 10px', borderRadius: 'var(--radius-sm)', border: '1px solid #CBD5E1', fontSize: '0.85rem' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.785rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
+                      Trend Label (e.g. +₹2.00 today)
+                    </label>
+                    <input
+                      type="text"
+                      value={editingScrapItem.trend || 'Stable'}
+                      onChange={(e) => setEditingScrapItem({ ...editingScrapItem, trend: e.target.value })}
+                      style={{ width: '100%', padding: '8px 10px', borderRadius: 'var(--radius-sm)', border: '1px solid #CBD5E1', fontSize: '0.85rem' }}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.785rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
+                    Description
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={editingScrapItem.description || ''}
+                    onChange={(e) => setEditingScrapItem({ ...editingScrapItem, description: e.target.value })}
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: 'var(--radius-sm)', border: '1px solid #CBD5E1', fontSize: '0.85rem' }}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
+                  <button
+                    type="button"
+                    onClick={() => setEditingScrapItem(null)}
+                    className="btn btn-secondary"
+                    style={{ padding: '8px 16px' }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    style={{ padding: '8px 20px', fontWeight: 700 }}
+                  >
+                    Save Changes
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================================= */}
+        {/* SUB-MODAL 3: BULK CATEGORY RATE ADJUSTER */}
+        {/* ========================================================================= */}
+        {isBulkAdjustModalOpen && (
+          <div className="modal-overlay" style={{ zIndex: 1300 }} onClick={() => setIsBulkAdjustModalOpen(false)}>
+            <div
+              className="modal-content"
+              onClick={(e) => e.stopPropagation()}
+              style={{ maxWidth: '520px', width: '92%', padding: '1.5rem' }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Sliders size={20} color="#4338CA" />
+                  <span>Bulk Margin & Price Adjuster</span>
+                </h3>
+                <button
+                  onClick={() => setIsBulkAdjustModalOpen(false)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748B' }}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <form onSubmit={handleExecuteBulkAdjust} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <p style={{ margin: 0, fontSize: '0.825rem', color: '#64748B' }}>
+                  Apply market-wide price corrections across all items in a selected category simultaneously.
+                </p>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.785rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
+                    Target Category
+                  </label>
+                  <select
+                    value={bulkCategory}
+                    onChange={(e) => setBulkCategory(e.target.value)}
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: 'var(--radius-sm)', border: '1px solid #CBD5E1', fontSize: '0.85rem', background: '#FFFFFF' }}
+                  >
+                    <option value="all">🌐 All Categories (Entire Catalog)</option>
+                    <option value="metal">🔩 Metals (Iron, Copper, Brass, Steel)</option>
+                    <option value="paper">📄 Paper & Cardboard</option>
+                    <option value="plastic">🧴 Plastics</option>
+                    <option value="ewaste">💻 E-Waste & Appliances</option>
+                    <option value="battery">🔋 Vehicles & Batteries</option>
+                  </select>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.785rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
+                      Adjustment Type
+                    </label>
+                    <div style={{ display: 'flex', borderRadius: 'var(--radius-sm)', overflow: 'hidden', border: '1px solid #CBD5E1' }}>
+                      <button
+                        type="button"
+                        onClick={() => setBulkAdjustmentType('percent')}
+                        style={{
+                          flex: 1,
+                          padding: '8px',
+                          border: 'none',
+                          background: bulkAdjustmentType === 'percent' ? '#4338CA' : '#F8FAFC',
+                          color: bulkAdjustmentType === 'percent' ? '#FFFFFF' : '#475569',
+                          fontWeight: 700,
+                          fontSize: '0.8rem',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Percentage (%)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setBulkAdjustmentType('amount')}
+                        style={{
+                          flex: 1,
+                          padding: '8px',
+                          border: 'none',
+                          background: bulkAdjustmentType === 'amount' ? '#4338CA' : '#F8FAFC',
+                          color: bulkAdjustmentType === 'amount' ? '#FFFFFF' : '#475569',
+                          fontWeight: 700,
+                          fontSize: '0.8rem',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Flat Amount (₹)
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.785rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
+                      Change Value
+                    </label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <select
+                        value={bulkAdjustmentSign}
+                        onChange={(e) => setBulkAdjustmentSign(e.target.value)}
+                        style={{
+                          width: '60px',
+                          padding: '8px 4px',
+                          borderRadius: 'var(--radius-sm)',
+                          border: '1px solid #CBD5E1',
+                          fontWeight: 800,
+                          background: bulkAdjustmentSign === '+' ? '#ECFDF5' : '#FEF2F2',
+                          color: bulkAdjustmentSign === '+' ? '#047857' : '#B91C1C'
+                        }}
+                      >
+                        <option value="+">+ (Up)</option>
+                        <option value="-">- (Down)</option>
+                      </select>
+                      <input
+                        type="number"
+                        min="0.5"
+                        step="0.5"
+                        required
+                        value={bulkAdjustmentValue}
+                        onChange={(e) => setBulkAdjustmentValue(e.target.value)}
+                        style={{ flex: 1, padding: '8px 10px', borderRadius: 'var(--radius-sm)', border: '1px solid #CBD5E1', fontSize: '0.85rem', fontWeight: 800 }}
+                      />
+                      <span style={{ fontWeight: 700, color: '#64748B', fontSize: '0.85rem' }}>
+                        {bulkAdjustmentType === 'percent' ? '%' : '₹'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Preview Box */}
+                <div style={{ background: '#F8FAFC', padding: '0.85rem 1rem', borderRadius: 'var(--radius-md)', border: '1px solid #E2E8F0' }}>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
+                    📊 Impact Preview:
+                  </div>
+                  <div style={{ fontSize: '0.785rem', color: '#64748B', lineHeight: 1.5 }}>
+                    {bulkCategory === 'all' ? 'All catalog items' : `All ${bulkCategory.toUpperCase()} items`} will receive a{' '}
+                    <strong style={{ color: bulkAdjustmentSign === '+' ? '#047857' : '#B91C1C' }}>
+                      {bulkAdjustmentSign}{bulkAdjustmentValue}{bulkAdjustmentType === 'percent' ? '%' : ' ₹'}
+                    </strong>{' '}
+                    price update.
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
+                  <button
+                    type="button"
+                    onClick={() => setIsBulkAdjustModalOpen(false)}
+                    className="btn btn-secondary"
+                    style={{ padding: '8px 16px' }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    style={{ padding: '8px 20px', fontWeight: 700, background: '#4338CA', borderColor: '#4338CA' }}
+                  >
+                    Apply Bulk Update
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================================= */}
+        {/* SUB-MODAL 4: DELETE SCRAP CONFIRMATION MODAL */}
+        {/* ========================================================================= */}
+        {deleteConfirmScrapId && (
+          <div className="modal-overlay" style={{ zIndex: 1300 }} onClick={() => setDeleteConfirmScrapId(null)}>
+            <div
+              className="modal-content"
+              onClick={(e) => e.stopPropagation()}
+              style={{ maxWidth: '440px', width: '90%', padding: '1.5rem', textAlign: 'center' }}
+            >
+              <div style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '50%',
+                background: '#FEF2F2',
+                color: '#DC2626',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 1rem'
+              }}>
+                <Trash2 size={24} />
+              </div>
+              <h3 style={{ margin: '0 0 0.5rem', fontSize: '1.1rem', fontWeight: 800, color: '#0F172A' }}>
+                Delete Scrap Item?
+              </h3>
+              <p style={{ margin: '0 0 1.25rem', fontSize: '0.825rem', color: '#64748B' }}>
+                Are you sure you want to remove this item from the active scrap catalog? Customers won't be able to select it for new bookings.
+              </p>
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '0.75rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setDeleteConfirmScrapId(null)}
+                  className="btn btn-secondary"
+                  style={{ padding: '8px 16px' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDeleteScrapConfirmed(deleteConfirmScrapId)}
+                  className="btn btn-primary"
+                  style={{ padding: '8px 20px', background: '#DC2626', borderColor: '#DC2626', fontWeight: 700 }}
+                >
+                  Yes, Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

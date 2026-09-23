@@ -7,6 +7,7 @@ import usersHandler from './_routes/users.js';
 import seedHandler from './_routes/seed.js';
 import configDbHandler from './_routes/config-db.js';
 import ticketsHandler from './_routes/tickets.js';
+import paymentsHandler from './_routes/payments.js';
 
 export default async function handler(req, res) {
   // CORS Headers
@@ -68,6 +69,12 @@ export default async function handler(req, res) {
       case 'support':
       case 'contact':
         return await ticketsHandler(req, res);
+      case 'create-order':
+      case 'verify-payment':
+      case 'payments':
+      case 'payment':
+      case 'razorpay':
+        return await paymentsHandler(req, res);
       case '':
         // Default root /api ping
         return await healthHandler(req, res);

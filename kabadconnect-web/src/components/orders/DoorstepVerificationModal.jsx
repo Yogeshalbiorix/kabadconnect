@@ -28,8 +28,11 @@ import {
   Info
 } from 'lucide-react';
 import { SCRAP_ITEMS } from '../../data/scrapRates';
+import { openRazorpayCheckout } from '../../services/razorpay';
+import confetti from 'canvas-confetti';
 
 export const DoorstepVerificationModal = ({
+
   isOpen,
   onClose,
   order,
@@ -300,6 +303,84 @@ export const DoorstepVerificationModal = ({
       return;
     }
 
+    // 1. RAZORPAY GATEWAY CHECKOUT INTEGRATION
+    if (paymentMethod === 'razorpay') {
+      setIsProcessingPayment(true);
+      try {
+        await openRazorpayCheckout({
+          amountInRupees: totalAmount || 10,
+          name: 'KabadCollect Scrap Payout',
+          description: `Doorstep scrap settlement for Order #${order.id}`,
+          prefill: {
+            name: order.customer?.name || order.userName || currentUser?.name || '',
+            email: order.customer?.email || order.userEmail || currentUser?.email || '',
+            contact: order.customer?.phone || order.userPhone || currentUser?.phone || ''
+          },
+          orderId: order.id,
+          notes: {
+            orderId: order.id,
+            totalWeightKg: totalWeight,
+            verifiedOtp: otpCode
+          },
+          onSuccess: (paymentData) => {
+            setIsProcessingPayment(false);
+            const txnId = paymentData.razorpay_payment_id || `RZP-${Date.now().toString().slice(-8)}`;
+            const paymentRecord = {
+              transactionRef: txnId,
+              paidAmount: totalAmount,
+              paymentMethod: 'Razorpay Online Gateway (Verified)',
+              paidAt: new Date().toISOString()
+            };
+
+            setPaymentSuccessData(paymentRecord);
+            try {
+              confetti({ particleCount: 90, spread: 70, origin: { y: 0.6 } });
+            } catch {}
+
+            const formattedWeighed = inspectedItems.map(it => ({
+              name: it.name,
+              weight: `${it.weight} ${it.unit}`,
+              rate: `₹${it.rate}/${it.unit}`,
+              subtotal: Math.round(it.weight * it.rate)
+            }));
+
+            if (onUpdateOrder) {
+              onUpdateOrder(order.id, {
+                status: 'completed',
+                paymentStatus: 'paid',
+                doorstepVerification: {
+                  otp: otpCode,
+                  isVerified: true,
+                  verifiedAt: new Date().toISOString(),
+                  paymentStatus: 'completed',
+                  paymentMethod: 'Razorpay Online Gateway (Verified)',
+                  transactionRef: txnId,
+                  paidAmount: totalAmount,
+                  inspectedItems: formattedWeighed
+                },
+                totalPaid: totalAmount,
+                paymentMethod: 'Razorpay Online Gateway (Verified)',
+                itemsWeighed: formattedWeighed,
+                carbonOffsetKg: (totalWeight * 1.45).toFixed(1)
+              });
+            }
+          },
+          onError: (err) => {
+            setIsProcessingPayment(false);
+            alert(`Razorpay Gateway notice: ${err.message || 'Payment could not be completed.'}`);
+          },
+          onDismiss: () => {
+            setIsProcessingPayment(false);
+          }
+        });
+      } catch (err) {
+        setIsProcessingPayment(false);
+        console.warn('Razorpay popup open error, falling back:', err.message);
+      }
+      return;
+    }
+
+    // 2. OTHER PAYMENT METHODS (UPI / Cash / Wallet / Bank)
     setIsProcessingPayment(true);
 
     // Simulate banking / payment settlement latency
@@ -348,6 +429,7 @@ export const DoorstepVerificationModal = ({
       }
     }, 1200);
   };
+
 
   return (
     <div className="modal-overlay" onClick={onClose} style={{ zIndex: 1300 }}>
@@ -1019,11 +1101,12 @@ export const DoorstepVerificationModal = ({
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                     <div style={{
                       display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
                       gap: '0.65rem'
                     }}>
                       {[
                         { id: 'upi', label: 'Instant UPI', icon: Sparkles, desc: 'GPay, PhonePe, Paytm' },
+                        { id: 'razorpay', label: 'Razorpay Gateway', icon: CreditCard, desc: 'Cards, UPI & Netbanking' },
                         { id: 'cash', label: 'Doorstep Cash', icon: DollarSign, desc: 'Direct cash handover' },
                         { id: 'wallet', label: 'Eco Wallet', icon: Wallet, desc: '+5% Green Coins' },
                         { id: 'bank', label: 'Bank IMPS', icon: Building2, desc: 'Direct Account Payout' }
@@ -1066,6 +1149,28 @@ export const DoorstepVerificationModal = ({
                         );
                       })}
                     </div>
+
+                    {/* Method Specific Fields */}
+                    {paymentMethod === 'razorpay' && (
+                      <div style={{
+                        padding: '1rem',
+                        background: 'linear-gradient(135deg, rgba(13, 92, 58, 0.08) 0%, rgba(37, 99, 235, 0.08) 100%)',
+                        borderRadius: 'var(--radius-md)',
+                        border: '1px solid rgba(13, 92, 58, 0.25)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '0.5rem'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#0D5C3A', fontWeight: 800, fontSize: '0.9rem' }}>
+                          <ShieldCheck size={18} />
+                          <span>Razorpay Standard Web Checkout Enabled</span>
+                        </div>
+                        <p style={{ fontSize: '0.8rem', color: '#334155', margin: 0, lineHeight: 1.5 }}>
+                          Clicking below will open the official Razorpay Checkout modal to complete and verify the payout of <strong>₹{totalAmount.toLocaleString()}</strong> instantly with live HMAC signature verification.
+                        </p>
+                      </div>
+                    )}
+
 
                     {/* Method Specific Fields */}
                     {paymentMethod === 'upi' && (
