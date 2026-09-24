@@ -698,6 +698,43 @@ export default function App() {
     apiUpdateOrder(orderId, { kabadwala: partner, status: 'assigned' }).catch(() => { });
   };
 
+  const handleAdminUpdateOrderPayment = (orderId, paymentMethod) => {
+    const isCompleted = true;
+    const updated = orders.map((o) => {
+      if (o.id === orderId) {
+        return {
+          ...o,
+          paymentMethod,
+          doorstepVerification: {
+            ...(o.doorstepVerification || {}),
+            paymentMethod,
+            paymentStatus: isCompleted ? 'completed' : 'pending'
+          }
+        };
+      }
+      return o;
+    });
+    setOrders(updated);
+    if (activeOrder?.id === orderId) {
+      setActiveOrder((prev) => ({
+        ...prev,
+        paymentMethod,
+        doorstepVerification: {
+          ...(prev?.doorstepVerification || {}),
+          paymentMethod,
+          paymentStatus: isCompleted ? 'completed' : 'pending'
+        }
+      }));
+    }
+
+    // Persist payment change to MongoDB Atlas
+    apiUpdateOrder(orderId, {
+      paymentMethod,
+      'doorstepVerification.paymentMethod': paymentMethod,
+      'doorstepVerification.paymentStatus': isCompleted ? 'completed' : 'pending'
+    }).catch(() => { });
+  };
+
   // ----------------------------------------------------
   // Scrap Rates & Catalog Operations (CRUD & Bulk Adjustment)
   // ----------------------------------------------------
@@ -1159,6 +1196,7 @@ export default function App() {
         onUpdateOrderStatus={handleAdminUpdateOrderStatus}
         onAssignKabadwala={handleAssignKabadwala}
         onCancelOrder={handleCancelOrder}
+        onUpdateOrderPayment={handleAdminUpdateOrderPayment}
         scrapItems={scrapItems}
         onUpdateScrapRate={handleUpdateScrapRate}
         onCreateScrapItem={handleCreateScrapItem}
