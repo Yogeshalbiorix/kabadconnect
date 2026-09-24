@@ -7,38 +7,49 @@ import { fileURLToPath, pathToFileURL } from 'url'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 function vercelServerlessDevPlugin() {
+  let cachedHandler = null;
+  const apiFile = path.resolve(__dirname, '../api/index.js');
+
   return {
     name: 'vercel-serverless-dev',
     configureServer(server) {
+      server.watcher.add(path.resolve(__dirname, '../api/**'));
+      server.watcher.on('change', (changedPath) => {
+        if (changedPath.includes(path.sep + 'api' + path.sep) || changedPath.endsWith('index.js')) {
+          cachedHandler = null;
+        }
+      });
+
       server.middlewares.use(async (req, res, next) => {
         if (!req.url.startsWith('/api')) {
-          return next()
+          return next();
         }
 
         // Polyfill Vercel res helper methods immediately
         if (!res.status) {
           res.status = function (code) {
-            this.statusCode = code
-            return this
-          }
+            this.statusCode = code;
+            return this;
+          };
         }
         if (!res.json) {
           res.json = function (data) {
-            this.setHeader('Content-Type', 'application/json')
-            this.end(JSON.stringify(data))
-            return this
-          }
+            this.setHeader('Content-Type', 'application/json');
+            this.end(JSON.stringify(data));
+            return this;
+          };
         }
 
         try {
-          // Unified API router in root /api/index.js
-          const apiFile = path.resolve(__dirname, '../api/index.js')
-          const fileUrl = `${pathToFileURL(apiFile).href}?t=${Date.now()}`
-          const module = await import(fileUrl)
-          const handler = module.default
+          if (!cachedHandler) {
+            const fileUrl = `${pathToFileURL(apiFile).href}?t=${Date.now()}`;
+            const module = await import(fileUrl);
+            cachedHandler = module.default;
+          }
 
+          const handler = cachedHandler;
           if (typeof handler !== 'function') {
-            return next()
+            return next();
           }
 
           // Parse query parameters

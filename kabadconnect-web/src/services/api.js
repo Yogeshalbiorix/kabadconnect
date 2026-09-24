@@ -10,9 +10,13 @@ const API_BASE = '/api';
 /**
  * Helper to safely perform fetch requests with timeout
  */
-async function fetchWithTimeout(url, options = {}, timeoutMs = 6000) {
+async function fetchWithTimeout(url, options = {}, timeoutMs = 20000) {
   const controller = new AbortController();
-  const id = setTimeout(() => controller.abort(), timeoutMs);
+  const id = setTimeout(() => {
+    try {
+      controller.abort();
+    } catch {}
+  }, timeoutMs);
 
   try {
     const response = await fetch(url, {
@@ -27,6 +31,9 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 6000) {
     return response;
   } catch (err) {
     clearTimeout(id);
+    if (err.name === 'AbortError' || err.message?.includes('aborted')) {
+      throw new Error('Request timed out connecting to database/email service. Please try again.');
+    }
     throw err;
   }
 }
@@ -314,7 +321,7 @@ export async function apiSendOtp({ email, purpose = 'login' }) {
     const res = await fetchWithTimeout(`${API_BASE}/users?action=send-otp`, {
       method: 'POST',
       body: JSON.stringify({ email, purpose })
-    }, 12000);
+    }, 25000);
     const data = await res.json();
     if (res.ok && data.success) {
       return {

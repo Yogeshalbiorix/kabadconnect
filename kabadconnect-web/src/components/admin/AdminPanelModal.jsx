@@ -40,7 +40,9 @@ import {
   Sliders,
   PlusCircle,
   HelpCircle,
-  Info
+  Info,
+  Maximize2,
+  Minimize2
 } from 'lucide-react';
 import { KABADWALA_PARTNERS } from '../../data/kabadwalas';
 import { apiSeedDatabase, apiGetDbConfig, apiUpdateDbConfig } from '../../services/api';
@@ -74,6 +76,7 @@ export const AdminPanelModal = ({
   // Rate editor state: { [itemId]: { rate: number, trendType: string, trend: string } }
   const [editingRates, setEditingRates] = useState({});
   const [rateSavedMessage, setRateSavedMessage] = useState('');
+  const [isFullScreen, setIsFullScreen] = useState(false);
 
   // Scrap Manager State
   const [scrapCategoryFilter, setScrapCategoryFilter] = useState('all');
@@ -163,8 +166,14 @@ export const AdminPanelModal = ({
   // KPI calculations
   const totalOrdersCount = orders.length;
   const completedOrdersCount = orders.filter(o => o.status === 'completed').length;
-  const totalPayouts = orders.reduce((acc, o) => acc + (o.totalPaid || o.estimatedAmount || 750), 0);
-  const totalCarbonOffset = orders.reduce((acc, o) => acc + (o.carbonOffsetKg || 45), 0);
+  const totalPayouts = orders.reduce((acc, o) => {
+    const amt = parseFloat(o.totalPaid ?? o.estimatedAmount ?? o.payout ?? 750) || 0;
+    return acc + amt;
+  }, 0);
+  const totalCarbonOffset = orders.reduce((acc, o) => {
+    const co2 = parseFloat(o.carbonOffsetKg ?? o.co2SavedKg ?? 45) || 0;
+    return acc + co2;
+  }, 0);
 
   // Filtered orders
   const filteredOrders = orders.filter((o) => {
@@ -311,36 +320,41 @@ export const AdminPanelModal = ({
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose} style={{ zIndex: 1250 }}>
+    <div className="modal-overlay" onClick={onClose} style={{ zIndex: 1250, padding: isFullScreen ? 0 : '1vh 1vw' }}>
       <div
         className="modal-content"
         onClick={(e) => e.stopPropagation()}
         style={{
-          maxWidth: '960px',
-          width: '95%',
-          maxHeight: '92vh',
+          maxWidth: isFullScreen ? '100vw' : '98vw',
+          width: isFullScreen ? '100vw' : '98vw',
+          height: isFullScreen ? '100vh' : '96vh',
+          maxHeight: isFullScreen ? '100vh' : '96vh',
           display: 'flex',
           flexDirection: 'column',
           padding: 0,
           overflow: 'hidden',
-          background: '#F8FAFC'
+          background: '#F8FAFC',
+          borderRadius: isFullScreen ? 0 : '16px',
+          boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.45)',
+          transition: 'all 0.2s ease-in-out'
         }}
       >
         {/* Admin Header */}
         <div style={{
           background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)',
           color: '#FFFFFF',
-          padding: '1rem clamp(0.75rem, 2vw, 1.75rem)',
+          padding: '0.85rem clamp(0.75rem, 2vw, 1.75rem)',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
           flexWrap: 'wrap',
-          gap: '0.5rem'
+          gap: '0.5rem',
+          flexShrink: 0
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
             <div style={{
-              width: '42px',
-              height: '42px',
+              width: '40px',
+              height: '40px',
               borderRadius: '12px',
               background: 'rgba(16, 185, 129, 0.2)',
               color: '#34D399',
@@ -349,11 +363,11 @@ export const AdminPanelModal = ({
               justifyContent: 'center',
               flexShrink: 0
             }}>
-              <ShieldCheck size={24} />
+              <ShieldCheck size={22} />
             </div>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                <h3 style={{ color: '#FFFFFF', margin: 0, fontSize: 'clamp(1rem, 2.5vw, 1.3rem)' }}>
+                <h3 style={{ color: '#FFFFFF', margin: 0, fontSize: 'clamp(1rem, 2.5vw, 1.25rem)' }}>
                   KabadCollect Admin Portal
                 </h3>
                 <span style={{
@@ -373,25 +387,48 @@ export const AdminPanelModal = ({
             </div>
           </div>
 
-          <button
-            onClick={onClose}
-            style={{
-              background: 'rgba(255, 255, 255, 0.1)',
-              border: 'none',
-              borderRadius: '50%',
-              width: '36px',
-              height: '36px',
-              color: '#FFFFFF',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              flexShrink: 0
-            }}
-            aria-label="Close admin portal"
-          >
-            <X size={18} />
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <button
+              onClick={() => setIsFullScreen(!isFullScreen)}
+              style={{
+                background: 'rgba(255, 255, 255, 0.1)',
+                border: 'none',
+                borderRadius: '50%',
+                width: '36px',
+                height: '36px',
+                color: '#FFFFFF',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                flexShrink: 0
+              }}
+              title={isFullScreen ? "Exit 100% Fullscreen" : "Maximize Full Window"}
+              aria-label="Toggle full window"
+            >
+              {isFullScreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+            </button>
+
+            <button
+              onClick={onClose}
+              style={{
+                background: 'rgba(255, 255, 255, 0.1)',
+                border: 'none',
+                borderRadius: '50%',
+                width: '36px',
+                height: '36px',
+                color: '#FFFFFF',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                flexShrink: 0
+              }}
+              aria-label="Close admin portal"
+            >
+              <X size={18} />
+            </button>
+          </div>
         </div>
 
         {/* Top KPI Summary Bar */}
@@ -415,7 +452,7 @@ export const AdminPanelModal = ({
 
           <div style={{ padding: '0.65rem', background: '#FEF3C7', borderRadius: 'var(--radius-md)', border: '1px solid #FDE68A' }}>
             <div style={{ fontSize: '0.7rem', color: '#B45309', fontWeight: 600, textTransform: 'uppercase' }}>Total Payouts</div>
-            <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#92400E' }}>₹{totalPayouts.toLocaleString()}</div>
+            <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#92400E' }}>₹{Number(totalPayouts || 0).toLocaleString()}</div>
           </div>
 
           <div style={{ padding: '0.65rem', background: '#EFF6FF', borderRadius: 'var(--radius-md)', border: '1px solid #BFDBFE' }}>
@@ -425,7 +462,7 @@ export const AdminPanelModal = ({
 
           <div style={{ padding: '0.65rem', background: '#F0FDF4', borderRadius: 'var(--radius-md)', border: '1px solid #BBF7D0' }}>
             <div style={{ fontSize: '0.7rem', color: '#15803D', fontWeight: 600, textTransform: 'uppercase' }}>CO₂ Offsets</div>
-            <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#166534' }}>{totalCarbonOffset.toFixed(0)} kg</div>
+            <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#166534' }}>{Number(totalCarbonOffset || 0).toFixed(0)} kg</div>
           </div>
         </div>
 
@@ -1042,22 +1079,23 @@ export const AdminPanelModal = ({
                 overflowX: 'auto',
                 boxShadow: 'var(--shadow-sm)'
               }}>
-                <table style={{ width: '100%', minWidth: '780px', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                <table style={{ width: '100%', minWidth: '950px', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                   <thead>
                     <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', textAlign: 'left', color: '#475569' }}>
-                      <th style={{ padding: '0.75rem 1rem' }}>Scrap Item & Hindi Name</th>
-                      <th style={{ padding: '0.75rem 0.75rem' }}>Category</th>
-                      <th style={{ padding: '0.75rem 0.75rem' }}>Unit</th>
-                      <th style={{ padding: '0.75rem 0.75rem' }}>Current Rate</th>
-                      <th style={{ padding: '0.75rem 0.75rem', minWidth: '120px' }}>New Rate</th>
-                      <th style={{ padding: '0.75rem 0.75rem', minWidth: '160px' }}>Market Trend</th>
-                      <th style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>Actions</th>
+                      <th style={{ padding: '0.85rem 1.25rem', width: '26%' }}>Scrap Material & Hindi Name</th>
+                      <th style={{ padding: '0.85rem 0.85rem', width: '10%' }}>Category</th>
+                      <th style={{ padding: '0.85rem 0.85rem', width: '8%' }}>Unit</th>
+                      <th style={{ padding: '0.85rem 0.85rem', width: '11%' }}>Current Rate</th>
+                      <th style={{ padding: '0.85rem 0.85rem', width: '14%' }}>Live Benchmark Rate</th>
+                      <th style={{ padding: '0.85rem 0.85rem', width: '15%' }}>Market Trend</th>
+                      <th style={{ padding: '0.85rem 0.85rem', width: '10%' }}>Eco Saved</th>
+                      <th style={{ padding: '0.85rem 1.25rem', textAlign: 'right', width: '12%' }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredScrapItems.length === 0 ? (
                       <tr>
-                        <td colSpan={7} style={{ padding: '3rem 1rem', textAlign: 'center', color: '#64748B' }}>
+                        <td colSpan={8} style={{ padding: '3rem 1rem', textAlign: 'center', color: '#64748B' }}>
                           <Package size={36} color="#CBD5E1" style={{ margin: '0 auto 0.5rem' }} />
                           <div style={{ fontWeight: 600 }}>No scrap items found matching criteria.</div>
                           <div style={{ fontSize: '0.75rem', marginTop: '4px' }}>Try adjusting your category filter or search query.</div>
@@ -1079,33 +1117,33 @@ export const AdminPanelModal = ({
                         return (
                           <tr key={item.id} style={{ borderBottom: '1px solid #E2E8F0', background: isChanged ? '#F0FDF4' : 'transparent', transition: 'background 0.2s ease' }}>
                             {/* Name & Hindi */}
-                            <td style={{ padding: '0.75rem 1rem' }}>
-                              <div style={{ fontWeight: 700, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                <span>{item.name}</span>
+                            <td style={{ padding: '0.85rem 1.25rem' }}>
+                              <div style={{ fontWeight: 700, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                <span style={{ fontSize: '0.9rem' }}>{item.name}</span>
                                 {item.minWeight && (
-                                  <span style={{ fontSize: '0.685rem', background: '#F1F5F9', color: '#64748B', padding: '1px 6px', borderRadius: '4px', fontWeight: 500 }}>
+                                  <span style={{ fontSize: '0.7rem', background: '#F1F5F9', color: '#64748B', padding: '1px 7px', borderRadius: '4px', fontWeight: 600 }}>
                                     Min: {item.minWeight}
                                   </span>
                                 )}
                               </div>
-                              <div style={{ fontSize: '0.75rem', color: '#64748B' }}>
+                              <div style={{ fontSize: '0.78rem', color: '#64748B', marginTop: '2px' }}>
                                 {item.hindiName || '—'}
                               </div>
                             </td>
 
                             {/* Category */}
-                            <td style={{ padding: '0.75rem 0.75rem' }}>
-                              <span className="badge badge-primary" style={{ textTransform: 'capitalize', fontSize: '0.7rem' }}>
+                            <td style={{ padding: '0.85rem 0.85rem' }}>
+                              <span className="badge badge-primary" style={{ textTransform: 'capitalize', fontSize: '0.75rem', padding: '3px 8px' }}>
                                 {item.category}
                               </span>
                             </td>
 
                             {/* Unit */}
-                            <td style={{ padding: '0.75rem 0.75rem' }}>
+                            <td style={{ padding: '0.85rem 0.85rem' }}>
                               <span style={{
-                                fontSize: '0.72rem',
+                                fontSize: '0.75rem',
                                 fontWeight: 700,
-                                padding: '2px 6px',
+                                padding: '3px 8px',
                                 borderRadius: '4px',
                                 background: item.unit === 'unit' ? '#FEF3C7' : '#E0E7FF',
                                 color: item.unit === 'unit' ? '#92400E' : '#3730A3'
@@ -1115,14 +1153,14 @@ export const AdminPanelModal = ({
                             </td>
 
                             {/* Current Rate */}
-                            <td style={{ padding: '0.75rem 0.75rem', fontWeight: 800, color: 'var(--color-primary)', fontSize: '0.95rem' }}>
+                            <td style={{ padding: '0.85rem 0.85rem', fontWeight: 800, color: 'var(--color-primary)', fontSize: '1.05rem' }}>
                               ₹{item.rate}
                             </td>
 
                             {/* New Rate Input */}
-                            <td style={{ padding: '0.75rem 0.75rem' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                <span style={{ fontWeight: 700, color: '#64748B', fontSize: '0.8rem' }}>₹</span>
+                            <td style={{ padding: '0.85rem 0.85rem' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                <span style={{ fontWeight: 800, color: '#64748B', fontSize: '0.9rem' }}>₹</span>
                                 <input
                                   type="number"
                                   min="1"
@@ -1130,92 +1168,98 @@ export const AdminPanelModal = ({
                                   value={currentVal}
                                   onChange={(e) => handleRateInputChange(item.id, e.target.value)}
                                   style={{
-                                    width: '75px',
-                                    padding: '4px 6px',
+                                    width: '90px',
+                                    padding: '5px 8px',
                                     borderRadius: 'var(--radius-sm)',
-                                    border: isChanged ? '1.5px solid var(--color-primary)' : '1px solid #CBD5E1',
-                                    fontSize: '0.85rem',
-                                    fontWeight: 700,
-                                    background: '#FFFFFF'
+                                    border: isChanged ? '2px solid var(--color-primary)' : '1px solid #CBD5E1',
+                                    fontSize: '0.9rem',
+                                    fontWeight: 800,
+                                    background: isChanged ? '#FFFFFF' : '#F8FAFC'
                                   }}
                                 />
                               </div>
                             </td>
 
                             {/* Trend Selector */}
-                            <td style={{ padding: '0.75rem 0.75rem' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                <select
-                                  value={currentTrendType}
-                                  onChange={(e) => handleTrendTypeChange(item.id, e.target.value)}
-                                  style={{
-                                    padding: '3px 6px',
-                                    borderRadius: 'var(--radius-sm)',
-                                    border: '1px solid #CBD5E1',
-                                    fontSize: '0.75rem',
-                                    fontWeight: 600,
-                                    background:
-                                      currentTrendType === 'up' ? '#ECFDF5' :
-                                        currentTrendType === 'down' ? '#FEF2F2' : '#F8FAFC',
-                                    color:
-                                      currentTrendType === 'up' ? '#065F46' :
-                                        currentTrendType === 'down' ? '#991B1B' : '#475569'
-                                  }}
-                                >
-                                  <option value="stable">━ Stable</option>
-                                  <option value="up">↗ High (Bullish)</option>
-                                  <option value="down">↘ Low (Bearish)</option>
-                                </select>
-                              </div>
+                            <td style={{ padding: '0.85rem 0.85rem' }}>
+                              <select
+                                value={currentTrendType}
+                                onChange={(e) => handleTrendTypeChange(item.id, e.target.value)}
+                                style={{
+                                  width: '100%',
+                                  maxWidth: '160px',
+                                  padding: '5px 8px',
+                                  borderRadius: 'var(--radius-sm)',
+                                  border: '1px solid #CBD5E1',
+                                  fontSize: '0.78rem',
+                                  fontWeight: 700,
+                                  background:
+                                    currentTrendType === 'up' ? '#ECFDF5' :
+                                      currentTrendType === 'down' ? '#FEF2F2' : '#F8FAFC',
+                                  color:
+                                    currentTrendType === 'up' ? '#065F46' :
+                                      currentTrendType === 'down' ? '#991B1B' : '#475569',
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                <option value="stable">━ Stable</option>
+                                <option value="up">↗ High (Bullish)</option>
+                                <option value="down">↘ Low (Bearish)</option>
+                              </select>
+                            </td>
+
+                            {/* Eco Saved */}
+                            <td style={{ padding: '0.85rem 0.85rem', fontSize: '0.78rem', color: '#047857', fontWeight: 600 }}>
+                              🌱 ~{item.co2SavedPerKg || 1.5} kg CO₂
                             </td>
 
                             {/* Actions */}
-                            <td style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>
-                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                            <td style={{ padding: '0.85rem 1.25rem', textAlign: 'right' }}>
+                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                                 <button
                                   onClick={() => handleSaveRate(item)}
                                   className={`btn ${isChanged ? 'btn-primary' : 'btn-secondary'} btn-sm`}
-                                  style={{ padding: '3px 8px', fontSize: '0.75rem', fontWeight: 700 }}
+                                  style={{ padding: '4px 10px', fontSize: '0.78rem', fontWeight: 700 }}
                                   title="Save price change to live database"
                                 >
-                                  <Save size={12} />
+                                  <Save size={13} />
                                   <span>{isChanged ? 'Save' : 'Update'}</span>
                                 </button>
 
                                 <button
                                   onClick={() => setEditingScrapItem({ ...item })}
                                   style={{
-                                    padding: '4px 7px',
+                                    padding: '5px 8px',
                                     borderRadius: 'var(--radius-sm)',
                                     border: '1px solid #CBD5E1',
                                     background: '#FFFFFF',
                                     color: '#475569',
                                     cursor: 'pointer',
-                                    fontSize: '0.75rem',
+                                    fontSize: '0.78rem',
                                     display: 'inline-flex',
                                     alignItems: 'center'
                                   }}
                                   title="Edit full item metadata (Hindi name, CO2 metrics, description)"
                                 >
-                                  <Edit2 size={12} />
+                                  <Edit2 size={13} />
                                 </button>
 
                                 <button
                                   onClick={() => setDeleteConfirmScrapId(item.id)}
                                   style={{
-                                    padding: '4px 7px',
+                                    padding: '5px 8px',
                                     borderRadius: 'var(--radius-sm)',
                                     border: '1px solid #FECACA',
                                     background: '#FEF2F2',
                                     color: '#DC2626',
                                     cursor: 'pointer',
-                                    fontSize: '0.75rem',
+                                    fontSize: '0.78rem',
                                     display: 'inline-flex',
                                     alignItems: 'center'
                                   }}
                                   title="Delete item from scrap catalog"
                                 >
-                                  <Trash2 size={12} />
+                                  <Trash2 size={13} />
                                 </button>
                               </div>
                             </td>
